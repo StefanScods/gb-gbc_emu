@@ -30,15 +30,13 @@ typedef uint16_t cycles;
 #define NUM_INSTRUCTIONS 256
 
 
+//Screen dimension constants
+const int SCREEN_WIDTH = 640;
+const int SCREEN_HEIGHT = 480;
 
-
-
-
-
-
-
-
-
+//fps defines 
+#define TARGET_FPS 60
+#define FRAME_DELAY 1000/TARGET_FPS
 
 //op codes
 #define NOP 0x00

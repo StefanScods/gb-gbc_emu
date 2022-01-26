@@ -4,13 +4,14 @@
 #include "core\include\memory.h"
 #include "core\include\register.h"
 
-//Screen dimension constants
-const int SCREEN_WIDTH = 640;
-const int SCREEN_HEIGHT = 480;
+
+#include "GUI/include/screen.h"
 
 int main(int argc, char** argv){
 
-    int temp;
+    Screen screen;
+
+  
     CPU cpu;
     Memory memory;
 
@@ -24,27 +25,18 @@ int main(int argc, char** argv){
 
 
     cpu.fetchAndExecute();
-
     cpu.fetchAndExecute();
-
     cpu.outputState();
 
 
     //cpu.executeCycles((CALL_NZ_a16_CYCLES_MAX+INC_A_CYCLES+RET_NZ_CYCLES_MAX));
-
     //cpu.outputState();
-
-
-
-
-
-
     //std::cout<< (int)memory.read(0) <<std::endl;
 
+    screen.mainloop();
+    screen.exit();
 
     memory.destroy();
-
-    std::cin >> temp;
 
     return 0; 
 }
