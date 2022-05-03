@@ -6,6 +6,14 @@ a header file for defines/enums accross multiple core files
 date: 2021-11-12 
 */
 #include <cstdint>
+#include <iostream>
+
+//!!!debug functions
+namespace debug {
+	void scream();
+	void loudScream();
+}
+
 
 //data types 
 typedef int8_t signedByte;
@@ -15,6 +23,11 @@ typedef uint16_t word;
 typedef byte* reg8; //used to address the top and bottom halves of the cpu regs 
 
 typedef uint16_t cycles;
+
+//button logic 
+#define NOT_PRESSED 0
+#define FIRST_PRESSED 1
+#define HOLD 2
 
 //flags 
 #define FLAG_Z 7

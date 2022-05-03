@@ -13,7 +13,7 @@ bool Memory::init(){
 
     if(data==nullptr)  return false; //make sure it was successful 
 
-    //zeors the memory 
+    //zeros the memory 
     for(int address = 0; address<MEM_SIZE; ++address){
         data[ (word) address] = 0;
     }

@@ -78,13 +78,13 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDIR)dependencies\SDL2\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDIR)dependencies\SDL2\lib\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDIR)dependencies\SDL2\include;$(SolutionDIR)dependencies\SDL2_TTF\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDIR)dependencies\SDL2_TTF\lib\x64;$(SolutionDIR)dependencies\SDL2\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(SolutionDIR)dependencies\SDL2\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDIR)dependencies\SDL2\lib\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDIR)dependencies\SDL2\include;$(SolutionDIR)dependencies\SDL2_TTF\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDIR)dependencies\SDL2_TTF\lib\x64;$(SolutionDIR)dependencies\SDL2\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -128,7 +128,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>sdl2.lib;sdl2main.lib;Shell32.lib</AdditionalDependencies>
+      <AdditionalDependencies>sdl2.lib;sdl2main.lib;Shell32.lib;SDL2_ttf.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -145,10 +145,11 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>sdl2.lib;sdl2main.lib;Shell32.lib</AdditionalDependencies>
+      <AdditionalDependencies>sdl2.lib;sdl2main.lib;Shell32.lib;SDL2_ttf.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="core\core.cpp" />
     <ClCompile Include="core\cpu.cpp" />
     <ClCompile Include="core\instuctions\arithmetic.cpp" />
     <ClCompile Include="core\instuctions\bit.cpp" />
@@ -157,10 +158,12 @@
     <ClCompile Include="core\instuctions\misc_control.cpp" />
     <ClCompile Include="core\memory.cpp" />
     <ClCompile Include="core\register.cpp" />
+    <ClCompile Include="core\defines.cpp" />
     <ClCompile Include="GUI\screen.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="core\include\core.h" />
     <ClInclude Include="core\include\cpu.h" />
     <ClInclude Include="core\include\defines.h" />
     <ClInclude Include="core\include\instructionSet.h" />
