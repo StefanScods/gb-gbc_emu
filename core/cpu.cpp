@@ -80,16 +80,19 @@ int CPU::executeCycles(cycles numCycles){
 
 void CPU::outputState(){
 
+    std::cout << std::hex;
     std::cout << "========================" << std::endl;
-    std::cout <<  "AF: 0x" << std::hex << (int) reg_AF.read() << std::endl;
-    std::cout <<  "BC: 0x" << std::hex << (int) reg_BC.read() << std::endl;
-    std::cout <<  "DE: 0x" << std::hex << (int) reg_DE.read() << std::endl;
-    std::cout <<  "HL: 0x" << std::hex << (int) reg_HL.read() << std::endl;
-    std::cout <<  "\nSP: 0x" << std::hex << (int) SP.read() << std::endl;
-    std::cout <<  "PC: 0x" << std::hex << (int) PC.read() << std::endl;
+    std::cout <<  "AF: 0x"  << (int) reg_AF.read() << std::endl;
+    std::cout <<  "BC: 0x" << (int) reg_BC.read() << std::endl;
+    std::cout <<  "DE: 0x"  << (int) reg_DE.read() << std::endl;
+    std::cout <<  "HL: 0x"  << (int) reg_HL.read() << std::endl;
+    std::cout <<  "\nSP: 0x"  << (int) SP.read() << std::endl;
+    std::cout <<  "PC: 0x" << (int) PC.read() << std::endl;
 
     std::cout << "FLAGS: Z: " << readBit(*(F), FLAG_Z) <<" N: "<< readBit(*(F), FLAG_N) <<" H: " << readBit(*(F), FLAG_H)<<" C: "  << readBit(*(F), FLAG_C) <<std::endl;
     std::cout << "========================" << std::endl;
+
+    std::cout << std::dec;
 }
 
 void popHelper(CPU* cpu, reg& dest){

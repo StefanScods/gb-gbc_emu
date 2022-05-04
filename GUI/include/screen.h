@@ -21,11 +21,8 @@ private:
 	SDL_Window* main_window;
 	//The surface contained by the window
 	SDL_Surface* mainWindowSurface = NULL;
-	//SDL renderer
 	SDL_Renderer* mainWindowRenderer;
 	int mainWindowID;
-
-
 
 	//window title
 	std::string title = "red panda's are pretty cool imo ";
@@ -85,10 +82,12 @@ public:
 	//populates the cpuStateSurface with graphics 
 	void renderCpuState(CPU* cpu);
 
-
 	//handles all input events
 	void eventHandler();
 };
+
+//helper function to draw text onto a surface
+void drawText(SDL_Surface* surface, const char* text, TTF_Font* font, SDL_Color& colour, int x, int y);
 
 
 #endif

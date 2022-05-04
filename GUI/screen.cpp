@@ -11,6 +11,39 @@ date: 2022-01-06
 #include <iostream>
 
 
+
+/*!!! how to directly edit surface pixels 
+SDL_LockSurface(cpuStateSurface);
+Uint8 bytesperPixel = cpuStateSurface->format->BytesPerPixel;
+Uint8* pixelArray = (Uint8*) cpuStateSurface->pixels;
+int lenOfRow = cpuStateSurface->pitch;
+std::cout << (int)bytesperPixel << std::endl;
+for (int x = 0; x < 100;x++) {
+	for (int y = 0; y < 100; y++) {
+		pixelArray[y * lenOfRow + x * bytesperPixel] = 255; //BRGA blue is +0 -> alpha is +3
+	}
+}
+SDL_UnlockSurface(cpuStateSurface);
+*/
+
+
+//!!! todo maybe upgrade to a hardware text rendering -> sdl_screens are purely cpu rendering 
+void drawText(SDL_Surface* surface, const char* text, TTF_Font* font, SDL_Color& colour, int x, int y) {
+
+	SDL_Surface* textSurface = TTF_RenderText_Solid(font, text, colour); //renders the text
+
+	//specifies the position on the desination surface 
+	SDL_Rect destLocation;
+	destLocation.x = x;
+	destLocation.y = y;
+	destLocation.w = textSurface->w;
+	destLocation.h = textSurface->h;
+
+	//draws the text to the surface 
+	SDL_BlitSurface(textSurface, NULL, surface, &destLocation);
+	SDL_FreeSurface(textSurface);
+}
+
 bool Screen::init() {
 	//Initialize SDL
 	if (SDL_Init(SDL_INIT_VIDEO) < 0){
@@ -46,7 +79,7 @@ bool Screen::init() {
 		return false;
 	}
 
-	//Create renderer for windows
+	//get hardware renderers
 	mainWindowRenderer = SDL_CreateRenderer(main_window, -1, SDL_RENDERER_ACCELERATED);
 	if (mainWindowRenderer == NULL) {
 		std::cout << "ERROR: Renderer could not be created!: " << SDL_GetError() << std::endl;;
@@ -59,7 +92,6 @@ bool Screen::init() {
 	}
 
 	//loadingFonts 
-
 	//Initialize SDL_ttf
 	if (TTF_Init() == -1){
 		std::cout << "ERROR: SDL_ttf could not initialize!: " << TTF_GetError() << std::endl;
@@ -78,15 +110,12 @@ bool Screen::init() {
 
 void Screen::exit() {
 
-	SDL_FreeSurface(mainWindowSurface);
-	SDL_FreeSurface(cpuStateSurface);
-	mainWindowSurface = NULL;
-	cpuStateSurface = NULL;
-
 	SDL_DestroyWindow(main_window);
 	SDL_DestroyWindow(cpuStateWindow);
 	main_window = NULL;
+	mainWindowSurface = NULL;
 	cpuStateWindow = NULL;
+	cpuStateSurface = NULL;
 
 	SDL_DestroyRenderer(mainWindowRenderer);
 	SDL_DestroyRenderer(cpuStateRenderer);
@@ -178,24 +207,24 @@ void  Screen::uiLogic() {
 
 void Screen::renderCpuState(CPU* cpu) {
 
-	//Initialize renderer 
-	SDL_RenderClear(cpuStateRenderer);
-	SDL_SetRenderDrawColor(cpuStateRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
-
-
+	for (int i = 0; i < 100; i++) {
+		drawText(cpuStateSurface, "hello world", cpuStateFont, white, (i*31)%SCREEN_WIDTH, (i * 37) % SCREEN_HEIGHT);
+	}
 
 }
 
 void Screen::mainloop(Uint32& frameStart, CPU* cpu) {
 
+	//main screen
+	SDL_FillRect(mainWindowSurface, NULL, 0); //clears the surface
 	uiLogic();
+	SDL_UpdateWindowSurface(main_window); //update display
 
-	//update display
-	SDL_UpdateWindowSurface(main_window);
-
+	//cpu state window 
 	if (showCPUState) {
+		SDL_FillRect(cpuStateSurface, NULL, 0); //clears the surface
 		renderCpuState(cpu);
-		SDL_UpdateWindowSurface(cpuStateWindow);
+		SDL_UpdateWindowSurface(cpuStateWindow); //update display
 	}
 
 	frameTime = SDL_GetTicks() - frameStart;
