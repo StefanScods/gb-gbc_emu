@@ -159,6 +159,7 @@
     <ClCompile Include="core\memory.cpp" />
     <ClCompile Include="core\register.cpp" />
     <ClCompile Include="core\defines.cpp" />
+    <ClCompile Include="GUI\include\rainbow.h" />
     <ClCompile Include="GUI\screen.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>

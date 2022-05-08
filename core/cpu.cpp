@@ -95,6 +95,21 @@ void CPU::outputState(){
     std::cout << std::dec;
 }
 
+void CPU::populateCpuStateBuffer(word* regs, char* flags){
+
+    regs[0] = reg_AF.read();
+    regs[1] = reg_BC.read();
+    regs[2] = reg_DE.read();
+    regs[3] = reg_HL.read();
+    regs[4] = SP.read();
+    regs[5] = PC.read();
+
+    readBit(*(F), FLAG_Z) ? flags[0] = '1' : flags[0] = '0';
+    readBit(*(F), FLAG_N) ? flags[1] = '1' : flags[1] = '0';
+    readBit(*(F), FLAG_H) ? flags[2] = '1' : flags[2] = '0';
+    readBit(*(F), FLAG_C) ? flags[3] = '1' : flags[3] = '0';
+}
+
 void popHelper(CPU* cpu, reg& dest){
     
     cpu->SP++; //pop the data off the stack
@@ -115,4 +130,15 @@ void pushHelper(CPU* cpu, reg& source){
     cpu->SP--;
     cpu->memory->write(cpu->SP.read(), data & 0xFF);
     cpu->SP--; //push the data onto the stack
+}
+
+void displayHex(word value, char* output) {
+
+    output[3] = toHex[value % 16];
+    value = value >> 4;
+    output[2] = toHex[value % 16];
+    value = value >> 4;
+    output[1] = toHex[value % 16];
+    value = value >> 4;
+    output[0] = toHex[value % 16];
 }

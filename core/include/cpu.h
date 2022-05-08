@@ -17,6 +17,9 @@ void popHelper(CPU* cpu, reg& dest);
 // a generic push function -> loads data saved in the source reg into the bytes  pointed by the stack pointer into -> decs the stack pointer by 2
 void pushHelper(CPU* cpu, reg& source);
 
+//takes a word and generates a four character hex output -> does not perform any error checks to make sure output buffer is valid 
+void displayHex(word value, char* output);
+
 class CPU {
 
     //friends all sets of instuctions so they can have access to the cpus private data 
@@ -88,6 +91,9 @@ public:
 
     //debug function -> prints the contents of the cpu
     void outputState();
+
+    //fills the buffers with the current state of the cpu -> input buffer must be atleast 6 words / 4 chars wide
+    void populateCpuStateBuffer(word* regs, char* flags);
 
 };
 

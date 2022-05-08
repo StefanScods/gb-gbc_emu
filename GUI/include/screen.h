@@ -13,6 +13,9 @@ date: 2022-01-06
 
 #include "..\..\core\include\cpu.h"
 #include "..\..\core\include\defines.h"
+#include "rainbow.h"
+
+
 
 class Screen {
 
@@ -43,6 +46,15 @@ private:
 	SDL_Renderer* cpuStateRenderer;
 	int cpuStateWindowID;
 
+	//cpustate vars to help with rendering 
+	unsigned int cpuStateScreenWidth; //determined by font size to best fit the cpu state info 
+	unsigned int cpuStateScreenLineHeight;
+	unsigned int regValueSpacing;
+	word regValues[6];
+	char flagValues[4];
+	char bufferToRender[7];
+
+
 	//keycodes
 	SDL_Keycode showCPUStateScreenKey = SDLK_F11;
 
@@ -53,11 +65,10 @@ private:
 	Uint32 frameTime;
 
 	//fonts
-	TTF_Font* cpuStateFont = NULL;
+	TTF_Font* cpuStateFontTitle = NULL;
+	TTF_Font* cpuStateFontMain = NULL;
 
-	//colours 
-	SDL_Color white = { 255, 255, 255 };
-	SDL_Color black = { 0, 0, 0 };
+	Rainbow colour;
 
 public:
 
@@ -86,8 +97,7 @@ public:
 	void eventHandler();
 };
 
-//helper function to draw text onto a surface
-void drawText(SDL_Surface* surface, const char* text, TTF_Font* font, SDL_Color& colour, int x, int y);
-
+//helper function to draw text onto a surface -> returns the width of the rendered text 
+ unsigned int drawText(SDL_Surface* surface, const char* text, TTF_Font* font, SDL_Color& colour, int x, int y);
 
 #endif

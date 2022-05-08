@@ -14,8 +14,8 @@ namespace debug {
 	void loudScream();
 }
 
-
-//data types 
+ 
+//data types
 typedef int8_t signedByte;
 typedef uint8_t byte;
 typedef uint16_t word;
@@ -46,6 +46,12 @@ typedef uint16_t cycles;
 //Screen dimension constants
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
+
+const int CPUSTATE_WIDTH_OFFSET = 75;
+
+const int FONT_SIZE = 24;
+
+const char toHex[16] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F' };
 
 //fps defines 
 #define TARGET_FPS 60
@@ -1107,8 +1113,6 @@ const int SCREEN_HEIGHT = 480;
 #define BIT 8
 #define RES 16
 #define SET 24
-
-
 
 
 #endif

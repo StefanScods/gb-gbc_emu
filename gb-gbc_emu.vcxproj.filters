@@ -51,6 +51,9 @@
     <ClCompile Include="core\defines.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GUI\include\rainbow.h">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core\instuctions\include\misc_control.h">
