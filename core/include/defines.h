@@ -22,12 +22,17 @@ typedef uint16_t word;
 
 typedef byte* reg8; //used to address the top and bottom halves of the cpu regs 
 
-typedef uint16_t cycles;
+typedef uint32_t cycles;
 
 //button logic 
 #define NOT_PRESSED 0
 #define FIRST_PRESSED 1
 #define HOLD 2
+
+//emulator debug state 
+#define CONTINUE 0 //only stop for break points 
+#define TIMER 1 //fetch and execute every x ms 
+#define STEP 2 //only fetch and execute at keypress 
 
 //flags 
 #define FLAG_Z 7
@@ -56,6 +61,10 @@ const char toHex[16] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D'
 //fps defines 
 #define TARGET_FPS 60
 #define FRAME_DELAY 1000/TARGET_FPS
+
+//clockspeeds
+#define CLOCKSPEED 4194304 //Hz
+#define CLOCKSPEED_CGBMODE 8400000 //Hz
 
 //op codes
 #define NOP 0x00

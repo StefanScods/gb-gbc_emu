@@ -57,6 +57,7 @@ private:
 
 	//keycodes
 	SDL_Keycode showCPUStateScreenKey = SDLK_F11;
+	SDL_Keycode stepCPUKey = SDLK_F1;
 
 	//button logic vars 
 	int showCPUStateButton = 0;
@@ -74,7 +75,10 @@ public:
 
 	//controls main loop
 	bool running = false;
+	bool cpuStepButtonHeld = false;
 	bool showCPUState = false;
+
+	uint16_t cpuStepButtonCounter = 0;
 
 	//constuctor -> calls init
 	//Screen();

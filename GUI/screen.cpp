@@ -194,6 +194,9 @@ void Screen::eventHandler() {
 			if (event.key.keysym.sym == showCPUStateScreenKey && showCPUStateButton <= FIRST_PRESSED) {
 				showCPUStateButton += 1;
 			}
+			else if (event.key.keysym.sym == stepCPUKey) {
+				cpuStepButtonHeld = true;
+			}
 
 			break;
 
@@ -203,6 +206,10 @@ void Screen::eventHandler() {
 				showCPUStateButton = NOT_PRESSED;
 			}
 
+			else if (event.key.keysym.sym == stepCPUKey) {
+				cpuStepButtonHeld = false;
+				cpuStepButtonCounter = 0;
+			}
 			break;
 
 		case (SDL_MOUSEMOTION):
@@ -276,7 +283,7 @@ void Screen::renderCpuState(CPU* cpu) {
 	drawText(cpuStateSurface, bufferToRender, cpuStateFontMain, colour.black, regValueSpacing, verticalOffset);
 	verticalOffset += cpuStateScreenLineHeight;
 
-	drawText(cpuStateSurface, "HL:", cpuStateFontMain, colour.black, 5, verticalOffset);
+	drawText(cpuStateSurface, "PC:", cpuStateFontMain, colour.black, 5, verticalOffset);
 	displayHex(regValues[5], bufferToRender + 2);
 	drawText(cpuStateSurface, bufferToRender, cpuStateFontMain, colour.black, regValueSpacing, verticalOffset);
 	verticalOffset += cpuStateScreenLineHeight*2;

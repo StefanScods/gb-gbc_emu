@@ -20,6 +20,12 @@ private:
     Screen screen;
     CPU cpu;
     Memory memory;
+    uint64_t frameCounter;
+    uint8_t stepSpeedFactor; 
+
+    int debugState = CONTINUE;
+
+    cycles cyclesPerFrame;
 
     bool loadSuccess = false;
 
@@ -29,6 +35,10 @@ private:
 public:
 
     Core(int mode);
+    //runs the application 
+    void run();
+    //updates the target number of cycles per frame 
+    void updateCyclesPerFrame();
     ~Core();
 
 };

@@ -8,23 +8,31 @@
 #include "..\GUI\include\screen.h"
 
 
-
 Core::Core(int mode) {
 
+    debugState = mode;
     cpu.init();
     memory.init();
     cpu.bindMemory(&memory);
+    updateCyclesPerFrame();
+
+    if (mode != CONTINUE) {
+        cpu.toggleVerbose();
+    }
 
     memory.write(0x100, INC_B);
     memory.write(0x101, DEC_B);
 
-    cpu.fetchAndExecute();
-    cpu.fetchAndExecute();
-    cpu.outputState();
-
-
     loadSuccess = screen.init();
+}
 
+void Core::updateCyclesPerFrame() {
+    cyclesPerFrame = cpu.getClockSpeed() / TARGET_FPS;
+}
+
+void Core::run() {
+    
+    cycles cycleCounter = 0;
 
     //application stuffs 
     while (loadSuccess && screen.running) {
@@ -33,9 +41,38 @@ Core::Core(int mode) {
 
         //all input event handler: keyboard, window and mouse 
         screen.eventHandler();
+
+
+        //run cpu 
+        cycleCounter = 0; 
+        switch (debugState) {
+
+        case(CONTINUE): //!!!  cycleCounter could be > cyclesPerFrame during last instuction 
+            while (debugState == CONTINUE && cycleCounter < cyclesPerFrame) {
+                cycleCounter += cpu.fetchAndExecute();
+            }
+            break;
+
+        case(STEP):
+            if (screen.cpuStepButtonHeld) {
+                if (screen.cpuStepButtonCounter % stepSpeedFactor == 0) {
+                    cycleCounter += cpu.fetchAndExecute();
+                    if (stepSpeedFactor>1) stepSpeedFactor--;
+                }
+                screen.cpuStepButtonCounter++;
+            }
+            else {
+                stepSpeedFactor = 30;
+            }
+            break;
+
+        default:
+            break;
+        }
+
+        
         screen.mainloop(frameStart, &cpu);
     }
-
 }
 
 Core::~Core() {

@@ -22,7 +22,7 @@ cycles CPU::fetchAndExecute(){
     Instruction nextInsruction = instructionSet.set[nextOpcode];
     PC++;
 
-    std::cout << nextInsruction.opcode << std::endl;
+    if(verbose) std::cout << nextInsruction.opcode << std::endl;
     
     //if the instuction has immediate data that also needs to be read from memory
     if(nextInsruction.length>=2){
@@ -56,7 +56,7 @@ int CPU::executeCycles(cycles numCycles){
 
         PC++;
 
-        std::cout << nextInsruction.opcode << std::endl;
+        if (verbose) std::cout << nextInsruction.opcode << std::endl;
      
         //if the instuction has immediate data that also needs to be read from memory
         if(nextInsruction.length>=2){
@@ -93,6 +93,10 @@ void CPU::outputState(){
     std::cout << "========================" << std::endl;
 
     std::cout << std::dec;
+}
+
+cycles CPU::getClockSpeed() {
+    return clockSpeed;
 }
 
 void CPU::populateCpuStateBuffer(word* regs, char* flags){

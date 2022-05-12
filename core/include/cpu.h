@@ -33,6 +33,8 @@ class CPU {
 
 private:
 
+    bool verbose = false;
+
     //main regs 
     reg reg_AF;
     reg reg_BC;
@@ -68,10 +70,16 @@ private:
     //Interrupt Master Enable Flag
     bool ime; 
 
+    //the clock speed of the cpu -> 4194304Hz or 8400000Hz in CGB mode 
+    cycles clockSpeed = (cycles) CLOCKSPEED;
+
 public:
 
     //run init rountine for the cpu -> rn its just hardcoded garbage -> !!! make it gbc accuate 
     void init();
+    
+    //toggles certain print statments in the cpu code 
+    void toggleVerbose() {verbose = !verbose;}
 
     //increments the pc by one 
     void inc_pc() {PC++;}
@@ -88,6 +96,9 @@ public:
 
     return: the number of cycles executed*/
     cycles fetchAndExecute();
+
+    //returns the clock speed of the cpu
+    cycles getClockSpeed();
 
     //debug function -> prints the contents of the cpu
     void outputState();
