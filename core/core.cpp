@@ -11,9 +11,10 @@
 Core::Core(int mode) {
 
     debugState = mode;
-    cpu.init();
     memory.init();
     cpu.bindMemory(&memory);
+    cpu.init();
+
     updateCyclesPerFrame();
 
     if (mode != CONTINUE) {
@@ -21,7 +22,7 @@ Core::Core(int mode) {
     }
 
     memory.write(0x100, INC_B);
-    memory.write(0x101, DEC_B);
+    //memory.write(0x101, DEC_B);
 
     loadSuccess = screen.init();
 }

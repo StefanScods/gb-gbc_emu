@@ -75,7 +75,7 @@ private:
 
 public:
 
-    //run init rountine for the cpu -> rn its just hardcoded garbage -> !!! make it gbc accuate 
+    //run init rountine for the cpu 
     void init();
     
     //toggles certain print statments in the cpu code 

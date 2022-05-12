@@ -7,7 +7,7 @@
 
 int main(int argc, char** argv){
 
-    Core core(STEP);
+    Core core(CONTINUE);
     core.run();
 
     return 0; 
