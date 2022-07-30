@@ -10,8 +10,8 @@
 *.userosscache
 *.sln.docstates
 
-dependencies
-testroms 
+dependencies/
+testroms/ 
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
