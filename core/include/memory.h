@@ -12,7 +12,24 @@ date: 2021-11-13
 class Memory{
 private:
 
-    byte* data = nullptr;
+    //memory map memory chunks 
+    byte* romBank0 = nullptr;
+    byte* romBankn = nullptr;
+
+    byte* vRAM = nullptr;
+
+    byte* externalRAM = nullptr;
+
+    byte* wRAM0 = nullptr;
+    byte* wRAM1 = nullptr;
+
+    byte* spriteAttributeTable = nullptr;
+
+    byte* ioPorts = nullptr;
+
+    byte* hRAM = nullptr;
+
+    byte interruptEnableRegister;
 
 
 

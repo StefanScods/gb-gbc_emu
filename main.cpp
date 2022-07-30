@@ -1,15 +1,9 @@
-#include <iostream>
-#include <cstdint>
-#include "core\include\core.h"
+#include <wx/wxprec.h>
+#include "core\include\defines.h"
+#include "GUI\include\app.h"
 
-
-#include "GUI\include\screen.h"
-
-int main(int argc, char** argv){
-
-    Core core(CONTINUE);
-    core.run();
-
-    return 0; 
-}
-
+#ifdef _DEBUG
+    wxIMPLEMENT_APP_CONSOLE(App);
+#else
+    wxIMPLEMENT_APP(App);
+#endif

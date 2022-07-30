@@ -7,14 +7,21 @@ date: 2021-11-12
 */
 #include <cstdint>
 #include <iostream>
+#include <wx/wxprec.h>
 
 //!!!debug functions
 namespace debug {
 	void scream();
 	void loudScream();
+	void spinSleep(long long nanosecondsToSleep);
 }
 
- 
+const char APP_TITLE[] = "RedPandaEmu";
+#define MAIN_WINDOW_WIDTH 600
+#define MAIN_WINDOW_HEIGHT 480
+
+#define MAIN_TIMER_ID 1
+
 //data types
 typedef int8_t signedByte;
 typedef uint8_t byte;
@@ -34,7 +41,7 @@ typedef uint32_t cycles;
 #define TIMER 1 //fetch and execute every x ms 
 #define STEP 2 //only fetch and execute at keypress 
 
-//flags 
+//cpu flags 
 #define FLAG_Z 7
 #define FLAG_N 6
 #define FLAG_H 5
@@ -44,27 +51,124 @@ typedef uint32_t cycles;
 //gbc has a 16bit address bus -> 65,536 positions of memory
 #define MEM_SIZE 65536
 
+//Memory Map
+#define ROMBANK0_START 0x0000
+#define ROMBANK0_END 0x3FFF
+
+#define ROMBANKN_START 0x4000
+#define ROMBANKN_END 0x7FFF
+
+#define VRAM_START 0x8000
+#define VRAM_END 0x9FFF
+
+#define EXTERNALRAM_START 0xA000
+#define EXTERNALRAM_END 0xBFFF
+
+#define WRAMBANK0_START 0xC000
+#define WRAMBANK0_END 0xCFFF
+
+#define WRAMBANK1_START 0xD000
+#define WRAMBANK1_END 0xDFFF
+
+#define ECHO_START 0xE000
+#define ECHO_END 0xFDFF   
+
+#define OAM_START 0xFE00
+#define OAM_END 0xFE9F
+
+#define NOTUSABLE_START 0xFEA0
+#define NOTUSABLE_END 0xFEFF
+
+#define IOPORTS_START 0xFF00
+#define IOPORTS_END 0xFF7F
+
+#define HRAM_START 0xFF80
+#define HRAM_END 0xFFFE
+
+#define INTERUPT_ENABLE_REGISTER_ADDR 0xFFFF
+
 //the number of instuctions in the instuction set
 #define NUM_INSTRUCTIONS 256
 
-
-//Screen dimension constants
-const int SCREEN_WIDTH = 640;
-const int SCREEN_HEIGHT = 480;
-
 const int CPUSTATE_WIDTH_OFFSET = 75;
+const int CPUSTATE_MARGIN = 5;
+const int CARTRIDGEDETAILS_WIDTH_OFFSET = 75;
+const int CARTRIDGEDETAILS_MARGIN = 5;
 
-const int FONT_SIZE = 24;
+const int TITLE_FONT_SIZE = 18;
+const int MAIN_FONT_SIZE = 16;
 
 const char toHex[16] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F' };
 
 //fps defines 
+#define NANOSECOND_FACTOR 1e9
 #define TARGET_FPS 60
-#define FRAME_DELAY 1000/TARGET_FPS
+#define FRAME_DELAY NANOSECOND_FACTOR/TARGET_FPS
 
 //clockspeeds
 #define CLOCKSPEED 4194304 //Hz
 #define CLOCKSPEED_CGBMODE 8400000 //Hz
+
+//Cartridge Defines
+
+//header positions 
+#define CARTRIDGE_HEADER_SIZE 335
+
+#define TITLE_START 0x134
+#define TITLE_END  0x143
+
+#define MANUFACTURERCODE_START 0x13F
+#define MANUFACTURERCODE_END  0x142
+
+#define CGB_FLAG_ADDR 0x0143
+
+#define NEWLICENSECODE_START 0x0144 
+#define NEWLICENSECODE_END 0x0145
+
+#define SGB_FLAG_ADDR 0x0146 
+
+#define CARTRIDGE_TYPE_ADDR 0x147
+
+#define ROM_SiZE_ADDR 0x148
+
+#define RAM_SiZE_ADDR 0x149
+
+#define DESTINATION_CODE_ADDR 0x14A
+
+#define OLD_LICENSE_CODE_ADDR 0x14B
+
+#define ROM_VERSION_NUMBER_ADDR 0x14C
+
+//memory controller types 
+#define ROM_ONLY 0x00     
+#define MBC1 0x01
+#define MBC1_RAM 0x02
+#define MBC1_RAM_BATTERY 0x03   
+#define MBC2 0x05
+#define MBC2_BATTERY 0x06
+#define ROM_RAM 0x08
+#define ROM_RAM_BATTERY 0x09 
+#define MMM01 0x0B
+#define MMM01_RAM 0x0C
+#define MMM01_RAM_BATTERY 0x0D
+#define MBC3_TIMER_BATTERY 0x0F
+#define MBC3_TIMER_RAM_BATTERY 0x10
+#define MBC3 0x11
+#define MBC3_RAM 0x12
+#define MBC3_RAM_BATTERY 0x13
+#define MBC4 0x15
+#define MBC4_RAM 0x16
+#define MBC4_RAM_BATTERY 0x17
+#define MBC5 0x19
+#define MBC5_RAM 0x1A
+#define MBC5_RAM_BATTERY 0x1B
+#define MBC5_RUMBLE 0x1C
+#define MBC5_RUMBLE_RAM 0x1D
+#define MBC5_RUMBLE_RAM_BATTERY 0x1E
+#define POCKET_CAMERA 0xFC
+#define BANDAI_TAMA5 0xFD
+#define HuC3 0xFE 
+#define HuC1_RAM_BATTERY 0xFF
 
 //op codes
 #define NOP 0x00

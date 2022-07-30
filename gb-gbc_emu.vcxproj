@@ -78,13 +78,12 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDIR)dependencies\SDL2\include;$(SolutionDIR)dependencies\SDL2_TTF\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDIR)dependencies\SDL2_TTF\lib\x64;$(SolutionDIR)dependencies\SDL2\lib\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDIR)dependencies\wxWidgets\include\msvc;$(SolutionDIR)dependencies\wxWidgets\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(SolutionDIR)dependencies\SDL2\include;$(SolutionDIR)dependencies\SDL2_TTF\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDIR)dependencies\SDL2_TTF\lib\x64;$(SolutionDIR)dependencies\SDL2\lib\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDIR)dependencies\wxWidgets\include\msvc;$(SolutionDIR)dependencies\wxWidgets\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -122,14 +121,19 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions> _DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WXUSINGDLL;wxMSVC_VERSION_AUTO;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll\mswud;$(SolutionDir)dependencies\wxWidgets\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>sdl2.lib;sdl2main.lib;Shell32.lib;SDL2_ttf.lib</AdditionalDependencies>
+      <AdditionalDependencies>Shell32.lib;wxbase32ud.lib;wxmsw32ud_core.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -137,18 +141,24 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions> NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WXUSINGDLL;wxMSVC_VERSION_AUTO;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll\mswu;$(SolutionDir)dependencies\wxWidgets\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>sdl2.lib;sdl2main.lib;Shell32.lib;SDL2_ttf.lib</AdditionalDependencies>
+      <AdditionalDependencies>Shell32.lib;wxbase32u.lib;wxmsw32u_core.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="core\cartridge.cpp" />
     <ClCompile Include="core\core.cpp" />
     <ClCompile Include="core\cpu.cpp" />
     <ClCompile Include="core\instuctions\arithmetic.cpp" />
@@ -159,11 +169,11 @@
     <ClCompile Include="core\memory.cpp" />
     <ClCompile Include="core\register.cpp" />
     <ClCompile Include="core\defines.cpp" />
-    <ClCompile Include="GUI\include\rainbow.h" />
-    <ClCompile Include="GUI\screen.cpp" />
+    <ClCompile Include="GUI\app.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="core\include\cartridge.h" />
     <ClInclude Include="core\include\core.h" />
     <ClInclude Include="core\include\cpu.h" />
     <ClInclude Include="core\include\defines.h" />
@@ -175,10 +185,6 @@
     <ClInclude Include="core\instuctions\include\jump_call.h" />
     <ClInclude Include="core\instuctions\include\load_store.h" />
     <ClInclude Include="core\instuctions\include\misc_control.h" />
-    <ClInclude Include="dependencies\GLEW\include\GL\eglew.h" />
-    <ClInclude Include="dependencies\GLEW\include\GL\glew.h" />
-    <ClInclude Include="dependencies\GLEW\include\GL\glxew.h" />
-    <ClInclude Include="dependencies\GLEW\include\GL\wglew.h" />
     <ClInclude Include="dependencies\SDL2\include\begin_code.h" />
     <ClInclude Include="dependencies\SDL2\include\close_code.h" />
     <ClInclude Include="dependencies\SDL2\include\SDL.h" />
@@ -266,19 +272,10 @@
     <ClInclude Include="dependencies\SDL2\include\SDL_version.h" />
     <ClInclude Include="dependencies\SDL2\include\SDL_video.h" />
     <ClInclude Include="dependencies\SDL2\include\SDL_vulkan.h" />
-    <ClInclude Include="GUI\include\screen.h" />
+    <ClInclude Include="dependencies\SDL2_TTF\include\SDL_ttf.h" />
+    <ClInclude Include="GUI\include\app.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="dependencies\GLEW\doc\advanced.html" />
-    <None Include="dependencies\GLEW\doc\basic.html" />
-    <None Include="dependencies\GLEW\doc\build.html" />
-    <None Include="dependencies\GLEW\doc\credits.html" />
-    <None Include="dependencies\GLEW\doc\glew.html" />
-    <None Include="dependencies\GLEW\doc\glxew.html" />
-    <None Include="dependencies\GLEW\doc\index.html" />
-    <None Include="dependencies\GLEW\doc\install.html" />
-    <None Include="dependencies\GLEW\doc\log.html" />
-    <None Include="dependencies\GLEW\doc\wglew.html" />
     <None Include="SDL2.dll" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

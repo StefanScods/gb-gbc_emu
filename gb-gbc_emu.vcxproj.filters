@@ -42,16 +42,16 @@
     <ClCompile Include="core\instuctions\arithmetic.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GUI\screen.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="core\core.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="core\defines.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GUI\include\rainbow.h">
+    <ClCompile Include="core\cartridge.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GUI\app.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -347,36 +347,20 @@
     <ClInclude Include="dependencies\SDL2\include\SDL_vulkan.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dependencies\GLEW\include\GL\eglew.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dependencies\GLEW\include\GL\glew.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dependencies\GLEW\include\GL\glxew.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dependencies\GLEW\include\GL\wglew.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GUI\include\screen.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="core\include\core.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="core\include\cartridge.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\SDL2_TTF\include\SDL_ttf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GUI\include\app.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="dependencies\GLEW\doc\advanced.html" />
-    <None Include="dependencies\GLEW\doc\basic.html" />
-    <None Include="dependencies\GLEW\doc\build.html" />
-    <None Include="dependencies\GLEW\doc\credits.html" />
-    <None Include="dependencies\GLEW\doc\glew.html" />
-    <None Include="dependencies\GLEW\doc\glxew.html" />
-    <None Include="dependencies\GLEW\doc\index.html" />
-    <None Include="dependencies\GLEW\doc\install.html" />
-    <None Include="dependencies\GLEW\doc\log.html" />
-    <None Include="dependencies\GLEW\doc\wglew.html" />
     <None Include="SDL2.dll" />
   </ItemGroup>
 </Project>

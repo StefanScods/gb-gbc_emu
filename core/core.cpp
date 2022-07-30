@@ -2,10 +2,12 @@
 #include "include\cpu.h"
 #include "include\memory.h"
 #include "include\register.h"
+#include "include\cartridge.h"
 
 #include <iostream>
+#include <wx/wxprec.h>
 
-#include "..\GUI\include\screen.h"
+
 
 
 Core::Core(int mode) {
@@ -14,6 +16,9 @@ Core::Core(int mode) {
     memory.init();
     cpu.bindMemory(&memory);
     cpu.init();
+    if (!cartridge.open("C:/C++/gb-gbc_emu/testroms/LegendOfZelda_OracleOfSeasons.gbc")) {
+        exit(1);
+    }
 
     updateCyclesPerFrame();
 
@@ -23,62 +28,41 @@ Core::Core(int mode) {
 
     memory.write(0x100, INC_B);
     //memory.write(0x101, DEC_B);
-
-    loadSuccess = screen.init();
 }
 
 void Core::updateCyclesPerFrame() {
     cyclesPerFrame = cpu.getClockSpeed() / TARGET_FPS;
 }
 
-void Core::run() {
+
+void Core::runForFrame() {
+    frameStartTimer = std::chrono::steady_clock::now();
     
     cycles cycleCounter = 0;
 
-    //application stuffs 
-    while (loadSuccess && screen.running) {
-        //start the frame counter 
-        frameStart = SDL_GetTicks();
-
-        //all input event handler: keyboard, window and mouse 
-        screen.eventHandler();
-
-
-        //run cpu 
-        cycleCounter = 0; 
-        switch (debugState) {
-
-        case(CONTINUE): //!!!  cycleCounter could be > cyclesPerFrame during last instuction 
-            while (debugState == CONTINUE && cycleCounter < cyclesPerFrame) {
-                cycleCounter += cpu.fetchAndExecute();
-            }
-            break;
-
-        case(STEP):
-            if (screen.cpuStepButtonHeld) {
-                if (screen.cpuStepButtonCounter % stepSpeedFactor == 0) {
-                    cycleCounter += cpu.fetchAndExecute();
-                    if (stepSpeedFactor>1) stepSpeedFactor--;
-                }
-                screen.cpuStepButtonCounter++;
-            }
-            else {
-                stepSpeedFactor = 30;
-            }
-            break;
-
-        default:
-            break;
-        }
-
-        
-        screen.mainloop(frameStart, &cpu);
+    //!!!  cycleCounter could be > cyclesPerFrame during last instuction 
+    //cpu computation
+    while (debugState == CONTINUE && cycleCounter < cyclesPerFrame) {
+        cycleCounter += cpu.fetchAndExecute();
     }
+ 
+    //fps cap
+    long long sleepTime = targetFrameTime;
+    frameEndTimer = std::chrono::steady_clock::now();
+    frameTime = std::chrono::duration_cast<std::chrono::nanoseconds> (frameEndTimer - frameStartTimer).count();
+    sleepTime = sleepTime - frameTime;
+    if (sleepTime > 0) {
+        //sleep if we are faster than the target fps
+        debug::spinSleep(sleepTime);
+    }
+
+    //update the frame time for the frontend counter
+    frameEndTimer = std::chrono::steady_clock::now();
+    outputFrameTime = std::chrono::duration_cast<std::chrono::nanoseconds> (frameEndTimer - frameStartTimer).count();
 }
 
 Core::~Core() {
-
-    if(loadSuccess) screen.exit();
+    cartridge.close();
     memory.destroy();
 }
 

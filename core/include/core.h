@@ -6,37 +6,46 @@ the main emulator application core
 date: 2022-05-01
 */
 
+#include <wx/wxprec.h>
 #include "cpu.h"
 #include "memory.h"
 #include "register.h"
 #include "defines.h"
-
-#include "..\..\GUI\include\screen.h"
-
+#include "cartridge.h"
+#include "../../GUI/include/app.h"
+#include <chrono>
 
 class Core {
 private:
 
-    Screen screen;
     CPU cpu;
     Memory memory;
-    uint64_t frameCounter;
-    uint8_t stepSpeedFactor; 
+    Cartridge cartridge;
 
     int debugState = CONTINUE;
 
     cycles cyclesPerFrame;
+    long long targetFrameTime = FRAME_DELAY;
 
-    bool loadSuccess = false;
+    bool loadedROM = false;
 
-    //fps vars
-    Uint32 frameStart;
+
+    //fps vars 
+    long long frameTime;
+    std::chrono::steady_clock::time_point frameStartTimer;
+    std::chrono::steady_clock::time_point frameEndTimer;
+
+
 
 public:
 
+    //frontend access vars
+    long long outputFrameTime;
+
+
     Core(int mode);
-    //runs the application 
-    void run();
+    //runs the emulator core for one frame
+    void runForFrame();
     //updates the target number of cycles per frame 
     void updateCyclesPerFrame();
     ~Core();
