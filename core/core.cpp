@@ -7,16 +7,13 @@
 #include <iostream>
 #include <wx/wxprec.h>
 
-
-
-
 Core::Core(int mode) {
 
     debugState = mode;
     memory.init();
     cpu.bindMemory(&memory);
     cpu.init();
-    if (!cartridge.open("C:/C++/gb-gbc_emu/testroms/LegendOfZelda_OracleOfSeasons.gbc")) {
+    if (!cartridge.open("C:/C++/gb-gbc_emu/testroms/tetris.gb")) {
         exit(1);
     }
 

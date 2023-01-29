@@ -1,15 +1,14 @@
 #ifndef DEFINES_H
 #define DEFINES_H
-/*
-a header file for defines/enums accross multiple core files 
-
-date: 2021-11-12 
-*/
+/**
+ * A header file for defines/enums across the entire emulator code base.
+ *
+ */
 #include <cstdint>
 #include <iostream>
 #include <wx/wxprec.h>
 
-//!!!debug functions
+// Debug functions.
 namespace debug {
 	void scream();
 	void loudScream();
@@ -19,10 +18,15 @@ namespace debug {
 const char APP_TITLE[] = "RedPandaEmu";
 #define MAIN_WINDOW_WIDTH 600
 #define MAIN_WINDOW_HEIGHT 480
+#define MAIN_WINDOW_DISPLAY_PIXEL_DEPTH 24
+
+const char CPU_STATE_DISPLAY_TITLE[] = "Cpu State";
+#define CPU_STATE_DISPLAY_WIDTH 300
+#define CPU_STATE_DISPLAY_HEIGHT 480
 
 #define MAIN_TIMER_ID 1
 
-//data types
+// Data types.
 typedef int8_t signedByte;
 typedef uint8_t byte;
 typedef uint16_t word;
@@ -31,27 +35,27 @@ typedef byte* reg8; //used to address the top and bottom halves of the cpu regs
 
 typedef uint32_t cycles;
 
-//button logic 
+// Button logic.
 #define NOT_PRESSED 0
 #define FIRST_PRESSED 1
 #define HOLD 2
 
-//emulator debug state 
+// Emulator debug state 
 #define CONTINUE 0 //only stop for break points 
 #define TIMER 1 //fetch and execute every x ms 
 #define STEP 2 //only fetch and execute at keypress 
 
-//cpu flags 
+// CPU flags.
 #define FLAG_Z 7
 #define FLAG_N 6
 #define FLAG_H 5
 #define FLAG_C 4
 
-//size of the memory address space 
-//gbc has a 16bit address bus -> 65,536 positions of memory
+// Size of the memory address space.
+// GBC has a 16bit address bus -> 65,536 positions of memory
 #define MEM_SIZE 65536
 
-//Memory Map
+// Memory Map.
 #define ROMBANK0_START 0x0000
 #define ROMBANK0_END 0x3FFF
 
@@ -87,7 +91,7 @@ typedef uint32_t cycles;
 
 #define INTERUPT_ENABLE_REGISTER_ADDR 0xFFFF
 
-//the number of instuctions in the instuction set
+// The number of instuctions in the instuction set.
 #define NUM_INSTRUCTIONS 256
 
 const int CPUSTATE_WIDTH_OFFSET = 75;
@@ -100,18 +104,18 @@ const int MAIN_FONT_SIZE = 16;
 
 const char toHex[16] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F' };
 
-//fps defines 
-#define NANOSECOND_FACTOR 1e9
+// FPS defines.
+#define MILLISECOND_FACTOR 1e3
 #define TARGET_FPS 60
-#define FRAME_DELAY NANOSECOND_FACTOR/TARGET_FPS
+#define FRAME_DELAY MILLISECOND_FACTOR/TARGET_FPS
 
-//clockspeeds
+// Clockspeeds.
 #define CLOCKSPEED 4194304 //Hz
 #define CLOCKSPEED_CGBMODE 8400000 //Hz
 
-//Cartridge Defines
+// Cartridge Defines.
 
-//header positions 
+// Header positions.
 #define CARTRIDGE_HEADER_SIZE 335
 
 #define TITLE_START 0x134
@@ -139,7 +143,7 @@ const char toHex[16] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D'
 
 #define ROM_VERSION_NUMBER_ADDR 0x14C
 
-//memory controller types 
+// Memory controller types.
 #define ROM_ONLY 0x00     
 #define MBC1 0x01
 #define MBC1_RAM 0x02
@@ -170,7 +174,7 @@ const char toHex[16] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D'
 #define HuC3 0xFE 
 #define HuC1_RAM_BATTERY 0xFF
 
-//op codes
+// OP Codes.
 #define NOP 0x00
 #define NOP_CYCLES 4
 #define NOP_LENGTH 1

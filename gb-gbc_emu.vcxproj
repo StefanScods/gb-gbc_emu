@@ -78,12 +78,13 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDIR)dependencies\wxWidgets\include\msvc;$(SolutionDIR)dependencies\wxWidgets\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDIR)dependencies\sdl\SDL2\include;$(SolutionDIR)dependencies\wxWidgets\include\msvc;$(SolutionDIR)dependencies\wxWidgets\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDIR)dependencies\sdl\SDL2\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(SolutionDIR)dependencies\wxWidgets\include\msvc;$(SolutionDIR)dependencies\wxWidgets\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDIR)dependencies\sdl\SDL2\include;$(SolutionDIR)dependencies\wxWidgets\include\msvc;$(SolutionDIR)dependencies\wxWidgets\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDIR)dependencies\sdl\SDL2\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -123,13 +124,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WXUSINGDLL;wxMSVC_VERSION_AUTO;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll\mswud;$(SolutionDir)dependencies\wxWidgets\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll\mswud;$(SolutionDir)dependencies\sdl\SDL2\lib\x64;$(SolutionDir)dependencies\wxWidgets\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Shell32.lib;wxbase32ud.lib;wxmsw32ud_core.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Shell32.lib;wxbase32ud.lib;wxmsw32ud_core.lib;SDL2.lib;SDL2main.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll;$(SolutionDir)dependencies\sdl\SDL2\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -143,15 +144,16 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WXUSINGDLL;wxMSVC_VERSION_AUTO;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll\mswu;$(SolutionDir)dependencies\wxWidgets\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll\mswu;$(SolutionDir)dependencies\wxWidgets\include;$(SolutionDir)dependencies\sdl\SDL2\lib\x64;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Shell32.lib;wxbase32u.lib;wxmsw32u_core.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;Shell32.lib;wxbase32u.lib;wxmsw32u_core.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)dependencies\sdl\SDL2\lib\x64;$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -170,6 +172,8 @@
     <ClCompile Include="core\register.cpp" />
     <ClCompile Include="core\defines.cpp" />
     <ClCompile Include="GUI\app.cpp" />
+    <ClCompile Include="GUI\emulationThread.cpp" />
+    <ClCompile Include="GUI\mainWindowFrame.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -274,6 +278,10 @@
     <ClInclude Include="dependencies\SDL2\include\SDL_vulkan.h" />
     <ClInclude Include="dependencies\SDL2_TTF\include\SDL_ttf.h" />
     <ClInclude Include="GUI\include\app.h" />
+    <ClInclude Include="GUI\include\cpuStateDisplay.h" />
+    <ClInclude Include="GUI\include\emuEvents.h" />
+    <ClInclude Include="GUI\include\emulationThread.h" />
+    <ClInclude Include="GUI\include\mainWindowFrame.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SDL2.dll" />

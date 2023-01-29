@@ -1,10 +1,8 @@
+/*
+The header declaration for the main emulator core.
+*/
 #ifndef CORE_H
 #define CORE_H
-/*
-the main emulator application core 
-
-date: 2022-05-01
-*/
 
 #include <wx/wxprec.h>
 #include "cpu.h"
@@ -15,9 +13,9 @@ date: 2022-05-01
 #include "../../GUI/include/app.h"
 #include <chrono>
 
-class Core {
+class Core
+{
 private:
-
     CPU cpu;
     Memory memory;
     Cartridge cartridge;
@@ -27,31 +25,25 @@ private:
     cycles cyclesPerFrame;
     long long targetFrameTime = FRAME_DELAY;
 
+    // A flag indicating a ROM is loaded.
     bool loadedROM = false;
 
-
-    //fps vars 
+    // Vars used in FPS logic.
+    
     long long frameTime;
     std::chrono::steady_clock::time_point frameStartTimer;
     std::chrono::steady_clock::time_point frameEndTimer;
 
-
-
 public:
-
-    //frontend access vars
+    // Frontend access vars.
     long long outputFrameTime;
 
-
     Core(int mode);
-    //runs the emulator core for one frame
+    // Runs the emulator core for one frame.
     void runForFrame();
-    //updates the target number of cycles per frame 
+    // Updates the target number of cycles per frame.
     void updateCyclesPerFrame();
     ~Core();
-
 };
-
-
 
 #endif
