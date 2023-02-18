@@ -1,3 +1,6 @@
+/*
+The header implementation for the main emulator core.
+*/
 #include "include\core.h"
 #include "include\cpu.h"
 #include "include\memory.h"
@@ -23,43 +26,35 @@ Core::Core(int mode) {
         cpu.toggleVerbose();
     }
 
-    memory.write(0x100, INC_B);
+    //memory.write(0x100, INC_B);
     //memory.write(0x101, DEC_B);
-}
-
-void Core::updateCyclesPerFrame() {
-    cyclesPerFrame = cpu.getClockSpeed() / TARGET_FPS;
-}
-
-
-void Core::runForFrame() {
-    frameStartTimer = std::chrono::steady_clock::now();
-    
-    cycles cycleCounter = 0;
-
-    //!!!  cycleCounter could be > cyclesPerFrame during last instuction 
-    //cpu computation
-    while (debugState == CONTINUE && cycleCounter < cyclesPerFrame) {
-        cycleCounter += cpu.fetchAndExecute();
-    }
- 
-    //fps cap
-    long long sleepTime = targetFrameTime;
-    frameEndTimer = std::chrono::steady_clock::now();
-    frameTime = std::chrono::duration_cast<std::chrono::nanoseconds> (frameEndTimer - frameStartTimer).count();
-    sleepTime = sleepTime - frameTime;
-    if (sleepTime > 0) {
-        //sleep if we are faster than the target fps
-        debug::spinSleep(sleepTime);
-    }
-
-    //update the frame time for the frontend counter
-    frameEndTimer = std::chrono::steady_clock::now();
-    outputFrameTime = std::chrono::duration_cast<std::chrono::nanoseconds> (frameEndTimer - frameStartTimer).count();
 }
 
 Core::~Core() {
     cartridge.close();
     memory.destroy();
 }
+
+void Core::populateCpuStateBuffer(CPU_State* CPU_StateBuffer){
+    // Calls the CPU's states `populateCpuStateBuffer`.
+    cpu.populateCpuStateBuffer(CPU_StateBuffer);
+}
+
+void Core::updateCyclesPerFrame() {
+    cyclesPerFrame = cpu.getClockSpeed() / TARGET_FPS;
+}
+
+void Core::runForFrame() {
+    
+    cycles cycleCounter = 0;
+
+    //!!!  cycleCounter could be > cyclesPerFrame during last instuction 
+    // CPU computation.
+    while (debugState == CONTINUE && cycleCounter < cyclesPerFrame) {
+        cycleCounter += cpu.fetchAndExecute();
+    }
+}
+
+
+
 

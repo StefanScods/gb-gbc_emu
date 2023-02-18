@@ -60,6 +60,9 @@
     <ClCompile Include="GUI\mainWindowFrame.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GUI\cpuStateFrame.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core\instuctions\include\misc_control.h">

@@ -1,7 +1,7 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 /*
-Memory class delcaration for a gameboy color emulator 
+Memory class delcaration for a GameBoy color emulator 
 
 date: 2021-11-13
 */

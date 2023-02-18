@@ -1,6 +1,6 @@
-/*
-The implementation of the wxWidget thread object which holds the emulator
-core.
+/**
+ * The implementation of the wxWidget thread object which holds the emulator
+ * core.
 */
 #include "include/emulationThread.h"
 #include "../core/include/core.h"
@@ -50,7 +50,6 @@ bool EmulationThread::initializeEmulator(){
 	return true;
 }
 
-
 void* EmulationThread::Entry()
 {
 	// Preform initialize routine.
@@ -64,13 +63,6 @@ void* EmulationThread::Entry()
 	// Main event loop.
 	while (appContext->getRunningEmulationState())
 	{
-
-		int w, h;
-		
-		SDL_GetWindowSize(sdlWindow, &w, &h);
-
-		std::cout<< w << h << std::endl;
-
 		// Get the start time of the frame.
 		frameStartTime = SDL_GetTicks64();
 

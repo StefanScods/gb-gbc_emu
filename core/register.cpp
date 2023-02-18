@@ -1,5 +1,5 @@
 /*
-Register class implementation for a gameboy color emulator -> 16 wide 
+Register class implementation for a GameBoy color emulator -> 16 wide 
 
 date: 2021-11-12 
 */

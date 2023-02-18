@@ -12,16 +12,35 @@
 #include "wx/rawbmp.h"
 
 class Core;
+class App;
 class EmulationThread;
 
 /**
- * The main window of gameboy color emulator's GUI.
+ * The main window of GameBoy emulator's GUI.
  */
 class MainWindowFrame : public wxFrame
 {
 public:
-	MainWindowFrame(Core *d_emuCore);
+	MainWindowFrame(Core *d_emuCore, App* d_appContext);
 	~MainWindowFrame();
+
+	/**
+	 * @brief The WxWidget's OnCloseWindow event handler.
+	 */
+	void OnCloseWindow(wxCloseEvent& event);
+	/**
+	 * @brief The WxWidget menu's quit button event handler.
+	 */
+	void OnMenuQuitButton(wxCommandEvent& event);
+	/**
+	 * @brief The WxWidget menu's open CPU state view button event handler.
+	 */
+	void OnMenuOpenCPUStateViewButton(wxCommandEvent& event);
+
+	/**
+	 * @brief The event handler for the `EMULATOR_CORE_UPDATE_EVENT` wxWidget event.
+	 */
+	void handleEmulatorCoreUpdateEvent(wxCommandEvent& event);
 
 	/**
 	 * @brief Gets the pointer to the displayPanel object.
@@ -29,12 +48,6 @@ public:
 	 * @return wxPanel* (this.displayPanel).
 	 */
 	wxPanel* getDisplayPanel() { return displayPanel;}
-
-
-	/**
-	 * @brief The event handler for the `EMULATOR_CORE_UPDATE_EVENT` wxWidget event.
-	 */
-	void handleEmulatorCoreUpdateEvent(wxCommandEvent& event);
 
 	// Simple Mutators.
 	void setEmuThread(EmulationThread* d_emuThread){emuThread = d_emuThread;}
@@ -44,11 +57,17 @@ private:
 
 	Core *emuCore = nullptr;
 	EmulationThread* emuThread = nullptr;
+	App *appContext = nullptr;
 
 	// WxWidget elements.
 
 	// GB Display -> Used to generate an SDL window.
 	wxPanel* displayPanel = nullptr;
+
+	// Menu bar elements.
+	wxMenuBar* menuBar = nullptr;
+	wxMenu* fileMenuLayout = nullptr;
+	wxMenu* toolsMenuLayout = nullptr;
 };
 
 #endif

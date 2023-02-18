@@ -1,7 +1,7 @@
-/*
-The header declaration of the wxWidget thread object which holds the emulator
-core.
-*/
+/**
+ * The header declaration of the wxWidget thread object which holds the emulator
+ * core.
+ */
 #ifndef EMULATIONTHREAD_H
 #define EMULATIONTHREAD_H
 

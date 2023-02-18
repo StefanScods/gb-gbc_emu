@@ -172,6 +172,7 @@
     <ClCompile Include="core\register.cpp" />
     <ClCompile Include="core\defines.cpp" />
     <ClCompile Include="GUI\app.cpp" />
+    <ClCompile Include="GUI\cpuStateFrame.cpp" />
     <ClCompile Include="GUI\emulationThread.cpp" />
     <ClCompile Include="GUI\mainWindowFrame.cpp" />
     <ClCompile Include="main.cpp" />

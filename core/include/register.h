@@ -1,7 +1,7 @@
 #ifndef REGISTER_H
 #define REGISTER_H
 /*
-Register class delcaration for a gameboy color emulator -> 16 wide 
+Register class delcaration for a GameBoy color emulator -> 16 wide 
 
 date: 2021-11-12 
 */

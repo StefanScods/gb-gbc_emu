@@ -15,30 +15,28 @@ namespace debug {
 	void spinSleep(long long nanosecondsToSleep);
 }
 
-const char APP_TITLE[] = "RedPandaEmu";
-#define MAIN_WINDOW_WIDTH 600
-#define MAIN_WINDOW_HEIGHT 480
-#define MAIN_WINDOW_DISPLAY_PIXEL_DEPTH 24
-
-const char CPU_STATE_DISPLAY_TITLE[] = "Cpu State";
-#define CPU_STATE_DISPLAY_WIDTH 300
-#define CPU_STATE_DISPLAY_HEIGHT 480
-
-#define MAIN_TIMER_ID 1
-
 // Data types.
 typedef int8_t signedByte;
 typedef uint8_t byte;
 typedef uint16_t word;
 
-typedef byte* reg8; //used to address the top and bottom halves of the cpu regs 
+// Used to address the top and bottom halves of the CPU registers.
+typedef byte* reg8;  
+
+// Use to store the current state of the CPU.
+struct CPU_State{
+	// Main GBC registers.
+    word reg_AF;
+    word reg_BC;
+    word reg_DE;
+    word reg_HL;
+	// Stack pointer and program counter registers.
+	word SP;
+	word PC;
+
+};
 
 typedef uint32_t cycles;
-
-// Button logic.
-#define NOT_PRESSED 0
-#define FIRST_PRESSED 1
-#define HOLD 2
 
 // Emulator debug state 
 #define CONTINUE 0 //only stop for break points 
@@ -94,14 +92,6 @@ typedef uint32_t cycles;
 // The number of instuctions in the instuction set.
 #define NUM_INSTRUCTIONS 256
 
-const int CPUSTATE_WIDTH_OFFSET = 75;
-const int CPUSTATE_MARGIN = 5;
-const int CARTRIDGEDETAILS_WIDTH_OFFSET = 75;
-const int CARTRIDGEDETAILS_MARGIN = 5;
-
-const int TITLE_FONT_SIZE = 18;
-const int MAIN_FONT_SIZE = 16;
-
 const char toHex[16] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F' };
 
 // FPS defines.
@@ -115,7 +105,7 @@ const char toHex[16] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D'
 
 // Cartridge Defines.
 
-// Header positions.
+// Cartridge Header Positions.
 #define CARTRIDGE_HEADER_SIZE 335
 
 #define TITLE_START 0x134

@@ -1,5 +1,5 @@
 /*
-Memory class implmentation for a gameboy color emulator 
+Memory class implmentation for a GameBoy color emulator 
 
 date: 2021-11-13
 */

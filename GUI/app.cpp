@@ -1,13 +1,14 @@
-/*
-The main application class implementation for the gameboy color emulator.
-Also defines WxWidgets event table.
-*/
+/**
+ * The main application class implementation for the GameBoy color emulator.
+ * Also defines WxWidgets event table.
+ */
 #include <iostream>
 #include <string>
 #include <SDL.h>
 
 #include "include\app.h"
 #include "include\mainWindowFrame.h"
+#include "include\cpuStateFrame.h"
 #include "include\emulationThread.h"
 #include "..\core\include\cpu.h"
 #include "..\core\include\defines.h"
@@ -19,14 +20,24 @@ Also defines WxWidgets event table.
 // Custom WxWidget Events.
 wxDEFINE_EVENT(EMULATOR_CORE_UPDATE_EVENT, wxCommandEvent);
 
-// WxWidget Event Table.
-
+// WxWidget Event Tables.
 wxBEGIN_EVENT_TABLE(MainWindowFrame, wxFrame)
+	EVT_CLOSE(MainWindowFrame::OnCloseWindow)
 	EVT_COMMAND(wxID_ANY, EMULATOR_CORE_UPDATE_EVENT, MainWindowFrame::handleEmulatorCoreUpdateEvent)
+	
+
+	EVT_MENU(wxID_EXIT, MainWindowFrame::OnMenuQuitButton)
+
+	EVT_MENU(wxMenuIDs::OPEN_CPU_STATE_VIEW, MainWindowFrame::OnMenuOpenCPUStateViewButton)
 wxEND_EVENT_TABLE()
 
-bool App::OnInit()
-{
+wxBEGIN_EVENT_TABLE(CPUStateFrame, wxFrame)
+	EVT_CLOSE(CPUStateFrame::OnCloseWindow)
+	EVT_COMMAND(wxID_ANY, EMULATOR_CORE_UPDATE_EVENT, CPUStateFrame::handleEmulatorCoreUpdateEvent)
+	
+wxEND_EVENT_TABLE()
+
+bool App::OnInit(){
 	if (ENABLE_DEBUG_PRINTS)
 		std::cout << "Starting: " << APP_TITLE << std::endl;
 
@@ -39,12 +50,17 @@ bool App::OnInit()
 	emuCore = new Core(CONTINUE);
 
 	// Create the main window frame.
-	mainWindow = new MainWindowFrame(emuCore);
+	mainWindow = new MainWindowFrame(emuCore, this);
 	// Create the main emulation thread.
 	emuThread = new EmulationThread(this, emuCore, mainWindow->getDisplayPanel());
-	mainWindow->setEmuThread(emuThread);
 
-	// Attempt to create a sepreate thread to run the emulator in.
+	// Finish main window set up.
+	mainWindow->setEmuThread(emuThread);
+	// Activate the main window frame and give it focus.
+	mainWindow->Show(true);
+	SetTopWindow(mainWindow);
+
+	// Attempt to create a separate thread to run the emulator in.
 	int returnCode = emuThread->Create();
 	if (returnCode != wxTHREAD_NO_ERROR)
 	{
@@ -53,9 +69,9 @@ bool App::OnInit()
 		exit(returnCode);
 	}
 
-	// Activate the main window frame and give it focus.
-	mainWindow->Show(true);
-	SetTopWindow(mainWindow);
+	// Create the CPU state display.
+	cpuStateFrame = new CPUStateFrame(emuCore, emuThread);
+	cpuStateFrame->Hide();
 
 	// Start emulation.
 	runningEmulator = true;
@@ -81,6 +97,14 @@ int App::OnExit()
 	return 0;
 }
 
+void App::closeAllSideFrames(){
+	if(cpuStateFrame != nullptr){
+		cpuStateFrame->Destroy();
+		cpuStateFrame = nullptr;
+	}
+		
+}
+
 bool App::initializeSDL2(){
 
 	// Initialize the main SDL2 subsystem.
@@ -95,13 +119,21 @@ bool App::initializeSDL2(){
 
 void App::sendEmulationCoreUpdateEvent()
 {
-	if (!runningEmulator)
-		return;
+	if (!runningEmulator) return;
 
 	// Create an event.
 	wxCommandEvent event(EMULATOR_CORE_UPDATE_EVENT);
 
 	// Send the event to the child windows.
 	wxPostEvent(this, event);
-	wxPostEvent(mainWindow, event);
+	
+	if(mainWindow != nullptr && mainWindow->IsShown())
+		wxPostEvent(mainWindow, event);
+
+	if(cpuStateFrame != nullptr && cpuStateFrame->IsShown())
+		wxPostEvent(cpuStateFrame, event);
+}
+
+void App::showCPUStateFrame(){ 
+	if(cpuStateFrame!=nullptr) 	cpuStateFrame->Show(true);
 }

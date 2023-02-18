@@ -1,22 +1,54 @@
 /*
-CPU class implementation for a gameboy color emulator 
-
-date: 2021-11-12 
+CPU class implementation for a GameBoy Color emulator.
 */
-
 
 #include "include\cpu.h"
 #include <iostream>
 
-//according to http://bgb.bircd.org/pandocs.htm#powerupsequence
+void popHelper(CPU* cpu, reg& dest){
+    // Pop the data off the stack.
+    cpu->SP++; 
+    word data = cpu->memory->read(cpu->SP.read());
+    cpu->SP++;
+    data = data | (cpu->memory->read(cpu->SP.read()))<<8;
+    
+    // Load reg with the popped data.
+    dest = data;
+}
+
+void pushHelper(CPU* cpu, reg& source){
+    word data = source.read();
+
+    // Push the data onto the stack.
+    cpu->memory->write(cpu->SP.read(), data >> 8 );
+    cpu->SP--;
+    cpu->memory->write(cpu->SP.read(), data & 0xFF);
+    cpu->SP--;
+}
+
+void convertWordToHexNotation(word value, char* output) {
+    output[6] = NULL;
+    output[5] = toHex[value % 16];
+    value = value >> 4;
+    output[4] = toHex[value % 16];
+    value = value >> 4;
+    output[3] = toHex[value % 16];
+    value = value >> 4;
+    output[2] = toHex[value % 16];
+    output[1] = 'x';
+    output[0] = '0';
+}
+
 void CPU::init(){
 
+    // Return early if no memory has been bound.
     if (memory == nullptr) {
-        std::cout << "Error: Must Bind Memory to CPU First!" << std::endl;
+        std::cerr << "Error: Must Bind Memory to CPU First!" << std::endl;
         return;
     }
 
-    reg_AF = (word)0x01B0;
+    // Init routine according to http://bgb.bircd.org/pandocs.htm#powerupsequence.
+    reg_AF = (word)0x01F0;
     reg_BC = (word)0x0013;
     reg_DE = (word)0x00D8;
     reg_HL = (word)0x014D;
@@ -57,72 +89,77 @@ void CPU::init(){
     memory->write(0xFFFF, 0x00); //IE
 }
 
+byte CPU::readNextInstructionByte(){
+    byte nextOpcode = memory->read( PC.read() );
+    inc_PC();
+
+    return nextOpcode;
+}
+
 cycles CPU::fetchAndExecute(){
-    //read the next instuction and increment pc 
-    byte nextOpcode = memory->read(PC.read());
 
-    Instruction nextInsruction = instructionSet.set[nextOpcode];
-    PC++;
+    // Read the next instuction and increment PC. 
+    byte nextOpcode = readNextInstructionByte();
 
-    if(verbose) std::cout << nextInsruction.opcode << std::endl;
+    // Translate the OP code into a instruction.
+    Instruction nextInstruction = instructionSet.set[nextOpcode];
+ 
+    // If the instuction has immediate data, additional memory needs are necessary to populate parsed data.
+    switch (nextInstruction.length) {
+    case 2:
+        // Constructs a word from the two bytes of parsed data.
+        // PC+1 is placed in the lower 8 bits.
+        // Upper 8 bits are left unused.
+        parsedData = readNextInstructionByte();
+        break;
+    case 3:
+        // Constructs a word from the two bytes of parsed data. 
+        // PC+1 is placed in the lower 8 bits.
+        // PC+2 is placed in the upper 8 bits.
+        parsedData = readNextInstructionByte() | (readNextInstructionByte() << 8);
+        break;
     
-    //if the instuction has immediate data that also needs to be read from memory
-    if(nextInsruction.length>=2){
-        //perform another mem read
-        parsedData = memory->read(PC.read());
-        PC++;
-
-        if(nextInsruction.length==3){
-            //perform a third and final mem read
-            parsedData = parsedData | memory->read(PC.read()) << 8; //constructs a word from the two bytes of parsed data 
-            PC++;
-        }
+    default:
+        break;
     }
 
-    //execute the instuction and return number of cycles 
-    return nextInsruction.execute(this);
+    // Print OP code data.
+    if(verbose){
+        std::cout << nextInstruction.opcode << std::endl;
+    } 
+
+    // Execute the instuction and return number of cycles.
+    return nextInstruction.execute(this);
 }
 
 int CPU::executeCycles(cycles numCycles){
 
     cycles cyclesRemaining = numCycles;
 
-    //runs the cpu in a loop for the desired amount of cycles 
+    // Runs the cpu in a loop for the desired amount of cycles.
     while(cyclesRemaining>0){
 
-        //read the next instuction and increment pc 
+        // Read the next instuction to check its cycle timing.
         byte nextOpcode = memory->read(PC.read());
-        Instruction nextInsruction = instructionSet.set[nextOpcode];
+        Instruction nextInstruction = instructionSet.set[nextOpcode];
+        // Return early if the next instruction will exceed the cyclesRemaining.
+        if(cyclesRemaining<nextInstruction.cycleCount) break;
 
-        if(cyclesRemaining<nextInsruction.cycleCount) break;
-
-        PC++;
-
-        if (verbose) std::cout << nextInsruction.opcode << std::endl;
-     
-        //if the instuction has immediate data that also needs to be read from memory
-        if(nextInsruction.length>=2){
-            //perform another mem read
-            parsedData = memory->read(PC.read());
-            PC++;
-
-            if(nextInsruction.length==3){
-                //perform a third and final mem read
-                parsedData = parsedData | memory->read(PC.read()) << 8; //constructs a word from the two bytes of parsed data 
-                PC++;
-            }
-        }
-
-        //decrement the cycles at the end of the instuction -> !!! not rly accurate but i think its fine  
-        cyclesRemaining-=nextInsruction.execute(this);
+        // Execute the next instruction.
+        cycles cyclesUsed = fetchAndExecute();
+        // Reduce the remaining cycles.
+        cyclesRemaining -= cyclesUsed;
     }
     
-    return numCycles - cyclesRemaining;
+    // Return the deficit of desired cycles vs actual cycles.
+    return (int) numCycles - (int) cyclesRemaining;
 }
 
-void CPU::outputState(){
+void CPU::printCurrentState(){
 
+    // Switch to hex notation display. 
     std::cout << std::hex;
+
     std::cout << "========================" << std::endl;
     std::cout <<  "AF: 0x"  << (int) reg_AF.read() << std::endl;
     std::cout <<  "BC: 0x" << (int) reg_BC.read() << std::endl;
@@ -131,60 +168,29 @@ void CPU::outputState(){
     std::cout <<  "\nSP: 0x"  << (int) SP.read() << std::endl;
     std::cout <<  "PC: 0x" << (int) PC.read() << std::endl;
 
-    std::cout << "FLAGS: Z: " << readBit(*(F), FLAG_Z) <<" N: "<< readBit(*(F), FLAG_N) <<" H: " << readBit(*(F), FLAG_H)<<" C: "  << readBit(*(F), FLAG_C) <<std::endl;
+    std::cout << "FLAGS: Z: " << readBit(*(F), FLAG_Z) 
+        << " N: " << readBit(*(F), FLAG_N) 
+        << " H: " << readBit(*(F), FLAG_H)
+        << " C: " << readBit(*(F), FLAG_C) <<std::endl;
+
     std::cout << "========================" << std::endl;
 
+    // Return back to a decimal notation display. 
     std::cout << std::dec;
 }
 
-cycles CPU::getClockSpeed() {
-    return clockSpeed;
-}
+void CPU::populateCpuStateBuffer(CPU_State* CPU_StateBuffer){
+    // Return early if received a nullptr.
+    if(CPU_StateBuffer == nullptr){
+        std::cerr << "Error: Null pointer passed into `CPU::populateCpuStateBuffer()`" << std::endl; 
+        return;
+    }
 
-void CPU::populateCpuStateBuffer(word* regs, char* flags){
-
-    regs[0] = reg_AF.read();
-    regs[1] = reg_BC.read();
-    regs[2] = reg_DE.read();
-    regs[3] = reg_HL.read();
-    regs[4] = SP.read();
-    regs[5] = PC.read();
-
-    readBit(*(F), FLAG_Z) ? flags[0] = '1' : flags[0] = '0';
-    readBit(*(F), FLAG_N) ? flags[1] = '1' : flags[1] = '0';
-    readBit(*(F), FLAG_H) ? flags[2] = '1' : flags[2] = '0';
-    readBit(*(F), FLAG_C) ? flags[3] = '1' : flags[3] = '0';
-}
-
-void popHelper(CPU* cpu, reg& dest){
-    
-    cpu->SP++; //pop the data off the stack
-    word data = cpu->memory->read(cpu->SP.read());
-    cpu->SP++;
-    data = data | (cpu->memory->read(cpu->SP.read()))<<8;
-    
-    dest = data; //load reg with the popped data 
-    //std::cout << data <<std::endl;
-}
-
-void pushHelper(CPU* cpu, reg& source){
-
-    word data = source.read();
-    //std::cout << data <<std::endl;
-
-    cpu->memory->write(cpu->SP.read(), data >> 8 );
-    cpu->SP--;
-    cpu->memory->write(cpu->SP.read(), data & 0xFF);
-    cpu->SP--; //push the data onto the stack
-}
-
-void displayHex(word value, char* output) {
-
-    output[3] = toHex[value % 16];
-    value = value >> 4;
-    output[2] = toHex[value % 16];
-    value = value >> 4;
-    output[1] = toHex[value % 16];
-    value = value >> 4;
-    output[0] = toHex[value % 16];
+    // Populate the buffer with the CPUs current state.
+    CPU_StateBuffer->reg_AF = reg_AF.read();
+    CPU_StateBuffer->reg_BC = reg_BC.read();
+    CPU_StateBuffer->reg_DE = reg_DE.read();
+    CPU_StateBuffer->reg_HL = reg_HL.read();
+    CPU_StateBuffer->SP = SP.read();
+    CPU_StateBuffer->PC = PC.read();
 }

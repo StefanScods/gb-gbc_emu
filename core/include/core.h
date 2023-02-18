@@ -11,10 +11,8 @@ The header declaration for the main emulator core.
 #include "defines.h"
 #include "cartridge.h"
 #include "../../GUI/include/app.h"
-#include <chrono>
 
-class Core
-{
+class Core{
 private:
     CPU cpu;
     Memory memory;
@@ -23,26 +21,29 @@ private:
     int debugState = CONTINUE;
 
     cycles cyclesPerFrame;
-    long long targetFrameTime = FRAME_DELAY;
 
     // A flag indicating a ROM is loaded.
     bool loadedROM = false;
 
-    // Vars used in FPS logic.
-    
-    long long frameTime;
-    std::chrono::steady_clock::time_point frameStartTimer;
-    std::chrono::steady_clock::time_point frameEndTimer;
 
 public:
-    // Frontend access vars.
-    long long outputFrameTime;
-
     Core(int mode);
+
     // Runs the emulator core for one frame.
     void runForFrame();
     // Updates the target number of cycles per frame.
     void updateCyclesPerFrame();
+
+    /**
+     * @brief Populates a CPU_State struct with the current state of 
+     * the CPU. This function can be used to pipe the current state 
+     * of the CPU to other parts of the emulator application or to
+     * serialize the CPU for save stating.
+     * 
+     * @param CPU_StateBuffer The buffer to populate. 
+     */
+    void populateCpuStateBuffer(CPU_State* CPU_StateBuffer);
+
     ~Core();
 };
 
