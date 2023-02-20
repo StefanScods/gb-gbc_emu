@@ -1,8 +1,8 @@
 #ifndef CPU_H
 #define CPU_H
-/*
-CPU class declaration for a GameBoy Color emulator. 
-*/
+/**
+ * CPU class declaration for a GameBoy Color emulator. 
+ */
 #include "defines.h"
 #include "memory.h"
 #include "register.h"
@@ -118,7 +118,13 @@ public:
     /**
      * @brief Increment the program counter by one.
      */
-    void inc_PC() {PC++;}
+    void incPC() {PC++;}
+    /**
+     * @brief Returns the current value of the program counter.
+     * 
+     * @returns word - The current value of the PC register.
+     */
+    word getPC(){ return PC.read(); }
 
     /**
      * @brief Binds a memory module to the CPU. All future CPU operations are

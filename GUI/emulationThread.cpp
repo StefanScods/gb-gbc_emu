@@ -2,6 +2,7 @@
  * The implementation of the wxWidget thread object which holds the emulator
  * core.
 */
+#include <functional>
 #include "include/emulationThread.h"
 #include "../core/include/core.h"
 
@@ -60,14 +61,28 @@ void* EmulationThread::Entry()
 	int x = 0;
 	int y = 0;
 
+	// Bind important keys.
+	emuCore->controller.bindKeyUp(SDL_SCANCODE_HOME, std::bind(&Core::printCurrentState, emuCore));
+	emuCore->controller.bindKeyUp(SDL_SCANCODE_PAUSE, std::bind(&Core::toggleEmulatorExecution, emuCore));
+
+	// Step next frame binds to the key "PAGE UP"
+	emuCore->controller.bindKeyDown(SDL_SCANCODE_PAGEUP, std::bind(&Core::keyDownStepNextFrameButton, emuCore));
+	emuCore->controller.bindKeyUp(SDL_SCANCODE_PAGEUP, std::bind(&Core::keyUpStepNextFrameButton, emuCore));
+	// Step next instuction binds to the key "PAGE UP"
+	emuCore->controller.bindKeyDown(SDL_SCANCODE_PAGEDOWN, std::bind(&Core::keyDownStepNextInstuctionButton, emuCore));
+	emuCore->controller.bindKeyUp(SDL_SCANCODE_PAGEDOWN, std::bind(&Core::keyUpStepNextInstuctionButton, emuCore));
+
 	// Main event loop.
 	while (appContext->getRunningEmulationState())
 	{
 		// Get the start time of the frame.
 		frameStartTime = SDL_GetTicks64();
 
-		// Runs the emulator for one frame.
-		emuCore->runForFrame();
+		// Call the event handler.
+		sdlEventHandler();
+
+		// Runs the emulator.
+		emuCore->emulatorMain();
 
 		x++;
 		y++;
@@ -110,6 +125,26 @@ void* EmulationThread::Entry()
 
 	// Casts success as a wxThread::ExitCode
 	return (wxThread::ExitCode)true;
+}
+
+void EmulationThread::sdlEventHandler(){
+	// Loop over all SDL2 events.
+    while( SDL_PollEvent( &sdlEvent ) ){
+		switch( sdlEvent.type ){
+			// Keyboard events. 
+			case SDL_KEYDOWN:
+				emuCore->controller.keyDown(sdlEvent);
+				break;
+
+			case SDL_KEYUP:
+				emuCore->controller.keyUp(sdlEvent);
+				break;
+			default:
+				break;
+		}
+
+
+	}
 }
 
 Uint64 EmulationThread::updateAndGetFrameDelta(){

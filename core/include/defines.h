@@ -2,7 +2,6 @@
 #define DEFINES_H
 /**
  * A header file for defines/enums across the entire emulator code base.
- *
  */
 #include <cstdint>
 #include <iostream>
@@ -19,6 +18,7 @@ namespace debug {
 typedef int8_t signedByte;
 typedef uint8_t byte;
 typedef uint16_t word;
+typedef uint32_t cycles;
 
 // Used to address the top and bottom halves of the CPU registers.
 typedef byte* reg8;  
@@ -36,12 +36,13 @@ struct CPU_State{
 
 };
 
-typedef uint32_t cycles;
-
-// Emulator debug state 
-#define CONTINUE 0 //only stop for break points 
-#define TIMER 1 //fetch and execute every x ms 
-#define STEP 2 //only fetch and execute at keypress 
+// Emulator execution modes.
+enum ExecutionModes {
+	CONTINUE, // Only stop for breakpoints or pauses.
+	PAUSE, // Stop all emulation but still listen for inputs.
+	STEP, // Fetch and execute at keypress for a single frame.
+	STEP_CPU // Fetch and execute at keypress for a single instuction.
+};
 
 // CPU flags.
 #define FLAG_Z 7
@@ -89,7 +90,7 @@ typedef uint32_t cycles;
 
 #define INTERUPT_ENABLE_REGISTER_ADDR 0xFFFF
 
-// The number of instuctions in the instuction set.
+// The number of instructions in the instuction set.
 #define NUM_INSTRUCTIONS 256
 
 const char toHex[16] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F' };
@@ -99,7 +100,7 @@ const char toHex[16] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D'
 #define TARGET_FPS 60
 #define FRAME_DELAY MILLISECOND_FACTOR/TARGET_FPS
 
-// Clockspeeds.
+// Clock Speeds.
 #define CLOCKSPEED 4194304 //Hz
 #define CLOCKSPEED_CGBMODE 8400000 //Hz
 

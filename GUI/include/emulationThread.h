@@ -42,6 +42,14 @@ public:
 	 */
     bool initializeEmulator();
 
+	/**
+	 * @brief Defines SDL2's event handler. This function can be used
+     * to respond to keyboard events.
+	 * 
+	 * @return void.
+	 */
+    void sdlEventHandler();
+
     /**
      * @brief Helper function which updates the current frame delta.
      * Note: This function does not update the `frameStartTime`, only the
@@ -62,6 +70,8 @@ private:
     // SDL2 window vars.
     SDL_Window* sdlWindow = nullptr;
     SDL_Renderer* sdlRenderer = nullptr;
+    // SDL2 events.
+    SDL_Event sdlEvent;
 
     // FPS calculation vars.
     Uint64 frameStartTime = 0;

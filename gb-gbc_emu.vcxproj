@@ -171,6 +171,7 @@
     <ClCompile Include="core\memory.cpp" />
     <ClCompile Include="core\register.cpp" />
     <ClCompile Include="core\defines.cpp" />
+    <ClCompile Include="core\sdlController.cpp" />
     <ClCompile Include="GUI\app.cpp" />
     <ClCompile Include="GUI\cpuStateFrame.cpp" />
     <ClCompile Include="GUI\emulationThread.cpp" />
@@ -185,6 +186,7 @@
     <ClInclude Include="core\include\instructionSet.h" />
     <ClInclude Include="core\include\memory.h" />
     <ClInclude Include="core\include\register.h" />
+    <ClInclude Include="core\include\sdlController.h" />
     <ClInclude Include="core\instuctions\include\arithmetic.h" />
     <ClInclude Include="core\instuctions\include\bit.h" />
     <ClInclude Include="core\instuctions\include\jump_call.h" />

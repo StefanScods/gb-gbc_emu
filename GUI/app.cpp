@@ -47,7 +47,7 @@ bool App::OnInit(){
 	}
 
 	// Create the emulator core object.
-	emuCore = new Core(CONTINUE);
+	emuCore = new Core(PAUSE);
 
 	// Create the main window frame.
 	mainWindow = new MainWindowFrame(emuCore, this);

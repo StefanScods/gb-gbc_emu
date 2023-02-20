@@ -1,5 +1,5 @@
-/*
-CPU class implementation for a GameBoy Color emulator.
+/**
+ * CPU class implementation for a GameBoy Color emulator.
 */
 
 #include "include\cpu.h"
@@ -91,13 +91,12 @@ void CPU::init(){
 
 byte CPU::readNextInstructionByte(){
     byte nextOpcode = memory->read( PC.read() );
-    inc_PC();
+    incPC();
 
     return nextOpcode;
 }
 
 cycles CPU::fetchAndExecute(){
-
     // Read the next instuction and increment PC. 
     byte nextOpcode = readNextInstructionByte();
 
