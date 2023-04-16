@@ -36,6 +36,10 @@ public:
 	 * @brief The WxWidget menu's open CPU state view button event handler.
 	 */
 	void OnMenuOpenCPUStateViewButton(wxCommandEvent& event);
+	/**
+	 * @brief The WxWidget menu's open memory viewer view button event handler.
+	 */
+	void OnMenuOpenMemoryViewerViewButton(wxCommandEvent& event);
 
 	/**
 	 * @brief The event handler for the `EMULATOR_CORE_UPDATE_EVENT` wxWidget event.

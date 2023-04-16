@@ -1,13 +1,12 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 /*
-Memory class delcaration for a GameBoy color emulator 
+Memory class declaration for a GameBoy color emulator 
 
 date: 2021-11-13
 */
 #include "defines.h"
-
-
+#include <mutex> 
 
 class Memory{
 private:
@@ -31,13 +30,13 @@ private:
 
     byte interruptEnableRegister;
 
-
+    std::mutex mtx;
 
 public:
-    //initalizes the memory class -> zeros the memeory 
+    //initializes the memory class -> zeros the memory 
     bool init();
 
-    //destorys the memory class and cleans up its data 
+    //destroys the memory class and cleans up its data 
     bool destroy();
 
     //accessors + mutators //-> !no error checking is done in these functions for the sake of speed  -> !!!might wanna make safe versions
@@ -45,6 +44,15 @@ public:
     const byte read(word address);
 
     byte* getBytePointer(word address); 
+
+    /**
+     * @brief Acquires the mutex lock which protects the memory sub-system.
+     */
+    void acquireMutexLock(){ mtx.lock();}
+    /**
+     * @brief Releases the mutex lock which protects the memory sub-system.
+     */
+    void releaseMutexLock(){ mtx.unlock();}
 };
 
 

@@ -43,6 +43,7 @@ MainWindowFrame::MainWindowFrame(Core *d_emuCore, App* d_appContext ) : wxFrame(
 	// Tool Menu.
 	toolsMenuLayout = new wxMenu();
 	toolsMenuLayout->Append(wxMenuIDs::OPEN_CPU_STATE_VIEW, _T("&Open CPU State View"));
+	toolsMenuLayout->Append(wxMenuIDs::OPEN_MEMORY_VIEWER_VIEW, _T("&Open Memory Viewer"));
 	menuBar->Append(toolsMenuLayout, _T("&Tools"));
 
 	// Render the top menu bar.
@@ -76,6 +77,9 @@ void MainWindowFrame::OnMenuQuitButton(wxCommandEvent& event){
 	Close(true);
 }
 
-void  MainWindowFrame::OnMenuOpenCPUStateViewButton(wxCommandEvent& event){
+void MainWindowFrame::OnMenuOpenCPUStateViewButton(wxCommandEvent& event){
 	appContext->showCPUStateFrame();
+}
+void MainWindowFrame::OnMenuOpenMemoryViewerViewButton(wxCommandEvent& event){
+	appContext->showMemoryViewerFrame();
 }

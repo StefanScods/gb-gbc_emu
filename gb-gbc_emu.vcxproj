@@ -176,6 +176,7 @@
     <ClCompile Include="GUI\cpuStateFrame.cpp" />
     <ClCompile Include="GUI\emulationThread.cpp" />
     <ClCompile Include="GUI\mainWindowFrame.cpp" />
+    <ClCompile Include="GUI\memoryViewerFrame.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -282,9 +283,11 @@
     <ClInclude Include="dependencies\SDL2_TTF\include\SDL_ttf.h" />
     <ClInclude Include="GUI\include\app.h" />
     <ClInclude Include="GUI\include\cpuStateDisplay.h" />
+    <ClInclude Include="GUI\include\cpuStateFrame.h" />
     <ClInclude Include="GUI\include\emuEvents.h" />
     <ClInclude Include="GUI\include\emulationThread.h" />
     <ClInclude Include="GUI\include\mainWindowFrame.h" />
+    <ClInclude Include="GUI\include\memoryViewerFrame.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SDL2.dll" />

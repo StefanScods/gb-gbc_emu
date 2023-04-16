@@ -88,7 +88,7 @@ enum ExecutionModes {
 #define HRAM_START 0xFF80
 #define HRAM_END 0xFFFE
 
-#define INTERUPT_ENABLE_REGISTER_ADDR 0xFFFF
+#define INTERRUPT_ENABLE_REGISTER_ADDR 0xFFFF
 
 // The number of instructions in the instuction set.
 #define NUM_INSTRUCTIONS 256

@@ -67,13 +67,21 @@ void Core::emulatorMain(){
             // Do nothing on PAUSE.
             break;
         case STEP_CPU:
+             // Acquire the mutex lock protecting the memory.
+            memory.acquireMutexLock();
             // Advance the core by a single instuction.
             cpu.fetchAndExecute();
+            // Release the mutex lock protecting the memory.
+            memory.releaseMutexLock();
          break;
         case STEP:
         case CONTINUE:
+            // Acquire the mutex lock protecting the memory.
+            memory.acquireMutexLock();
             // For both STEP and CONTINUE, advance the core by a single frame.
             runForFrame();
+            // Release the mutex lock protecting the memory.
+            memory.releaseMutexLock();
             break;
         default:
             break;

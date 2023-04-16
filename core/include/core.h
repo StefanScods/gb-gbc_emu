@@ -69,6 +69,13 @@ public:
     void emulatorMain();
 
     /**
+     * @brief An accessor function for retrieve the memory sub-object.
+     * 
+     * @returns Memory*.
+     */
+    Memory* getMemory(){ return &memory;}
+
+    /**
      * @brief Runs the emulator core for exactly one frame.
      * 
      * @returns void.

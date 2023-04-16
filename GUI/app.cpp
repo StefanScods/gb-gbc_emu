@@ -8,6 +8,7 @@
 
 #include "include\app.h"
 #include "include\mainWindowFrame.h"
+#include "include\memoryViewerFrame.h"
 #include "include\cpuStateFrame.h"
 #include "include\emulationThread.h"
 #include "..\core\include\cpu.h"
@@ -29,12 +30,18 @@ wxBEGIN_EVENT_TABLE(MainWindowFrame, wxFrame)
 	EVT_MENU(wxID_EXIT, MainWindowFrame::OnMenuQuitButton)
 
 	EVT_MENU(wxMenuIDs::OPEN_CPU_STATE_VIEW, MainWindowFrame::OnMenuOpenCPUStateViewButton)
+	EVT_MENU(wxMenuIDs::OPEN_MEMORY_VIEWER_VIEW, MainWindowFrame::OnMenuOpenMemoryViewerViewButton)
 wxEND_EVENT_TABLE()
 
 wxBEGIN_EVENT_TABLE(CPUStateFrame, wxFrame)
 	EVT_CLOSE(CPUStateFrame::OnCloseWindow)
 	EVT_COMMAND(wxID_ANY, EMULATOR_CORE_UPDATE_EVENT, CPUStateFrame::handleEmulatorCoreUpdateEvent)
-	
+wxEND_EVENT_TABLE()
+
+wxBEGIN_EVENT_TABLE(MemoryViewerFrame, wxFrame)
+	EVT_CLOSE(MemoryViewerFrame::OnCloseWindow)
+	EVT_COMMAND(wxID_ANY, EMULATOR_CORE_UPDATE_EVENT, MemoryViewerFrame::handleEmulatorCoreUpdateEvent)
+	EVT_GRID_CELL_LEFT_CLICK( MemoryViewerFrame::OnGridClick )
 wxEND_EVENT_TABLE()
 
 bool App::OnInit(){
@@ -73,6 +80,10 @@ bool App::OnInit(){
 	cpuStateFrame = new CPUStateFrame(emuCore, emuThread);
 	cpuStateFrame->Hide();
 
+	// Create the memory viewer displays.
+	memoryViewerFrame = new MemoryViewerFrame(emuCore, emuThread);
+	memoryViewerFrame->Hide();
+
 	// Start emulation.
 	runningEmulator = true;
 	// Begin the emulation thread's execution.
@@ -102,7 +113,11 @@ void App::closeAllSideFrames(){
 		cpuStateFrame->Destroy();
 		cpuStateFrame = nullptr;
 	}
-		
+
+	if(memoryViewerFrame != nullptr){
+		memoryViewerFrame->Destroy();
+		memoryViewerFrame = nullptr;
+	}	
 }
 
 bool App::initializeSDL2(){
@@ -132,8 +147,15 @@ void App::sendEmulationCoreUpdateEvent()
 
 	if(cpuStateFrame != nullptr && cpuStateFrame->IsShown())
 		wxPostEvent(cpuStateFrame, event);
+
+	if(memoryViewerFrame != nullptr && memoryViewerFrame->IsShown())
+		wxPostEvent(memoryViewerFrame, event);
 }
 
 void App::showCPUStateFrame(){ 
 	if(cpuStateFrame!=nullptr) 	cpuStateFrame->Show(true);
+}
+
+void App::showMemoryViewerFrame(){ 
+	if(memoryViewerFrame!=nullptr) 	memoryViewerFrame->Show(true);
 }

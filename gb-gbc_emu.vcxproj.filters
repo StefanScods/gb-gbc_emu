@@ -66,6 +66,9 @@
     <ClCompile Include="core\sdlController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GUI\memoryViewerFrame.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core\instuctions\include\misc_control.h">
@@ -384,6 +387,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="core\include\sdlController.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GUI\include\cpuStateFrame.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GUI\include\memoryViewerFrame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
