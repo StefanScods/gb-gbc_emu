@@ -42,6 +42,7 @@ wxBEGIN_EVENT_TABLE(MemoryViewerFrame, wxFrame)
 	EVT_CLOSE(MemoryViewerFrame::OnCloseWindow)
 	EVT_COMMAND(wxID_ANY, EMULATOR_CORE_UPDATE_EVENT, MemoryViewerFrame::handleEmulatorCoreUpdateEvent)
 	EVT_GRID_CELL_LEFT_CLICK(MemoryViewerFrame::OnGridClick)
+	EVT_TEXT(wxMenuIDs::MEMORY_MAP_SEARCHBAR, MemoryViewerFrame::OnSearch)
 wxEND_EVENT_TABLE()
 
 wxBEGIN_EVENT_TABLE(TileViewerFrame, wxFrame)
@@ -89,11 +90,11 @@ bool App::OnInit()
 
 	// Create the memory viewer displays.
 	memoryViewerFrame = new MemoryViewerFrame(emuCore, emuThread);
-	memoryViewerFrame->Hide();
+	memoryViewerFrame->Show();
 
 	// Create the memory viewer displays.
 	tileViewerFrame = new TileViewerFrame(emuCore, emuThread);
-	tileViewerFrame->Show();
+	tileViewerFrame->Hide();
 
 	emuThread->addAdditionalRenderEvent(
 		std::bind(&TileViewerFrame::updateSDLDisplays, tileViewerFrame)

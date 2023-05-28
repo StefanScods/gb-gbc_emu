@@ -25,6 +25,8 @@ TileViewerFrame::TileViewerFrame(Core *d_emuCore, EmulationThread *d_emuThread) 
     emuCore = d_emuCore;
     emuThread = d_emuThread;
 
+    SetBackgroundColour(wxColour(255,255,255));
+
     // Create a sizer to maintain the desired size of the main display.
 	wxBoxSizer* mainDisplaySizer  = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer* panelSizer  = new wxBoxSizer(wxVERTICAL);
@@ -53,16 +55,38 @@ TileViewerFrame::~TileViewerFrame()
 {
     if (ENABLE_DEBUG_PRINTS)
         std::cout << "Exiting: Tile Viewer Frame" << std::endl;
+    
+    // Clean SDL.
+    SDL_DestroyTexture(zoomedTileTexture);
+    zoomedTileTexture = nullptr;
+    SDL_DestroyRenderer(zoomedTileRenderer);
+    zoomedTileRenderer = nullptr;
+	SDL_DestroyWindow(zoomedTileWindow);
+	zoomedTileWindow = nullptr;
+    SDL_DestroyTexture(mainTileMapTexture);
+    mainTileMapTexture = nullptr;
+    SDL_DestroyRenderer(mainTileMapRenderer);
+    mainTileMapRenderer = nullptr;
+	SDL_DestroyWindow(mainTileMapWindow);
+	mainTileMapWindow = nullptr;
 }
 
 // Event Handlers.
 void TileViewerFrame::OnCloseWindow(wxCloseEvent &event)
 {
-    this->Hide();
     // Reset selection.
     int lastSelectedTile = -1;
 	bool lastSelectedBank = 0;
     selectedAddressTextElement->SetLabelText("Address:");
+    // Clear the zoomed tile.
+    SDL_SetRenderDrawColor(zoomedTileRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
+    SDL_Rect zoomedTile;
+    zoomedTile.x, zoomedTile.y = 1;
+    zoomedTile.w, zoomedTile.h = ZOOM_TILE_SIZE - 2;
+    SDL_RenderFillRect(zoomedTileRenderer, &zoomedTile);
+    // Update screen.
+    SDL_RenderPresent(zoomedTileRenderer);
+    this->Hide();
 }
 
 void TileViewerFrame::handleEmulatorCoreUpdateEvent(wxCommandEvent &event)
@@ -80,8 +104,8 @@ void TileViewerFrame::initializeSDL2(wxPanel* mainDisplayPanel, wxPanel* zoomedT
 
     zoomedTileWindow = SDL_CreateWindowFrom((void*)zoomedTilePanel->GetHandle());
 	SDL_SetWindowSize(zoomedTileWindow,ZOOM_TILE_SIZE, ZOOM_TILE_SIZE);
-    zoomedTileMapRenderer = SDL_CreateRenderer(zoomedTileWindow, -1, SDL_RENDERER_ACCELERATED);
-    zoomedTileMapTexture = SDL_CreateTexture(zoomedTileMapRenderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, TILE_DIMENSION, TILE_DIMENSION);
+    zoomedTileRenderer = SDL_CreateRenderer(zoomedTileWindow, -1, SDL_RENDERER_ACCELERATED);
+    zoomedTileTexture = SDL_CreateTexture(zoomedTileRenderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, TILE_DIMENSION, TILE_DIMENSION);
 
     // Draw grid in black.
     SDL_SetRenderDrawColor(mainTileMapRenderer, 0x00, 0x00, 0x00, 0xFF);
@@ -105,16 +129,16 @@ void TileViewerFrame::initializeSDL2(wxPanel* mainDisplayPanel, wxPanel* zoomedT
     SDL_RenderPresent(mainTileMapRenderer);
 
     // Clear the Zoomed in tile.
-    SDL_SetRenderDrawColor(zoomedTileMapRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
-    SDL_RenderClear(zoomedTileMapRenderer);
+    SDL_SetRenderDrawColor(zoomedTileRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
+    SDL_RenderClear(zoomedTileRenderer);
     // Draw a black boarder.
-    SDL_SetRenderDrawColor(zoomedTileMapRenderer, 0x00, 0x00, 0x0, 0xFF);
-    SDL_RenderDrawLine(zoomedTileMapRenderer, 0, 0, 0, ZOOM_TILE_SIZE);
-    SDL_RenderDrawLine(zoomedTileMapRenderer, ZOOM_TILE_SIZE-1, 0, ZOOM_TILE_SIZE-1, ZOOM_TILE_SIZE);
-    SDL_RenderDrawLine(zoomedTileMapRenderer, 0, 0, ZOOM_TILE_SIZE, 0);
-    SDL_RenderDrawLine(zoomedTileMapRenderer, 0, ZOOM_TILE_SIZE-1, ZOOM_TILE_SIZE, ZOOM_TILE_SIZE-1);
-    // Update screen
-    SDL_RenderPresent(zoomedTileMapRenderer);
+    SDL_SetRenderDrawColor(zoomedTileRenderer, 0x00, 0x00, 0x0, 0xFF);
+    SDL_RenderDrawLine(zoomedTileRenderer, 0, 0, 0, ZOOM_TILE_SIZE);
+    SDL_RenderDrawLine(zoomedTileRenderer, ZOOM_TILE_SIZE-1, 0, ZOOM_TILE_SIZE-1, ZOOM_TILE_SIZE);
+    SDL_RenderDrawLine(zoomedTileRenderer, 0, 0, ZOOM_TILE_SIZE, 0);
+    SDL_RenderDrawLine(zoomedTileRenderer, 0, ZOOM_TILE_SIZE-1, ZOOM_TILE_SIZE, ZOOM_TILE_SIZE-1);
+    // Update screen.
+    SDL_RenderPresent(zoomedTileRenderer);
 }
 
 void TileViewerFrame::updateSDLDisplays(){
@@ -172,12 +196,12 @@ void TileViewerFrame::updateSDLDisplays(){
 
                 void* lockedPixels = nullptr;
                 int pitch = NULL;
-                SDL_LockTexture(zoomedTileMapTexture, NULL, &lockedPixels, &pitch);
+                SDL_LockTexture(zoomedTileTexture, NULL, &lockedPixels, &pitch);
                 SDL_memcpy(lockedPixels, memory->getTileWithPalette(tileIndex, bankNumber), INT8_PER_TILE);
-                SDL_UnlockTexture(zoomedTileMapTexture);
+                SDL_UnlockTexture(zoomedTileTexture);
 
                 // Render the texture.
-                SDL_RenderCopy(zoomedTileMapRenderer, zoomedTileMapTexture, NULL, &textureRenderLocation);
+                SDL_RenderCopy(zoomedTileRenderer, zoomedTileTexture, NULL, &textureRenderLocation);
 
                 // Update the side panel messages.
                 convertWordToHexNotation(TILE_DATA_START + tileIndex * BYTES_PER_TILE, selectedAddressText+11);
@@ -188,6 +212,6 @@ void TileViewerFrame::updateSDLDisplays(){
     }
 
     // Update the display.
-    SDL_RenderPresent(zoomedTileMapRenderer);
+    SDL_RenderPresent(zoomedTileRenderer);
     SDL_RenderPresent(mainTileMapRenderer);
 }

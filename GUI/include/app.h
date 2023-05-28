@@ -25,7 +25,8 @@ class TileViewerFrame;
 enum wxMenuIDs {
 	OPEN_CPU_STATE_VIEW = 1,
 	OPEN_MEMORY_VIEWER_VIEW,
-	OPEN_TILE_VIEWER_VIEW
+	OPEN_TILE_VIEWER_VIEW,
+	MEMORY_MAP_SEARCHBAR
 };
 
 const char APP_TITLE[] = "RedPandaEmu";

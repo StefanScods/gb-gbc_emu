@@ -58,8 +58,8 @@ private:
     SDL_Renderer* mainTileMapRenderer = nullptr;
 
 	SDL_Window* zoomedTileWindow = nullptr;
-	SDL_Texture* zoomedTileMapTexture = nullptr;
-    SDL_Renderer* zoomedTileMapRenderer = nullptr;
+	SDL_Texture* zoomedTileTexture = nullptr;
+    SDL_Renderer* zoomedTileRenderer = nullptr;
 
 	char selectedAddressText[18] = "Address: 0:0x0000";
 	wxStaticText* selectedAddressTextElement = nullptr; 

@@ -42,6 +42,18 @@ void convertWordToHexNotation(word value, char *output)
     output[0] = '0';
 }
 
+void convertWordToBinaryNotation(word value, char *output)
+{
+    output[9] = NULL;
+    int offset = 1;
+    for(int i = 7 ; i >= 0; i--){
+        output[ i + offset] = (value % 2) ? '1' : '0';
+        value = value >> 1;
+
+        if(i % 4 == 0) offset--;
+    }
+}
+
 void CPU::init()
 {
     // Return early if no memory has been bound.

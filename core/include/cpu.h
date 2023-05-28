@@ -38,6 +38,15 @@ void pushHelper(CPU* cpu, reg& source);
  * @param output - The output string buffer to populate.
  */
 void convertWordToHexNotation(word value, char* output);
+/**
+ * @brief A helper function for turning a word of data into a binary notation
+ * string. Note: this function expects `output*` to be exactly the size of 
+ * 10 chars. No error checking is done to avoid a segmentation fault.
+ * 
+ * @param value - The word to convert into binary notation.
+ * @param output - The output string buffer to populate.
+ */
+void convertWordToBinaryNotation(word value, char *output);
 
 class CPU {
 

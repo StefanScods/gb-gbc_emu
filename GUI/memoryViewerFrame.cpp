@@ -26,13 +26,18 @@ MemoryViewerFrame::MemoryViewerFrame(Core *d_emuCore, EmulationThread *d_emuThre
     const int BOTTOM_CONTROL_PANEL_HEIGHT = 30;
     const int TOP_CONTROL_PANEL_HEIGHT = MEMORY_VIEWER_DISPLAY_HEIGHT/5-BOTTOM_CONTROL_PANEL_HEIGHT;
 
+    // Font and style constants.
+    wxFont guiFont = wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false);
+    wxFont legendFont = wxFont(11, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false);
+    wxFont valueFont = wxFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false);
+
     // Create the parent sizer object.
     wxFlexGridSizer* parentSizer = new wxFlexGridSizer(3, 1, 0, 0);
 
     // Create top level panels and add them to the sizer.
     topControlPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(MEMORY_VIEWER_DISPLAY_WIDTH, TOP_CONTROL_PANEL_HEIGHT));
     topControlPanel->SetBackgroundColour(wxColour(255,255,255));
-    parentSizer->Add(topControlPanel, 1, wxEXPAND);
+    parentSizer->Add(topControlPanel, 1, wxALIGN_CENTER);
     memoryViewPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(MEMORY_VIEWER_DISPLAY_WIDTH, MEMORY_VIEWER_DISPLAY_HEIGHT/5*4));
     memoryViewPanel->SetBackgroundColour(wxColour(255,255,255));
     parentSizer->Add(memoryViewPanel, 1, wxEXPAND);
@@ -40,10 +45,30 @@ MemoryViewerFrame::MemoryViewerFrame(Core *d_emuCore, EmulationThread *d_emuThre
     bottomControlPanel->SetBackgroundColour(wxColour(255,255,255));
     parentSizer->Add(bottomControlPanel, 1, wxEXPAND);
 
+    // Create the top control panel.
+    wxBoxSizer* topControlPanelSizer  = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* searchPanelSizer  = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer* displayTypeSizer  = new wxBoxSizer(wxVERTICAL);
+    topControlPanelSizer->Add(searchPanelSizer, 1, wxALIGN_CENTER | wxLEFT, 10);
+    topControlPanelSizer->Add(displayTypeSizer, 1, wxALIGN_CENTER);
+    topControlPanel->SetSizer(topControlPanelSizer);
 
-    // Create the top control panel elements.
-    // const wxString CHOICES[] = {"hex", "decimal"};
-    // wxComboBox * valueDisplayDropDown = new wxComboBox(topControlPanel, wxID_ANY, "hex", wxDefaultPosition, wxSize(MEMORY_VIEWER_DISPLAY_WIDTH, TOP_CONTROL_PANEL_HEIGHT), 2, CHOICES);
+    // Memory Search.
+    wxStaticText* label = new wxStaticText(topControlPanel, wxID_ANY, "Search Memory Address:");
+    label->SetFont(guiFont);
+    searchPanelSizer->Add(label, 0);
+    wxSearchCtrl* memorySearchBar = new wxSearchCtrl(topControlPanel, wxMenuIDs::MEMORY_MAP_SEARCHBAR, wxEmptyString, wxDefaultPosition, wxDefaultSize);
+    memorySearchBar->SetFont(valueFont);
+    searchPanelSizer->Add(memorySearchBar, 0);
+
+    // Display notation drop down.
+    label = new wxStaticText(topControlPanel, wxID_ANY, "Selected Notation:");
+    label->SetFont(guiFont);
+    displayTypeSizer->Add(label);
+    selectedNotationDropDown = new wxComboBox(topControlPanel, wxID_ANY, NOTATION_CHOICES[0], wxDefaultPosition, wxDefaultSize, 3, NOTATION_CHOICES);
+    selectedNotationDropDown->SetFont(valueFont);
+    selectedNotationDropDown->SelectNone();
+    displayTypeSizer->Add(selectedNotationDropDown, 0);
 
     // Create the main memory viewer grid.
     memoryViewGrid = new wxGrid( memoryViewPanel,
@@ -51,11 +76,6 @@ MemoryViewerFrame::MemoryViewerFrame(Core *d_emuCore, EmulationThread *d_emuThre
                 wxPoint( 0, 0 ),
                 wxSize( MEMORY_VIEWER_DISPLAY_WIDTH, MEMORY_VIEWER_DISPLAY_HEIGHT/5*4) );
     
-    // Font and style constants.
-    wxFont guiFont = wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false);
-    wxFont legendFont = wxFont(11, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false);
-    wxFont valueFont = wxFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false);
-
     // Calculate grid dimensions.
     const int RIGHT_MARGIN = 17;
     const int COLUMN_LEGEND_WIDTH = (MEMORY_VIEWER_DISPLAY_WIDTH - RIGHT_MARGIN)/(MEMORY_VIEW_GRID_COLS+1) + 50;
@@ -108,17 +128,24 @@ MemoryViewerFrame::MemoryViewerFrame(Core *d_emuCore, EmulationThread *d_emuThre
     }
 
     // Create the bottom control panel.
-    wxFlexGridSizer* bottomControlPanelSizer = new wxFlexGridSizer(1, 1, 0, 0);
-    wxPanel* selectedAddressPanel = new wxPanel(bottomControlPanel, wxID_ANY, wxDefaultPosition, wxSize(MEMORY_VIEWER_DISPLAY_WIDTH*6/7, BOTTOM_CONTROL_PANEL_HEIGHT));
-    bottomControlPanelSizer->Add(selectedAddressPanel, 1, wxEXPAND);
+    wxBoxSizer* bottomControlPanelSizer = new wxBoxSizer(wxHORIZONTAL);
+    bottomControlPanel->SetSizer(bottomControlPanelSizer);
 
     // Create the text displaying the currently selected address.
-    selectedAddressTextElement = new wxStaticText(selectedAddressPanel, wxID_ANY, "Address: 0x0000", wxPoint(10,5), wxSize(MEMORY_VIEWER_DISPLAY_WIDTH*6/7, BOTTOM_CONTROL_PANEL_HEIGHT), wxALIGN_CENTER_VERTICAL);
+    selectedAddressTextElement = new wxStaticText(bottomControlPanel, wxID_ANY, selectedAddressText, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_VERTICAL);
     selectedAddressTextElement->SetFont(guiFont);
+    bottomControlPanelSizer->Add(selectedAddressTextElement, 1, wxLEFT | wxALIGN_CENTER_VERTICAL, 10);
+    
+    // Create the text displaying the currently selected data.
+    selectedDataTextElement = new wxStaticText(bottomControlPanel, wxID_ANY, selectedDataText, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_VERTICAL);
+    selectedDataTextElement->SetFont(valueFont);
+    bottomControlPanelSizer->Add(selectedDataTextElement, 1, wxALIGN_CENTER_VERTICAL); 
 
-    // Set Sizers.
+    bottomControlPanelSizer->Add(new wxStaticText(bottomControlPanel, wxID_ANY, " ", wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_VERTICAL), 1, wxALIGN_CENTER_VERTICAL);  
+    // Set Main Sizer.
     this->SetSizerAndFit(parentSizer);
-    bottomControlPanel->SetSizerAndFit(bottomControlPanelSizer);
+
+    memorySearchBar->SetFocus();
 }
 
 MemoryViewerFrame::~MemoryViewerFrame()
@@ -145,20 +172,44 @@ void MemoryViewerFrame::handleEmulatorCoreUpdateEvent(wxCommandEvent &event)
     int rowEnd = std::min(scrollbarPosition+20, MEMORY_VIEW_GRID_ROWS); 
 
     // Loop over the memory values to update.
+    int selectedNotation = selectedNotationDropDown->GetCurrentSelection();
     for (int colNum = 0; colNum < MEMORY_VIEW_GRID_COLS; colNum++){
         for (int rowNum = rowStart; rowNum < rowEnd; rowNum++){
             // Read the memory address.
             word address = rowNum * MEMORY_VIEW_GRID_COLS + colNum;
             byte data = memory->read(address);
-            // Convert the data to hex notation.
-            char textToRender[3] = "00";
-            textToRender[1] = toHex[data % 16];
-            data = data >> 4;
-            textToRender[0] = toHex[data % 16];
+
+            wxString textToRender = "";
+
+            switch(selectedNotation){
+                // Decimal.
+                case 1:
+                    textToRender = std::to_string(data);
+                    break;
+                // ASCII.
+                case 2:
+                    textToRender = (char) data;
+                    break;
+                 // Hex.
+                case 0:
+                default:
+                    char temp[3] = "00";
+                    temp[1] = toHex[data % 16];
+                    data = data >> 4;
+                    temp[0] = toHex[data % 16];
+                    textToRender = temp;
+                    break;
+            }
+        
             // Update the cell data.
             memoryViewGrid->SetCellValue(rowNum, colNum, textToRender);
         }
     }
+
+    // Update the bottom control panel.
+    byte data = memory->read(selectedAddress);
+    convertWordToBinaryNotation(data, selectedDataText+6);
+    selectedDataTextElement->SetLabelText(selectedDataText);
 
     // Release the lock.
     memory->releaseMutexLock();
@@ -177,6 +228,29 @@ void MemoryViewerFrame::OnGridClick(wxGridEvent& event){
 
     convertWordToHexNotation(selectedAddress, selectedAddressText+9);
     selectedAddressTextElement->SetLabelText(selectedAddressText);
+
+    event.Skip();
+}
+
+void MemoryViewerFrame::OnSearch(wxCommandEvent& event){
+    std::string searchFilter = std::string(event.GetString().mb_str());
+
+
+    // Remove the "0x" if it exists.
+    if(searchFilter.length() >= 2 && searchFilter[0] == '0' && (searchFilter[1] == 'x' || searchFilter[1] == 'X')){
+        searchFilter = searchFilter.substr(2, searchFilter.length()-1);
+    }
+    // Return early if the filter is the wrong length.
+    if(searchFilter.length() <= 0 || searchFilter.length() > 4) return;
+
+    // Try and convert the filter into an integer.
+    int convertedFilter = -1;
+    try {
+        convertedFilter = std::stoi(searchFilter, 0, 16);
+    } catch (...) {}
+    if(convertedFilter == -1) return;
+
+    memoryViewGrid->MakeCellVisible(convertedFilter / 16, convertedFilter % 16);
 
     event.Skip();
 }

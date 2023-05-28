@@ -12,6 +12,7 @@
 #include "wx/rawbmp.h"
 #include "wx/grid.h"
 #include "wx/gbsizer.h"
+#include "wx/srchctrl.h"
 #include "../../core/include/defines.h"
 
 class Core;
@@ -42,6 +43,11 @@ public:
 	void OnGridClick(wxGridEvent& event);
 
 	/**
+	 * @brief The WxWidget's OnSearch Event handler.
+	 */
+	void OnSearch(wxCommandEvent&);
+
+	/**
 	 * @brief In order to better render the memory viewer grid,
 	 * blocks of memory are given their own unique colour. This
 	 * function takes in an address and returns which colour the 
@@ -68,6 +74,8 @@ private:
 	// The address currently selected.
 	word selectedAddress = 0;
 	char selectedAddressText[16] = "Address: 0x0000";
+	char selectedDataText[16] = "Data: 0000 0000";
+	const wxString NOTATION_CHOICES[3] = {"Hex", "Decimal", "ASCII"};
 
 	// WxWidget elements.
 	wxPanel* topControlPanel = nullptr;
@@ -75,6 +83,8 @@ private:
     wxPanel* bottomControlPanel = nullptr;
 	wxGrid* memoryViewGrid = nullptr;
 	wxStaticText* selectedAddressTextElement = nullptr;
+	wxStaticText* selectedDataTextElement = nullptr;
+	wxComboBox * selectedNotationDropDown = nullptr;
 };
 
 #endif
