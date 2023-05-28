@@ -5,66 +5,66 @@ date: 2022-05-14
 */
 
 #include "include/cartridge.h"
+#include "include/memory.h"
 #include <iostream>
 #include <fstream>
 
 
 //!!! ignores the checksums 
-bool Cartridge::open(const char* filepath) {
+bool Cartridge::open(const char* filepath, Memory* memory) {
 
-
+	// Read the ROM file.
+	romLoaded = false;
 	romFile.open(filepath, std::ios::in | std::ios::binary);
-	if (!romFile.is_open()) return false; //cannot load the rom file
+	if (!romFile.is_open()) return false; // Cannot read the ROM file.
 
-	int bytestoread = CARTRIDGE_HEADER_SIZE * sizeof(char);
+	// Determine the size of the cartridge header.
+	int bytesToRead = CARTRIDGE_HEADER_SIZE * sizeof(char);
 
-	dataBuff = (char*) malloc(bytestoread);
-	if(dataBuff == NULL) return false;
+	// Read the header of the cartridge.
+	char* headerDataBuffer = new char[bytesToRead];
+	if(headerDataBuffer == NULL) return false;
+	romFile.read(headerDataBuffer, bytesToRead);
 
-	romFile.read(dataBuff, bytestoread);
-
-	//extract the title text 
+	// Extract the title text from the ROM.
 	for (int i = 0; i < TITLE_END - TITLE_START + 1; i++) {
-		romTitle[i] = dataBuff[i + TITLE_START];
+		romTitle[i] = headerDataBuffer[i + TITLE_START];
 	}
 	romTitle[TITLE_END - TITLE_START] = '\0';
 
-	std::cout << romTitle << std::endl;
-
-	//extract the Manufacturer Code
+	// Extract the Manufacturer Code.
 	for (int i = 0; i < MANUFACTURERCODE_END - MANUFACTURERCODE_START + 1; i++) {
-		manufacturerCode[i] = dataBuff[i + MANUFACTURERCODE_START];
+		manufacturerCode[i] = headerDataBuffer[i + MANUFACTURERCODE_START];
 	}
-	romTitle[MANUFACTURERCODE_END - MANUFACTURERCODE_START] = '\0';
+	manufacturerCode[MANUFACTURERCODE_END - MANUFACTURERCODE_START] = '\0';
 
-	//extract the CGB Flag
-	if(dataBuff[CGB_FLAG_ADDR] == 0x80) {
-		//compatible with both gb and cgb 
+	// Extract the CGB Flag.
+	if(headerDataBuffer[CGB_FLAG_ADDR] == 0x80) {
+		// Compatible with both GB and CGB.
 		CGB_flag = false;
 	}
-	else if(dataBuff[CGB_FLAG_ADDR] == 0xC0) {
-		//compatible with just cgb
+	else if(headerDataBuffer[CGB_FLAG_ADDR] == 0xC0) {
+		// Compatible with just CGB.
 		CGB_flag = true;
 	}
 
-	//extract the New License Code
+	// Extract the New License Code.
 	for (int i = 0; i < NEWLICENSECODE_END - NEWLICENSECODE_START + 1; i++) {
-		manufacturerCode[i] = dataBuff[i + NEWLICENSECODE_START];
+		manufacturerCode[i] = headerDataBuffer[i + NEWLICENSECODE_START];
 	}
 	newLicenseCode[NEWLICENSECODE_END - NEWLICENSECODE_START] = '\0';
 
-	//extract the Destination Code
-	destinationCode = dataBuff[DESTINATION_CODE_ADDR];
+	// Extract the Destination Code.
+	destinationCode = headerDataBuffer[DESTINATION_CODE_ADDR];
 
-	//extract the old license Code
-	destinationCode = dataBuff[OLD_LICENSE_CODE_ADDR];
+	// Extract the old license Code.
+	oldLicenseCode = headerDataBuffer[OLD_LICENSE_CODE_ADDR];
 
-	//extract the Mask ROM Version number
-	versionNumber = dataBuff[ROM_VERSION_NUMBER_ADDR];
+	// Extract the Mask ROM Version number.
+	versionNumber = headerDataBuffer[ROM_VERSION_NUMBER_ADDR];
 
-	//extract the cartridge type and performs some catridge specific initalization
-	cartridgeType = dataBuff[CARTRIDGE_TYPE_ADDR];
-
+	// Extract the cartridge type and performs some cartridge specific initialization.
+	cartridgeType = headerDataBuffer[CARTRIDGE_TYPE_ADDR];
 	switch (cartridgeType) {
 	case(ROM_ONLY):
 		break;
@@ -128,10 +128,11 @@ bool Cartridge::open(const char* filepath) {
 		break;
 	}
 
-	//get the rom size
-	byte romSizeCode = dataBuff[ROM_SiZE_ADDR];
+	// Get the ROM size.
+	byte romSizeCode = headerDataBuffer[ROM_SIZE_ADDR];
 	switch (romSizeCode) {
 	case(0x00):
+		// No bank switching necessary. 
 		romSize = 32768;
 		break;
 	case(0x01):
@@ -169,8 +170,8 @@ bool Cartridge::open(const char* filepath) {
 		break;
 	}
 
-	//get the ram size
-	byte ramSizeCode = dataBuff[RAM_SiZE_ADDR];
+	// Get the on-cartridge RAM size.
+	byte ramSizeCode = headerDataBuffer[RAM_SIZE_ADDR];
 	switch (ramSize) {
 	case(0x00):
 		ramSize = 0;
@@ -189,26 +190,31 @@ bool Cartridge::open(const char* filepath) {
 		break;
 	}
 
-	romLoaded = true;
+	// Free the header buffer.
+	delete[] headerDataBuffer;
+	headerDataBuffer = nullptr;
 
+	// Store the first two banks of ROM into memory.
+	storeROMBankIntoMemory(0, memory);
+	storeROMBankIntoMemory(1, memory);
+	
+	// Raise the ROM loaded flag and print debug info.
+	romLoaded = true;
+	std::cout << "\nSuccessfully Loaded ROM:" << std::endl;
+	std::cout << "Title: " <<  romTitle << std::endl;
+	std::cout << "ROM Size: " <<  romSize << " Bytes" << std::endl;
+	std::cout << std::endl;
 	return true;
 }
 
-byte Cartridge::readDataBuff(word address) {
-	if (dataBuff == NULL) return 0;
-
-	unsigned int parsedByte = dataBuff[address];
-	if (parsedByte < 0) {
-		return (byte)(parsedByte + 256);
-	}
-
-	return (byte)(parsedByte);
-}
-
-void  Cartridge::close() {
+void Cartridge::close() {
 	if (romLoaded) {
-		free(dataBuff);
 		romLoaded = false;
 		romFile.close();
 	}
+}
+
+void Cartridge::storeROMBankIntoMemory(int ROMBankNumber, Memory* memory){
+	if (!romFile.is_open()) return;
+	memory->storeROMBank(ROMBankNumber, &romFile);
 }

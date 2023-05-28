@@ -93,7 +93,7 @@ cycles JumpAndCall::ret(CPU* cpu){
 }
 
 cycles JumpAndCall::reti(CPU* cpu){
-    cpu->ime = true;
+    cpu->enableInterrupts();
     popHelper(cpu, cpu->PC);
 
     return RETI_CYCLES;

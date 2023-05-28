@@ -34,7 +34,9 @@ private:
     // Variables used to determine debug stepping behaviour.
 
     // An array holding all current breakpoints. Simply add the desired value of PC to this register to pause execution.
-    std::vector<word> CPUBreakpoints = {};
+    std::vector<word> CPUBreakpoints = {
+        0x69A6
+    };
 
     // A boolean indicating if a user is currently holding the "step next frame" button.
     bool holdingStepNextFrameButton = false;

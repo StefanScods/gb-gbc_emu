@@ -10,7 +10,7 @@
 #include <string.h>
 
 // Enables debug cout statements for this file.
-#define ENABLE_DEBUG_PRINTS true
+#define ENABLE_DEBUG_PRINTS false
 
 CPUStateFrame::CPUStateFrame(Core *d_emuCore, EmulationThread *d_emuThread) : wxFrame(NULL, wxID_ANY, CPU_STATE_DISPLAY_TITLE, wxDefaultPosition, wxSize(CPU_STATE_DISPLAY_WIDTH, CPU_STATE_DISPLAY_HEIGHT), wxDEFAULT_FRAME_STYLE & ~wxRESIZE_BORDER)
 {

@@ -10,7 +10,7 @@
 #include <string.h>
 
 // Enables debug cout statements for this file.
-#define ENABLE_DEBUG_PRINTS true
+#define ENABLE_DEBUG_PRINTS false
 
 MainWindowFrame::MainWindowFrame(Core *d_emuCore, App* d_appContext ) : wxFrame(NULL, wxID_ANY, APP_TITLE, wxDefaultPosition, wxSize(MAIN_WINDOW_WIDTH, MAIN_WINDOW_HEIGHT))
 {
@@ -44,6 +44,7 @@ MainWindowFrame::MainWindowFrame(Core *d_emuCore, App* d_appContext ) : wxFrame(
 	toolsMenuLayout = new wxMenu();
 	toolsMenuLayout->Append(wxMenuIDs::OPEN_CPU_STATE_VIEW, _T("&Open CPU State View"));
 	toolsMenuLayout->Append(wxMenuIDs::OPEN_MEMORY_VIEWER_VIEW, _T("&Open Memory Viewer"));
+	toolsMenuLayout->Append(wxMenuIDs::OPEN_TILE_VIEWER_VIEW, _T("&Open Tile Viewer"));
 	menuBar->Append(toolsMenuLayout, _T("&Tools"));
 
 	// Render the top menu bar.
@@ -82,4 +83,7 @@ void MainWindowFrame::OnMenuOpenCPUStateViewButton(wxCommandEvent& event){
 }
 void MainWindowFrame::OnMenuOpenMemoryViewerViewButton(wxCommandEvent& event){
 	appContext->showMemoryViewerFrame();
+}
+void MainWindowFrame::OnMenuOpenTileViewerViewButton(wxCommandEvent& event){
+	appContext->showTileViewerFrame();
 }

@@ -40,6 +40,10 @@ public:
 	 * @brief The WxWidget menu's open memory viewer view button event handler.
 	 */
 	void OnMenuOpenMemoryViewerViewButton(wxCommandEvent& event);
+	/**
+	 * @brief The WxWidget menu's open tile viewer view button event handler.
+	 */
+	void OnMenuOpenTileViewerViewButton(wxCommandEvent& event);
 
 	/**
 	 * @brief The event handler for the `EMULATOR_CORE_UPDATE_EVENT` wxWidget event.

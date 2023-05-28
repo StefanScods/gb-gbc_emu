@@ -176,6 +176,23 @@ public:
      * @param CPU_StateBuffer The buffer to populate. 
      */
     void populateCpuStateBuffer(CPU_State* CPU_StateBuffer);
+
+    /**
+     * @brief Disables all interrupts using the interrupt master 
+     * enable flag.
+     */
+    void disableInterrupts();
+    /**
+     * @brief Enables all interrupts using the interrupt master 
+     * enable flag.
+     */
+    void enableInterrupts();
+
+    /**
+     * @brief Part of the initialization routine. Writes the 
+     * Nintendo logo to the expected location in VRAM.
+     */
+    void initializeVRAM();
 };
 
 #endif

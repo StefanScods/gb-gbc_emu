@@ -95,8 +95,13 @@ void* EmulationThread::Entry()
 		SDL_SetRenderDrawColor(sdlRenderer, 0xFF, 0x0, 0x0, 0xFF);
 		SDL_RenderDrawLine(sdlRenderer, 0, 0, x % MAIN_WINDOW_WIDTH, y % MAIN_WINDOW_HEIGHT);
 
-		//Update screen
+		// Update screen.
 		SDL_RenderPresent(sdlRenderer);
+
+		// Call any other render event.
+		for(int callbackIndex = 0; callbackIndex < additionalRenderFunctions.size(); callbackIndex++){
+			additionalRenderFunctions[callbackIndex]();
+		}
 
 		// Place a cap on the framerate.
 		updateAndGetFrameDelta();	

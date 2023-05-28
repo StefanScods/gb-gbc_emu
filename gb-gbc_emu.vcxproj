@@ -177,6 +177,7 @@
     <ClCompile Include="GUI\emulationThread.cpp" />
     <ClCompile Include="GUI\mainWindowFrame.cpp" />
     <ClCompile Include="GUI\memoryViewerFrame.cpp" />
+    <ClCompile Include="GUI\tileViewerFrame.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -288,6 +289,7 @@
     <ClInclude Include="GUI\include\emulationThread.h" />
     <ClInclude Include="GUI\include\mainWindowFrame.h" />
     <ClInclude Include="GUI\include\memoryViewerFrame.h" />
+    <ClInclude Include="GUI\include\tileViewerFrame.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SDL2.dll" />

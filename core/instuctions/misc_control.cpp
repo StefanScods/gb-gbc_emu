@@ -25,13 +25,13 @@ cycles MiscAndControl::stop(CPU* cpu){
 }
 
 cycles MiscAndControl::di(CPU* cpu){
-    cpu->ime = false;
+    cpu->disableInterrupts();
 
     return DI_CYCLES;
 }
 
 cycles MiscAndControl::ei(CPU* cpu){
-    cpu->ime = true;
+    cpu->enableInterrupts();
 
     return EI_CYCLES;
 }

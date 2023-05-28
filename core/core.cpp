@@ -17,7 +17,7 @@ Core::Core(ExecutionModes mode) {
     memory.init();
     cpu.bindMemory(&memory);
     cpu.init();
-    if (!cartridge.open("C:/C++/gb-gbc_emu/testroms/tetris.gb")) {
+    if (!cartridge.open("C:/C++/gb-gbc_emu/testroms/tetris.gb", &memory)) {
         exit(1);
     }
     updateCyclesPerFrame();
@@ -86,6 +86,9 @@ void Core::emulatorMain(){
         default:
             break;
     }
+
+    // Memory processing.
+    memory.handleDirtyVRAM();
 }
 
 

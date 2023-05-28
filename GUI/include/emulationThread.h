@@ -11,8 +11,10 @@
 #include "wx/numdlg.h"
 #include "wx/progdlg.h"
 #include <SDL.h>
+#include <vector>
 
 #include "../../core/include/defines.h"
+#include "../../core/include/sdlController.h"
 
 // Forward declarations.
 class App;
@@ -25,7 +27,7 @@ class Core;
 class EmulationThread : public wxThread
 {
 public:
-    EmulationThread(App *d_appContext, Core *d_emuCore,  wxPanel* d_displayPanel );
+    EmulationThread(App *d_appContext, Core *d_emuCore,  wxPanel* d_displayPanel);
     virtual ~EmulationThread();
 
     /**
@@ -62,6 +64,15 @@ public:
     // Simple Accessors.
     double getCurrentFPS(){return currentFPS;}
 
+    /**
+     * @brief Adds a new rendering event to the event loop.
+     * 
+     * @param frameRenderCallback The additional render function to call.
+     */
+    void addAdditionalRenderEvent(voidFuncWithNoArguments frameRenderCallback){
+        additionalRenderFunctions.push_back(frameRenderCallback);
+    }
+
 private:
     App *appContext = nullptr;
     Core *emuCore = nullptr;
@@ -80,6 +91,8 @@ private:
     Uint64 targetFrameTime = FRAME_DELAY;
     double currentFPS = 0;
 
+    // An array of additional render functions to call during the event loop.
+    std::vector<voidFuncWithNoArguments> additionalRenderFunctions;
 };
 
 #endif

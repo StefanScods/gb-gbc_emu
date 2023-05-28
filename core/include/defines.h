@@ -124,9 +124,8 @@ const char toHex[16] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D'
 
 #define CARTRIDGE_TYPE_ADDR 0x147
 
-#define ROM_SiZE_ADDR 0x148
-
-#define RAM_SiZE_ADDR 0x149
+#define ROM_SIZE_ADDR 0x148
+#define RAM_SIZE_ADDR 0x149
 
 #define DESTINATION_CODE_ADDR 0x14A
 
@@ -164,6 +163,18 @@ const char toHex[16] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D'
 #define BANDAI_TAMA5 0xFD
 #define HuC3 0xFE 
 #define HuC1_RAM_BATTERY 0xFF
+
+// Tile constants.
+#define COLOURS_PER_TILE 4
+#define TILE_DIMENSION 8
+const int PIXELS_PER_TILE = TILE_DIMENSION*TILE_DIMENSION;
+const int INT8_PER_TILE = sizeof(uint32_t)/sizeof(uint8_t) * TILE_DIMENSION * TILE_DIMENSION;
+#define BYTES_PER_TILE 16
+// The width of a tile row from SDL2's perspective.
+#define TILE_PITCH 32
+#define TILE_DATA_START VRAM_START
+#define TILE_DATA_END VRAM_START + 0x1800
+const int TILES_PER_BANK = (TILE_DATA_END - TILE_DATA_START) / BYTES_PER_TILE;
 
 // OP Codes.
 #define NOP 0x00

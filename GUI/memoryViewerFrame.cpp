@@ -12,7 +12,7 @@
 #include <algorithm>
 
 // Enables debug cout statements for this file.
-#define ENABLE_DEBUG_PRINTS true
+#define ENABLE_DEBUG_PRINTS false
 
 MemoryViewerFrame::MemoryViewerFrame(Core *d_emuCore, EmulationThread *d_emuThread) : wxFrame(NULL, wxID_ANY, MEMORY_VIEWER_DISPLAY_TITLE, wxDefaultPosition, wxSize(MEMORY_VIEWER_DISPLAY_WIDTH, MEMORY_VIEWER_DISPLAY_HEIGHT), wxDEFAULT_FRAME_STYLE & ~wxRESIZE_BORDER)
 {
@@ -173,7 +173,6 @@ void MemoryViewerFrame::OnGridClick(wxGridEvent& event){
     int selectedCol = event.GetCol();
     int selectedRow = event.GetRow();
 
-    std::cout << selectedRow << " " << selectedRow << std::endl;
     selectedAddress = selectedRow * MEMORY_VIEW_GRID_COLS + selectedCol;
 
     convertWordToHexNotation(selectedAddress, selectedAddressText+9);

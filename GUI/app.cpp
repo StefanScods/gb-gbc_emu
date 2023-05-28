@@ -10,6 +10,7 @@
 #include "include\mainWindowFrame.h"
 #include "include\memoryViewerFrame.h"
 #include "include\cpuStateFrame.h"
+#include "include\tileViewerFrame.h"
 #include "include\emulationThread.h"
 #include "..\core\include\cpu.h"
 #include "..\core\include\defines.h"
@@ -25,12 +26,11 @@ wxDEFINE_EVENT(EMULATOR_CORE_UPDATE_EVENT, wxCommandEvent);
 wxBEGIN_EVENT_TABLE(MainWindowFrame, wxFrame)
 	EVT_CLOSE(MainWindowFrame::OnCloseWindow)
 	EVT_COMMAND(wxID_ANY, EMULATOR_CORE_UPDATE_EVENT, MainWindowFrame::handleEmulatorCoreUpdateEvent)
-	
 
 	EVT_MENU(wxID_EXIT, MainWindowFrame::OnMenuQuitButton)
-
 	EVT_MENU(wxMenuIDs::OPEN_CPU_STATE_VIEW, MainWindowFrame::OnMenuOpenCPUStateViewButton)
 	EVT_MENU(wxMenuIDs::OPEN_MEMORY_VIEWER_VIEW, MainWindowFrame::OnMenuOpenMemoryViewerViewButton)
+	EVT_MENU(wxMenuIDs::OPEN_TILE_VIEWER_VIEW, MainWindowFrame::OnMenuOpenTileViewerViewButton)
 wxEND_EVENT_TABLE()
 
 wxBEGIN_EVENT_TABLE(CPUStateFrame, wxFrame)
@@ -41,16 +41,23 @@ wxEND_EVENT_TABLE()
 wxBEGIN_EVENT_TABLE(MemoryViewerFrame, wxFrame)
 	EVT_CLOSE(MemoryViewerFrame::OnCloseWindow)
 	EVT_COMMAND(wxID_ANY, EMULATOR_CORE_UPDATE_EVENT, MemoryViewerFrame::handleEmulatorCoreUpdateEvent)
-	EVT_GRID_CELL_LEFT_CLICK( MemoryViewerFrame::OnGridClick )
+	EVT_GRID_CELL_LEFT_CLICK(MemoryViewerFrame::OnGridClick)
 wxEND_EVENT_TABLE()
 
-bool App::OnInit(){
+wxBEGIN_EVENT_TABLE(TileViewerFrame, wxFrame)
+	EVT_CLOSE(TileViewerFrame::OnCloseWindow)
+	EVT_COMMAND(wxID_ANY, EMULATOR_CORE_UPDATE_EVENT, TileViewerFrame::handleEmulatorCoreUpdateEvent)
+wxEND_EVENT_TABLE()
+
+bool App::OnInit()
+{
 	if (ENABLE_DEBUG_PRINTS)
 		std::cout << "Starting: " << APP_TITLE << std::endl;
 
 	// Initialize SDL2 subsystem.
-	if(!initializeSDL2()){
-        exit(1);
+	if (!initializeSDL2())
+	{
+		exit(1);
 	}
 
 	// Create the emulator core object.
@@ -84,6 +91,14 @@ bool App::OnInit(){
 	memoryViewerFrame = new MemoryViewerFrame(emuCore, emuThread);
 	memoryViewerFrame->Hide();
 
+	// Create the memory viewer displays.
+	tileViewerFrame = new TileViewerFrame(emuCore, emuThread);
+	tileViewerFrame->Show();
+
+	emuThread->addAdditionalRenderEvent(
+		std::bind(&TileViewerFrame::updateSDLDisplays, tileViewerFrame)
+	);
+
 	// Start emulation.
 	runningEmulator = true;
 	// Begin the emulation thread's execution.
@@ -108,23 +123,34 @@ int App::OnExit()
 	return 0;
 }
 
-void App::closeAllSideFrames(){
-	if(cpuStateFrame != nullptr){
+void App::closeAllSideFrames()
+{
+	if (cpuStateFrame != nullptr)
+	{
 		cpuStateFrame->Destroy();
 		cpuStateFrame = nullptr;
 	}
 
-	if(memoryViewerFrame != nullptr){
+	if (memoryViewerFrame != nullptr)
+	{
 		memoryViewerFrame->Destroy();
 		memoryViewerFrame = nullptr;
-	}	
+	}
+
+	if (tileViewerFrame != nullptr)
+	{
+		tileViewerFrame->Destroy();
+		tileViewerFrame = nullptr;
+	}
 }
 
-bool App::initializeSDL2(){
+bool App::initializeSDL2()
+{
 
 	// Initialize the main SDL2 subsystem.
-	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-		std::cerr << "Failed to initialize SDL2 with error: "<< SDL_GetError() << std::endl;
+	if (SDL_Init(SDL_INIT_VIDEO) < 0)
+	{
+		std::cerr << "Failed to initialize SDL2 with error: " << SDL_GetError() << std::endl;
 		return false;
 	}
 
@@ -134,28 +160,40 @@ bool App::initializeSDL2(){
 
 void App::sendEmulationCoreUpdateEvent()
 {
-	if (!runningEmulator) return;
+	if (!runningEmulator)
+		return;
 
 	// Create an event.
 	wxCommandEvent event(EMULATOR_CORE_UPDATE_EVENT);
 
 	// Send the event to the child windows.
 	wxPostEvent(this, event);
-	
-	if(mainWindow != nullptr && mainWindow->IsShown())
+
+	if (mainWindow != nullptr && mainWindow->IsShown())
 		wxPostEvent(mainWindow, event);
 
-	if(cpuStateFrame != nullptr && cpuStateFrame->IsShown())
+	if (cpuStateFrame != nullptr && cpuStateFrame->IsShown())
 		wxPostEvent(cpuStateFrame, event);
 
-	if(memoryViewerFrame != nullptr && memoryViewerFrame->IsShown())
+	if (memoryViewerFrame != nullptr && memoryViewerFrame->IsShown())
 		wxPostEvent(memoryViewerFrame, event);
+
+	if (tileViewerFrame != nullptr && tileViewerFrame->IsShown())
+		wxPostEvent(tileViewerFrame, event);
 }
 
-void App::showCPUStateFrame(){ 
-	if(cpuStateFrame!=nullptr) 	cpuStateFrame->Show(true);
+void App::showCPUStateFrame()
+{
+	if (cpuStateFrame != nullptr)
+		cpuStateFrame->Show(true);
 }
-
-void App::showMemoryViewerFrame(){ 
-	if(memoryViewerFrame!=nullptr) 	memoryViewerFrame->Show(true);
+void App::showMemoryViewerFrame()
+{
+	if (memoryViewerFrame != nullptr)
+		memoryViewerFrame->Show(true);
+}
+void App::showTileViewerFrame()
+{
+	if (tileViewerFrame != nullptr)
+		tileViewerFrame->Show(true);
 }

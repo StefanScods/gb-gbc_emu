@@ -1,5 +1,5 @@
 /*
-a implementation file for the arithmetic instuctions for the gb/gbc cpu
+a implementation file for the arithmetic instuction for the gb/gbc cpu
 
 date: 2021-11-13
 */

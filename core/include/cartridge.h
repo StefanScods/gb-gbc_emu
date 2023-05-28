@@ -8,12 +8,10 @@ date: 2022-05-14
 #include "defines.h"
 #include <fstream>
 
+class Memory;
 
 class Cartridge {
 private:
-
-	char* dataBuff = NULL;
-
 	byte romTitle[TITLE_END - TITLE_START + 2] = "";
 	byte manufacturerCode[MANUFACTURERCODE_END - MANUFACTURERCODE_START + 2] = "";
 	byte newLicenseCode[NEWLICENSECODE_END - NEWLICENSECODE_START + 2] = "";
@@ -34,15 +32,30 @@ private:
 
 public:
 	
-	//opens a rom
-	bool open(const char* filepath);
+	/**
+	 * @brief Opens a GameBoy or GameBoy Color ROM file. Returns a 
+	 * boolean indicating the success of the loading process. Returns 
+	 * false upon failure.
+	 * 
+	 * @param filepath The path to the ROM file.
+	 * @param memory A pointer to the emulators memory.
+	 * @return boolean
+	 */
+	bool open(const char* filepath, Memory* memory);
 
-	//safely reads from the dataBuff
-	byte readDataBuff(word address);
-
-	//closes the loaded rom 
+	/**
+	 * @brief Closes the loaded ROM file and performs any required clean up.
+	 */
 	void close();
 
+	/**
+	 * @brief Due to the second ROM bank having a dynamic value, i.e. points to different 
+	 * blocks of the file, this function is used to load a new bank into memory,
+	 * 
+	 * @param ROMBankNumber The bank number to switch too.
+	 * @param memory - The pointer to the emulator's memory.
+	 */
+	void storeROMBankIntoMemory(int ROMBankNumber, Memory* memory);
 };
 
 
