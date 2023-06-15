@@ -44,7 +44,10 @@ MainWindowFrame::MainWindowFrame(Core *d_emuCore, App* d_appContext ) : wxFrame(
 	toolsMenuLayout = new wxMenu();
 	toolsMenuLayout->Append(wxMenuIDs::OPEN_CPU_STATE_VIEW, _T("&Open CPU State View"));
 	toolsMenuLayout->Append(wxMenuIDs::OPEN_MEMORY_VIEWER_VIEW, _T("&Open Memory Viewer"));
+	toolsMenuLayout->Append(wxMenuIDs::OPEN_PALETTE_VIEWER_VIEW, _T("&Open Palette Viewer"));
 	toolsMenuLayout->Append(wxMenuIDs::OPEN_TILE_VIEWER_VIEW, _T("&Open Tile Viewer"));
+	toolsMenuLayout->Append(wxMenuIDs::OPEN_OAM_VIEWER_VIEW, _T("&Open OAM Viewer"));
+	toolsMenuLayout->Append(wxMenuIDs::OPEN_BACKGROUND_VIEWER_VIEW, _T("&Open Background Viewer"));
 	menuBar->Append(toolsMenuLayout, _T("&Tools"));
 
 	// Render the top menu bar.
@@ -68,6 +71,7 @@ void MainWindowFrame::handleEmulatorCoreUpdateEvent(wxCommandEvent& event){
 
 void MainWindowFrame::OnCloseWindow(wxCloseEvent& event){
 	// Close all other frames open in the application.
+	appContext->setRunningEmulationState(false);
 	appContext->closeAllSideFrames();
 	// Close this frame.
 	event.Skip();
@@ -84,6 +88,15 @@ void MainWindowFrame::OnMenuOpenCPUStateViewButton(wxCommandEvent& event){
 void MainWindowFrame::OnMenuOpenMemoryViewerViewButton(wxCommandEvent& event){
 	appContext->showMemoryViewerFrame();
 }
+void MainWindowFrame::OnMenuOpenPaletteViewerViewButton(wxCommandEvent& event){
+	appContext->showPaletteViewerFrame();
+}
 void MainWindowFrame::OnMenuOpenTileViewerViewButton(wxCommandEvent& event){
 	appContext->showTileViewerFrame();
+}
+void MainWindowFrame::OnMenuOpenOAMViewerViewButton(wxCommandEvent& event){
+	appContext->showOAMViewerFrame();
+}
+void MainWindowFrame::OnMenuOpenBackgroundViewerViewButton(wxCommandEvent& event){
+	appContext->showBackgroundViewerFrame();
 }

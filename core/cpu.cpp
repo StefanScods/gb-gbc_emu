@@ -110,9 +110,9 @@ void CPU::init()
 void CPU::initializeVRAM(){   
     // No error checking since the `init` function provides safety net code.
 
-    // Overwrite the first 416 bytes of VRAM with the Nintendo logo. 
-    const int VALUES_TO_EDIT = 416;
-    const byte INITAL_VRAM_STATE[VALUES_TO_EDIT] =
+    // Overwrite the first 416 bytes of VRAM with the Nintendo logo Tile Data. 
+    const int TILE_VALUES_TO_EDIT = 416;
+    const byte INITAL_TILE_STATE[TILE_VALUES_TO_EDIT] =
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
           0xF0, 0x00, 0xF0, 0x00, 0xFC, 0x00, 0xFC, 0x00, 0xFC, 0x00, 0xFC, 0x00, 0xF3, 0x00, 0xF3, 0x00, 
           0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 
@@ -139,8 +139,18 @@ void CPU::initializeVRAM(){
           0xCF, 0x00, 0xCF, 0x00, 0xCF, 0x00, 0xCF, 0x00, 0xCF, 0x00, 0xCF, 0x00, 0xC3, 0x00, 0xC3, 0x00, 
           0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00, 0xFC, 0x00, 0xFC, 0x00,
           0x3C, 0x00, 0x42, 0x00, 0xB9, 0x00, 0xA5, 0x00, 0xB9, 0x00, 0xA5, 0x00, 0x42, 0x00, 0x3C, 0x00 };
-    for(word i = 0; i<VALUES_TO_EDIT; i++){
-        memory->write(VRAM_START+i, INITAL_VRAM_STATE[i]);
+    for(word i = 0; i<TILE_VALUES_TO_EDIT; i++){
+        memory->write(VRAM_START+i, INITAL_TILE_STATE[i]);
+    }
+
+    // Overwrite the next 48 bytes after 0x9900 of VRAM with the Nintendo logo Map Data. 
+    const int MAP_VALUES_TO_EDIT = 48;
+    const byte INITAL_MAP_STATE[MAP_VALUES_TO_EDIT] = 
+        { 0x00, 0X00, 0X00, 0X00, 0X01, 0X02, 0X03, 0X04, 0X05, 0X06, 0X07, 0X08, 0X09, 0X0A, 0X0B, 0X0C, 
+          0X19, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 
+          0X00, 0X00, 0X00, 0X00, 0X0D, 0X0E, 0X0F, 0X10, 0X11, 0X12, 0X13, 0X14, 0X15, 0X16, 0X17, 0X18 };
+    for(word i = 0; i<MAP_VALUES_TO_EDIT; i++){
+        memory->write(0x9900+i, INITAL_MAP_STATE[i]);
     }
 }
 
@@ -261,12 +271,12 @@ void CPU::populateCpuStateBuffer(CPU_State *CPU_StateBuffer)
 
 void CPU::disableInterrupts()
 {
-    ime = false;
+    // Disable all interrupts.
     memory->write(INTERRUPT_ENABLE_REGISTER_ADDR, 0x00);
 }
 void CPU::enableInterrupts()
 {
     // todo!!! delay this such that the code "ei; di;" would prevent any interrupts.
-    ime = true;
-    memory->write(INTERRUPT_ENABLE_REGISTER_ADDR, 0x01);
+    // Enable all interrupts.
+    memory->write(INTERRUPT_ENABLE_REGISTER_ADDR, 0xFF);
 }

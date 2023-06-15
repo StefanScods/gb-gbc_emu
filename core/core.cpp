@@ -17,15 +17,17 @@ Core::Core(ExecutionModes mode) {
     memory.init();
     cpu.bindMemory(&memory);
     cpu.init();
-    if (!cartridge.open("C:/C++/gb-gbc_emu/testroms/tetris.gb", &memory)) {
-        exit(1);
-    }
     updateCyclesPerFrame();
 }
 
 Core::~Core() {
     cartridge.close();
     memory.destroy();
+}
+
+bool Core::loadROM(std::string filePath){
+    bool success = cartridge.open(filePath.c_str(), this);
+    return success;
 }
 
 void Core::emulatorMain(){
@@ -88,7 +90,10 @@ void Core::emulatorMain(){
     }
 
     // Memory processing.
-    memory.handleDirtyVRAM();
+    memory.acquireMutexLock();
+    memory.handleDirtyPalettes(emulatingGBColour);
+    memory.handleDirtyVRAM(emulatingGBColour);
+    memory.releaseMutexLock();
 }
 
 

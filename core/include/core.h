@@ -6,6 +6,7 @@ The header declaration for the main emulator core.
 
 #include <wx/wxprec.h>
 #include <vector>
+#include <string>
 
 #include "SDL.h"
 
@@ -24,7 +25,9 @@ private:
     Memory memory;
     Cartridge cartridge;
 
-    ExecutionModes executionMode = CONTINUE;
+    ExecutionModes executionMode = PAUSE;
+
+    bool emulatingGBColour = false;
 
     // Used to determine how many cycles to run per frame.
     cycles cyclesPerFrame;
@@ -35,7 +38,7 @@ private:
 
     // An array holding all current breakpoints. Simply add the desired value of PC to this register to pause execution.
     std::vector<word> CPUBreakpoints = {
-        0x69A6
+        0x021e
     };
 
     // A boolean indicating if a user is currently holding the "step next frame" button.
@@ -159,6 +162,21 @@ public:
      */
     void keyUpStepNextInstuctionButton();
 
+    /**
+     * @brief Loads a ROM file and begins emulating it as a cartridge.
+     * Returns a bool indicating success.
+     * 
+     * @param filePath The absolute path to the ROM file.
+     */
+    bool loadROM(std::string filePath);
+
+    /**
+     * @brief Sets the emulator to either emulate the GameBoy or
+     * GameBoyColor. This is determined by the GBC flag within the 
+     * game's ROM file.
+     */
+    void setCGBMode(bool isCGB){ emulatingGBColour = isCGB; }
+    bool getCGBMode(){ return emulatingGBColour; }
     ~Core();
 };
 

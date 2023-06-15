@@ -16,12 +16,13 @@
 // Enables debug cout statements for this file.
 #define ENABLE_DEBUG_PRINTS false
 
-TileViewerFrame::TileViewerFrame(Core *d_emuCore, EmulationThread *d_emuThread) : wxFrame(NULL, wxID_ANY, TILE_VIEWER_DISPLAY_TITLE, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~wxRESIZE_BORDER)
+TileViewerFrame::TileViewerFrame(App *d_appContext, Core *d_emuCore, EmulationThread *d_emuThread) : wxFrame(NULL, wxID_ANY, TILE_VIEWER_DISPLAY_TITLE, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~wxRESIZE_BORDER)
 {
     if (ENABLE_DEBUG_PRINTS)
         std::cout << "Starting: Tile Viewer Frame" << std::endl;
 
     // Save passed pointers.
+    appContext = d_appContext;
     emuCore = d_emuCore;
     emuThread = d_emuThread;
 
@@ -143,10 +144,11 @@ void TileViewerFrame::initializeSDL2(wxPanel* mainDisplayPanel, wxPanel* zoomedT
 
 void TileViewerFrame::updateSDLDisplays(){
     // Return early if not active.
-    if (!this->IsShown())
+    if (!appContext->getRunningEmulationState() || !this->IsShown())
         return;
 
     Memory* memory = this->emuCore->getMemory();
+    memory->acquireMutexLock();
 
     // Generate the mouse position relative to the top of the context of this frame.
     const wxPoint mouseLocation = ScreenToClient(::wxGetMousePosition());
@@ -179,7 +181,7 @@ void TileViewerFrame::updateSDLDisplays(){
             void* lockedPixels = nullptr;
             int pitch = NULL;
             SDL_LockTexture(mainTileMapTexture, NULL, &lockedPixels, &pitch);
-            SDL_memcpy(lockedPixels, memory->getTileWithPalette(tileIndex, bankNumber), INT8_PER_TILE);
+            SDL_memcpy(lockedPixels, memory->getTileDataWithoutPalette(tileIndex, bankNumber), INT8_PER_TILE);
             SDL_UnlockTexture(mainTileMapTexture);
 
             // Render the texture.
@@ -197,7 +199,7 @@ void TileViewerFrame::updateSDLDisplays(){
                 void* lockedPixels = nullptr;
                 int pitch = NULL;
                 SDL_LockTexture(zoomedTileTexture, NULL, &lockedPixels, &pitch);
-                SDL_memcpy(lockedPixels, memory->getTileWithPalette(tileIndex, bankNumber), INT8_PER_TILE);
+                SDL_memcpy(lockedPixels, memory->getTileDataWithoutPalette(tileIndex, bankNumber), INT8_PER_TILE);
                 SDL_UnlockTexture(zoomedTileTexture);
 
                 // Render the texture.
@@ -210,6 +212,8 @@ void TileViewerFrame::updateSDLDisplays(){
             }
         }
     }
+
+    memory->releaseMutexLock();
 
     // Update the display.
     SDL_RenderPresent(zoomedTileRenderer);

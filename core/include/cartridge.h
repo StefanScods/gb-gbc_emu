@@ -9,6 +9,7 @@ date: 2022-05-14
 #include <fstream>
 
 class Memory;
+class Core;
 
 class Cartridge {
 private:
@@ -38,10 +39,10 @@ public:
 	 * false upon failure.
 	 * 
 	 * @param filepath The path to the ROM file.
-	 * @param memory A pointer to the emulators memory.
+	 * @param Core A pointer to the emulator's core.
 	 * @return boolean
 	 */
-	bool open(const char* filepath, Memory* memory);
+	bool open(const char* filepath, Core* core);
 
 	/**
 	 * @brief Closes the loaded ROM file and performs any required clean up.
@@ -53,7 +54,7 @@ public:
 	 * blocks of the file, this function is used to load a new bank into memory,
 	 * 
 	 * @param ROMBankNumber The bank number to switch too.
-	 * @param memory - The pointer to the emulator's memory.
+	 * @param memory The pointer to the emulator's memory.
 	 */
 	void storeROMBankIntoMemory(int ROMBankNumber, Memory* memory);
 };

@@ -6,12 +6,13 @@ date: 2022-05-14
 
 #include "include/cartridge.h"
 #include "include/memory.h"
+#include "include/core.h"
 #include <iostream>
 #include <fstream>
 
 
 //!!! ignores the checksums 
-bool Cartridge::open(const char* filepath, Memory* memory) {
+bool Cartridge::open(const char* filepath, Core* core) {
 
 	// Read the ROM file.
 	romLoaded = false;
@@ -19,34 +20,34 @@ bool Cartridge::open(const char* filepath, Memory* memory) {
 	if (!romFile.is_open()) return false; // Cannot read the ROM file.
 
 	// Determine the size of the cartridge header.
-	int bytesToRead = CARTRIDGE_HEADER_SIZE * sizeof(char);
+	int bytesToRead = CARTRIDGE_HEADER_SIZE * sizeof(byte);
 
 	// Read the header of the cartridge.
-	char* headerDataBuffer = new char[bytesToRead];
+	byte* headerDataBuffer = new byte[bytesToRead];
 	if(headerDataBuffer == NULL) return false;
-	romFile.read(headerDataBuffer, bytesToRead);
+	romFile.read((char *)headerDataBuffer, bytesToRead);
+
+	// Extract the CGB Flag.
+	if(((int) headerDataBuffer[CGB_FLAG_ADDR]) == 0x80) {
+		// Compatible with both GB and CGB.
+		CGB_flag = false;
+	}
+	else if(((int) headerDataBuffer[CGB_FLAG_ADDR]) == 0xC0) {
+		// Compatible with just CGB.
+		CGB_flag = true;
+	}
 
 	// Extract the title text from the ROM.
 	for (int i = 0; i < TITLE_END - TITLE_START + 1; i++) {
 		romTitle[i] = headerDataBuffer[i + TITLE_START];
 	}
-	romTitle[TITLE_END - TITLE_START] = '\0';
+	romTitle[TITLE_END - TITLE_START + 1] = '\0';
 
 	// Extract the Manufacturer Code.
 	for (int i = 0; i < MANUFACTURERCODE_END - MANUFACTURERCODE_START + 1; i++) {
 		manufacturerCode[i] = headerDataBuffer[i + MANUFACTURERCODE_START];
 	}
-	manufacturerCode[MANUFACTURERCODE_END - MANUFACTURERCODE_START] = '\0';
-
-	// Extract the CGB Flag.
-	if(headerDataBuffer[CGB_FLAG_ADDR] == 0x80) {
-		// Compatible with both GB and CGB.
-		CGB_flag = false;
-	}
-	else if(headerDataBuffer[CGB_FLAG_ADDR] == 0xC0) {
-		// Compatible with just CGB.
-		CGB_flag = true;
-	}
+	manufacturerCode[MANUFACTURERCODE_END - MANUFACTURERCODE_START + 1] = '\0';
 
 	// Extract the New License Code.
 	for (int i = 0; i < NEWLICENSECODE_END - NEWLICENSECODE_START + 1; i++) {
@@ -194,14 +195,20 @@ bool Cartridge::open(const char* filepath, Memory* memory) {
 	delete[] headerDataBuffer;
 	headerDataBuffer = nullptr;
 
+
+	// Set the emulator in GameBoy / GameBoy Colour mode.
+	core->setCGBMode(CGB_flag);
 	// Store the first two banks of ROM into memory.
-	storeROMBankIntoMemory(0, memory);
-	storeROMBankIntoMemory(1, memory);
-	
+	storeROMBankIntoMemory(0, core->getMemory());
+	storeROMBankIntoMemory(1, core->getMemory());
+
 	// Raise the ROM loaded flag and print debug info.
 	romLoaded = true;
 	std::cout << "\nSuccessfully Loaded ROM:" << std::endl;
 	std::cout << "Title: " <<  romTitle << std::endl;
+	std::cout << "GameBoy Mode: ";
+	if(CGB_flag) std::cout << "GameBoy Color"  << std::endl;
+	else         std::cout << "GameBoy"  	   << std::endl;
 	std::cout << "ROM Size: " <<  romSize << " Bytes" << std::endl;
 	std::cout << std::endl;
 	return true;

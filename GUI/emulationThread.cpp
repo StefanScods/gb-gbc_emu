@@ -103,6 +103,9 @@ void* EmulationThread::Entry()
 			additionalRenderFunctions[callbackIndex]();
 		}
 
+		// Tell rest of the GUI to update.
+		appContext->sendEmulationCoreUpdateEvent();
+
 		// Place a cap on the framerate.
 		updateAndGetFrameDelta();	
 		if(targetFrameTime > frameDelta){
@@ -117,9 +120,6 @@ void* EmulationThread::Entry()
 			continue;
 		}
 		currentFPS = ((double) MILLISECOND_FACTOR)/frameDelta;
-
-		// Tell rest of the GUI to update.
-		appContext->sendEmulationCoreUpdateEvent();
 	};
 
 	// Destroys the SDL window.
@@ -127,6 +127,8 @@ void* EmulationThread::Entry()
 	SDL_DestroyWindow(sdlWindow);
 	sdlRenderer = nullptr;
 	sdlWindow = nullptr;
+
+
 
 	// Casts success as a wxThread::ExitCode
 	return (wxThread::ExitCode)true;

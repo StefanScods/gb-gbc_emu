@@ -95,9 +95,6 @@ private:
     // A pointer to memory. 
     Memory* memory = nullptr;
 
-    // Interrupt Master Enable Flag.
-    bool ime; 
-
     // The clock speed of the CPU -> 4194304Hz or 8400000Hz in CGB mode 
     cycles clockSpeed = (cycles) CLOCKSPEED;
 

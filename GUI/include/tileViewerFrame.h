@@ -14,6 +14,7 @@
 #include "../../core/include/defines.h"
 
 class Core;
+class App;
 class EmulationThread;
 
 /**
@@ -21,7 +22,7 @@ class EmulationThread;
  */
 class TileViewerFrame : public wxFrame{
 public:
-	TileViewerFrame(Core *d_emuCore, EmulationThread* d_emuThread);
+	TileViewerFrame(App *d_appContext, Core *d_emuCore, EmulationThread* d_emuThread);
 	~TileViewerFrame();
 
     /**
@@ -50,6 +51,7 @@ public:
 private:
 	wxDECLARE_EVENT_TABLE();
 
+	App *appContext = nullptr;
     Core *emuCore = nullptr;
 	EmulationThread* emuThread = nullptr;
 

@@ -1,5 +1,5 @@
 /*
-Memory class implmentation for a GameBoy color emulator
+Memory class implementation for a GameBoy color emulator
 
 date: 2021-11-13
 */
@@ -89,12 +89,16 @@ bool Memory::init()
 
     interruptEnableRegister = 0;
 
+   // Create the background maps.
+    backgroundMap0 = new uint8_t[INT8_PER_BG_MAP];
+    if (backgroundMap0 == nullptr)
+        return false;
     // Create the tile map.
     tileMap = new uint8_t[PIXELS_PER_TILE * TILES_PER_BANK * 2];
     if (tileMap == nullptr)
         return false;
-    colouredTile = new uint8_t[INT8_PER_TILE];
-    if (colouredTile == nullptr)
+    nonColouredTile = new uint8_t[INT8_PER_TILE];
+    if (nonColouredTile == nullptr)
         return false;
 
     return true;
@@ -117,9 +121,10 @@ bool Memory::destroy()
     delete[] ioPorts;
     delete[] hRAM;
 
+    delete[] backgroundMap0;
     delete[] tileMap;
-    delete[] colouredTile;
- 
+    delete[] nonColouredTile;
+    
     return true;
 }
 
@@ -214,6 +219,7 @@ void Memory::write(word address, byte d_data)
     else if (address >= IOPORTS_START && address <= IOPORTS_END)
     {
         ioPorts[address - IOPORTS_START] = d_data;
+        handleIOUpdate(address, d_data);
     }
 
     // FF80-FFFE   High RAM (HRAM).
@@ -329,6 +335,7 @@ byte *Memory::getBytePointer(word address)
     // 8000-9FFF   8KB Video RAM (VRAM) (switchable bank 0-1 in CGB Mode).
     else if (address >= VRAM_START && address <= VRAM_END)
     {   
+        dirtyVRAM = true;
         if(selectedVRAMBank) return vRAMBank1 + address - VRAM_START;
         else return vRAMBank2 + address - VRAM_START;
     }
@@ -374,6 +381,7 @@ byte *Memory::getBytePointer(word address)
     // FF00-FF7F   I/O Ports.
     else if (address >= IOPORTS_START && address <= IOPORTS_END)
     {
+        std::cerr << "Error: IO update not handled in this case" << std::endl;
         return ioPorts + address - IOPORTS_START;
     }
 
@@ -419,7 +427,7 @@ void Memory::updateTile(int tileIndex, bool vRAMBank){
     }
 }
 
-void Memory::handleDirtyVRAM(){
+void Memory::handleDirtyVRAM(bool CGBMode){
     // Return early if there is nothing to do.
     if(!dirtyVRAM) return;
 
@@ -430,27 +438,120 @@ void Memory::handleDirtyVRAM(){
             updateTile(tileIndex, bankNumber);
         }
     }
+    // Update background map0.
+    if(CGBMode){
+        std::cerr << "Error: GameBoy Colour Mode is currently unsupported!" << std::endl;
+        dirtyPalettes = false;
+        return;
+    }
 
+    byte* startOfTileMapPointer = getBytePointer(BGM0_DATA_START);
+    for(int mapIndex = 0; mapIndex < BGM0_DATA_END - BGM0_DATA_START + 1; mapIndex++){
+        // Get which tile to draw.
+        byte tileIndex = *(startOfTileMapPointer + mapIndex);
+        int mapX = mapIndex % BG_MAP_WIDTH_TILES;
+        int mapY = mapIndex / BG_MAP_WIDTH_TILES;
+        // Get the palette to apply -> always BGP0 on non-CGB mode.
+        byte* startOfPalette =  getPaletteColour(false, 0);
+        // Loop over the tile data and render the tile with the background palette applied.
+        for(int lineNumber = 0; lineNumber<TILE_DIMENSION; lineNumber++){
+            for(int pixelNumber = 0; pixelNumber<TILE_DIMENSION; pixelNumber++){
+                // Determine which colour index to use.
+                uint32_t pixelPositionInMap = tileIndex * PIXELS_PER_TILE + lineNumber*TILE_DIMENSION + pixelNumber;
+                byte* startOfSwatch = startOfPalette + (4 * tileMap[pixelPositionInMap]);
+                // Calculate where each pixel is on the master array.
+                uint32_t pixelPositionInBGM0 = pixelNumber * sizeof(uint32_t) + mapX * TILE_PITCH + lineNumber * BG_MAP_PITCH + mapY * BG_MAP_PITCH * TILE_DIMENSION;
+                backgroundMap0[pixelPositionInBGM0    ] = *(startOfSwatch + 2); // Blue.
+                backgroundMap0[pixelPositionInBGM0 + 1] = *(startOfSwatch + 1); // Green.
+                backgroundMap0[pixelPositionInBGM0 + 2] = *(startOfSwatch    ); // Red.
+                backgroundMap0[pixelPositionInBGM0 + 3] = *(startOfSwatch + 3); // Alpha.
+            }
+        }
+    }
     dirtyVRAM = false;
 }
 
-uint8_t* Memory::getTileWithPalette(int tileIndex, bool bankNumber){
+void Memory::handleDirtyPalettes(bool CGBMode){
+    // no-op;
+    if(!dirtyPalettes) return;
+       
+    // Handle the monochrome mode.
+    if(!CGBMode){
+        // Read BGP at 0xFF47 and construct the colour.
+        byte bgTileData = read(0xFF47);
+        for(int swatchIndex = 0; swatchIndex < SWATCHES_PER_PALETTE; swatchIndex++){
+            const byte* selectedBrightness = &MONOCHROME_COLOURS[(bgTileData & 0x3) * 3];
+            backgroundColours[swatchIndex * 4 + 3] = 0xFF;                         // Alpha.
+            backgroundColours[swatchIndex * 4 + 2] = *(selectedBrightness + 2);    // Blue.
+            backgroundColours[swatchIndex * 4 + 1] = *(selectedBrightness + 1);    // Green.
+            backgroundColours[swatchIndex * 4 + 0] = *(selectedBrightness + 0);    // Red.
+            bgTileData = bgTileData >> 2;
+        }
+        // Read OBP0 and 1 at 0xFF48/0xFF49 and construct the colour.
+        for(int paletteIndex = 0; paletteIndex < NUMBER_OF_OBJECT_PALETTES_NON_COLOR; paletteIndex++){
+            byte obTileData = read(0xFF48 + paletteIndex);
+            for(int swatchIndex = 0; swatchIndex < SWATCHES_PER_PALETTE; swatchIndex++){
+                const byte* selectedBrightness = &MONOCHROME_COLOURS[(obTileData & 0x3) * 3];
+                int offset = paletteIndex * SWATCHES_PER_PALETTE * 4;
+                // Set the alpha of swatch0 to 0 (transparent).
+                objectColours[offset + swatchIndex * 4 + 3] = swatchIndex ? 0xFF : 0x00;    // Alpha.                  // Alpha.
+                objectColours[offset + swatchIndex * 4 + 2] = *(selectedBrightness + 2);    // Blue.
+                objectColours[offset + swatchIndex * 4 + 1] = *(selectedBrightness + 1);    // Green.
+                objectColours[offset + swatchIndex * 4 + 0] = *(selectedBrightness + 0);    // Red.
+                obTileData = obTileData >> 2;
+            }
+        }
+
+        dirtyPalettes = false;
+        return;
+    }
+
+    // Handle the GameBoy Colour Mode.
+    std::cerr << "Error: GameBoy Colour Palettes are currently unsupported!" << std::endl;
+    dirtyPalettes = false;
+}
+
+byte* Memory::getPaletteColour(boolean objectPalette, int index){
+    if(objectPalette) return &objectColours[4*SWATCHES_PER_PALETTE*index];
+    return &backgroundColours[4*SWATCHES_PER_PALETTE*index];;
+}
+
+uint8_t* Memory::getTileDataWithoutPalette(int tileIndex, bool bankNumber){
     for(int lineNumber = 0; lineNumber<TILE_DIMENSION; lineNumber++){
         for(int pixelNumber = 0; pixelNumber<TILE_DIMENSION; pixelNumber++){
         
-            // Determine which colour to use.
+            // Determine which colour index to use.
             uint32_t pixelPositionInMap = bankNumber*TILES_PER_BANK*PIXELS_PER_TILE + tileIndex*PIXELS_PER_TILE + lineNumber*TILE_DIMENSION + pixelNumber;
+            // Apply a monochrome colour mapping.
             int8_t colourToRender = 255 - 85 * tileMap[pixelPositionInMap];
             
             // Update the one pixel's colour.
             uint32_t pixelPositionInColouredTile = lineNumber * TILE_PITCH  + pixelNumber * sizeof(uint32_t);
-            colouredTile[pixelPositionInColouredTile    ] = colourToRender; // Blue.
-            colouredTile[pixelPositionInColouredTile + 1] = colourToRender; // Green.
-            colouredTile[pixelPositionInColouredTile + 2] = colourToRender; // Red.
-            colouredTile[pixelPositionInColouredTile + 3] = 0xFF; // Alpha.
+            nonColouredTile[pixelPositionInColouredTile    ] = colourToRender; // Blue.
+            nonColouredTile[pixelPositionInColouredTile + 1] = colourToRender; // Green.
+            nonColouredTile[pixelPositionInColouredTile + 2] = colourToRender; // Red.
+            nonColouredTile[pixelPositionInColouredTile + 3] = 0xFF; // Alpha.
         }
     }
 
     // Return the completed tile.
-    return colouredTile;
+    return nonColouredTile;
 }
+
+void Memory::handleIOUpdate(word address, byte data){
+    switch(address){
+        // BGP - BG Palette Data (R/W) - Non CGB Mode Only.
+        case 0xFF47:
+        // OBP0 - Object Palette 0 Data (R/W) - Non CGB Mode Only.
+        case 0xFF48:
+        // OBP1 - Object Palette 1 Data (R/W) - Non CGB Mode Only.
+        case 0xFF49:
+            dirtyPalettes = true;
+            break;
+
+        default:
+            std::cerr << "Error: I/O Device At 0x" << std::hex << address << std::dec <<" Not Yet Supported!" << std::endl;
+            break;
+    }
+}
+

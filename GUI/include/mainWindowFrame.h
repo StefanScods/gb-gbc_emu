@@ -41,9 +41,21 @@ public:
 	 */
 	void OnMenuOpenMemoryViewerViewButton(wxCommandEvent& event);
 	/**
+	 * @brief The WxWidget menu's open palette viewer view button event handler.
+	 */
+	void OnMenuOpenPaletteViewerViewButton(wxCommandEvent& event);
+	/**
 	 * @brief The WxWidget menu's open tile viewer view button event handler.
 	 */
 	void OnMenuOpenTileViewerViewButton(wxCommandEvent& event);
+		/**
+	 * @brief The WxWidget menu's open OAM viewer view button event handler.
+	 */
+	void OnMenuOpenOAMViewerViewButton(wxCommandEvent& event);
+		/**
+	 * @brief The WxWidget menu's open background viewer view button event handler.
+	 */
+	void OnMenuOpenBackgroundViewerViewButton(wxCommandEvent& event);
 
 	/**
 	 * @brief The event handler for the `EMULATOR_CORE_UPDATE_EVENT` wxWidget event.

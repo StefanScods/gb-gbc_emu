@@ -94,6 +94,13 @@ enum ExecutionModes {
 #define NUM_INSTRUCTIONS 256
 
 const char toHex[16] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F' };
+const byte MONOCHROME_COLOURS[16] = {
+//  Red   Green Blue
+	0xCB, 0xE5, 0xF6, // Colour 0.
+	0x63, 0xB0, 0xE3, // Colour 1.
+	0x22, 0x80, 0xBF, // Colour 2.
+	0x0F, 0x3A, 0x57  // Colour 3.
+}; 
 
 // FPS defines.
 #define MILLISECOND_FACTOR 1e3
@@ -110,17 +117,17 @@ const char toHex[16] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D'
 #define CARTRIDGE_HEADER_SIZE 335
 
 #define TITLE_START 0x134
-#define TITLE_END  0x143
+#define TITLE_END  0x142
 
 #define MANUFACTURERCODE_START 0x13F
 #define MANUFACTURERCODE_END  0x142
 
-#define CGB_FLAG_ADDR 0x0143
+#define CGB_FLAG_ADDR 0x143
 
-#define NEWLICENSECODE_START 0x0144 
-#define NEWLICENSECODE_END 0x0145
+#define NEWLICENSECODE_START 0x144 
+#define NEWLICENSECODE_END 0x145
 
-#define SGB_FLAG_ADDR 0x0146 
+#define SGB_FLAG_ADDR 0x146 
 
 #define CARTRIDGE_TYPE_ADDR 0x147
 
@@ -164,17 +171,35 @@ const char toHex[16] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D'
 #define HuC3 0xFE 
 #define HuC1_RAM_BATTERY 0xFF
 
+// Palette constants.
+#define NUMBER_OF_PALETTES 8
+#define SWATCHES_PER_PALETTE 4
+#define NUMBER_OF_OBJECT_PALETTES_NON_COLOR 2
+#define NUMBER_OF_BACKGROUND_PALETTES_NON_COLOR 1
+
 // Tile constants.
 #define COLOURS_PER_TILE 4
 #define TILE_DIMENSION 8
 const int PIXELS_PER_TILE = TILE_DIMENSION*TILE_DIMENSION;
-const int INT8_PER_TILE = sizeof(uint32_t)/sizeof(uint8_t) * TILE_DIMENSION * TILE_DIMENSION;
+const int INT8_PER_TILE = sizeof(uint32_t)/sizeof(uint8_t) * PIXELS_PER_TILE;
 #define BYTES_PER_TILE 16
 // The width of a tile row from SDL2's perspective.
-#define TILE_PITCH 32
+const int TILE_PITCH = sizeof(uint32_t)*TILE_DIMENSION;
 #define TILE_DATA_START VRAM_START
 #define TILE_DATA_END VRAM_START + 0x1800
 const int TILES_PER_BANK = (TILE_DATA_END - TILE_DATA_START) / BYTES_PER_TILE;
+
+// Background Map constants.
+#define BGM0_DATA_START 0x9800
+#define BGM0_DATA_END 0x9BFF
+#define BGM1_DATA_START 0x9C00
+#define BGM1_DATA_END 0x9FFF
+
+#define BG_MAP_WIDTH_TILES 32
+const int BG_MAP_WIDTH_PIXELS = BG_MAP_WIDTH_TILES * TILE_DIMENSION;
+const int BG_MAP_PITCH = sizeof(uint32_t) * BG_MAP_WIDTH_PIXELS;
+const int PIXELS_PER_GB_MAP = BG_MAP_WIDTH_PIXELS * BG_MAP_WIDTH_PIXELS;
+const int INT8_PER_BG_MAP = sizeof(uint32_t)/sizeof(uint8_t) * PIXELS_PER_GB_MAP;
 
 // OP Codes.
 #define NOP 0x00
