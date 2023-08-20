@@ -5,7 +5,7 @@
 #include "include\emulationThread.h"
 #include "..\core\include\cpu.h"
 #include "..\core\include\core.h"
-#include "..\core\include\memory.h"
+#include "..\core\include\ppu.h"
 
 // Enables debug cout statements for this file.
 #define ENABLE_DEBUG_PRINTS false
@@ -137,11 +137,11 @@ void PaletteViewerFrame::handleOnCartridgeLoadedEvent(wxCommandEvent& event){
 void PaletteViewerFrame::handleEmulatorCoreUpdateEvent(wxCommandEvent &event)
 {
     // Return early if not active.
-    if (!this->IsShown())
+    if (!IsShown())
         return;
 
-    Memory* memory = emuCore->getMemory();
-    memory->acquireMutexLock();
+    PPU* ppu = emuCore->getPPU();
+    emuCore->acquireMutexLock();
 
     // Background Palettes.
     for(int paletteIndex = 0; paletteIndex < NUMBER_OF_PALETTES; paletteIndex++){
@@ -149,7 +149,7 @@ void PaletteViewerFrame::handleEmulatorCoreUpdateEvent(wxCommandEvent &event)
         if(!backgroundPaletteSwatches[paletteIndex*SWATCHES_PER_PALETTE]->IsShown()) continue;
 
         // Update the palette
-        byte* startOfPalette =  memory->getPaletteColour(false, paletteIndex);
+        byte* startOfPalette =  ppu->getPaletteColour(false, paletteIndex);
         for(int swatchIndex = 0; swatchIndex < SWATCHES_PER_PALETTE; swatchIndex++){    
             backgroundPaletteSwatches[paletteIndex*SWATCHES_PER_PALETTE + swatchIndex]->SetBackgroundColour(
                 wxColour(*startOfPalette, *(startOfPalette+1),  *(startOfPalette+2)));
@@ -164,7 +164,7 @@ void PaletteViewerFrame::handleEmulatorCoreUpdateEvent(wxCommandEvent &event)
         if(!objectPaletteSwatches[paletteIndex*SWATCHES_PER_PALETTE]->IsShown()) continue;
 
         // Update the palette
-        byte* startOfPalette =  memory->getPaletteColour(true, paletteIndex) + 4;
+        byte* startOfPalette =  ppu->getPaletteColour(true, paletteIndex) + 4;
         // Skip the first of the object swatches as it is transparent.
         for(int swatchIndex = 1; swatchIndex < SWATCHES_PER_PALETTE; swatchIndex++){    
             objectPaletteSwatches[paletteIndex*SWATCHES_PER_PALETTE + swatchIndex]->SetBackgroundColour(
@@ -174,6 +174,6 @@ void PaletteViewerFrame::handleEmulatorCoreUpdateEvent(wxCommandEvent &event)
         }
     }
 
-    memory->releaseMutexLock();
+    emuCore->releaseMutexLock();
 }
 

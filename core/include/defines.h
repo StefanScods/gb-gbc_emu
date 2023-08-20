@@ -7,13 +7,6 @@
 #include <iostream>
 #include <wx/wxprec.h>
 
-// Debug functions.
-namespace debug {
-	void scream();
-	void loudScream();
-	void spinSleep(long long nanosecondsToSleep);
-}
-
 // Data types.
 typedef int8_t signedByte;
 typedef uint8_t byte;
@@ -22,6 +15,33 @@ typedef uint32_t cycles;
 
 // Used to address the top and bottom halves of the CPU registers.
 typedef byte* reg8;  
+
+// Debug functions.
+namespace debug {
+	void scream();
+	void loudScream();
+	void spinSleep(long long nanosecondsToSleep);
+}
+
+/**
+ * @brief A helper function for turning a word of data into a hex notation
+ * string. Note: this function expects `output*` to be exactly the size of 
+ * 7 chars. No error checking is done to avoid a segmentation fault.
+ * 
+ * @param value - The word to convert into hex notation.
+ * @param output - The output string buffer to populate.
+ */
+void convertWordToHexNotation(word value, char* output);
+/**
+ * @brief A helper function for turning a word of data into a binary notation
+ * string. Note: this function expects `output*` to be exactly the size of 
+ * 10 chars. No error checking is done to avoid a segmentation fault.
+ * 
+ * @param value - The word to convert into binary notation.
+ * @param output - The output string buffer to populate.
+ */
+void convertWordToBinaryNotation(word value, char *output);
+
 
 // Use to store the current state of the CPU.
 struct CPU_State{
@@ -53,6 +73,11 @@ enum ExecutionModes {
 // Size of the memory address space.
 // GBC has a 16bit address bus -> 65,536 positions of memory
 #define MEM_SIZE 65536
+
+// GB Display Properties.
+#define SCREEN_WIDTH 160
+#define SCREEN_HEIGHT 144
+const int INT8_PER_SCREEN = SCREEN_WIDTH*SCREEN_HEIGHT*sizeof(uint32_t)/sizeof(uint8_t);
 
 // Memory Map.
 #define ROMBANK0_START 0x0000
@@ -109,7 +134,22 @@ const byte MONOCHROME_COLOURS[16] = {
 
 // Clock Speeds.
 #define CLOCKSPEED 4194304 //Hz
-#define CLOCKSPEED_CGBMODE 8400000 //Hz
+#define CLOCKSPEED_CGBMODE 8388608 //Hz
+#define LCD_CLOCKSPEED  4194304//Hz
+
+const int CYCLES_PER_FRAME = CLOCKSPEED / TARGET_FPS;
+
+// LCD Defines.
+#define NUM_SCANLINES 154 
+#define LAST_VISIBLE_SCANLINE 143 
+
+#define CYCLES_PER_SCANLINE 456
+const int LCD_CYCLES_PER_FRAME = CYCLES_PER_SCANLINE * NUM_SCANLINES;
+
+#define MODE0_LEN 204
+#define MODE1_LEN CYCLES_PER_SCANLINE
+#define MODE2_LEN 80
+#define MODE3_LEN 172
 
 // Cartridge Defines.
 
@@ -200,6 +240,8 @@ const int BG_MAP_WIDTH_PIXELS = BG_MAP_WIDTH_TILES * TILE_DIMENSION;
 const int BG_MAP_PITCH = sizeof(uint32_t) * BG_MAP_WIDTH_PIXELS;
 const int PIXELS_PER_GB_MAP = BG_MAP_WIDTH_PIXELS * BG_MAP_WIDTH_PIXELS;
 const int INT8_PER_BG_MAP = sizeof(uint32_t)/sizeof(uint8_t) * PIXELS_PER_GB_MAP;
+
+const int AMOUNT_BG_TO_UPDATE_PER_CYCLE = (BGM0_DATA_END - BGM0_DATA_START + 1) / 128;
 
 // OP Codes.
 #define NOP 0x00

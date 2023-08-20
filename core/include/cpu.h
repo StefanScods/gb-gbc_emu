@@ -7,6 +7,7 @@
 #include "memory.h"
 #include "register.h"
 #include "instructionSet.h"
+#include <vector>
 
 /**
  * @brief  A generic function used to implement the pop instructions. 
@@ -29,25 +30,6 @@ void popHelper(CPU* cpu, reg& dest);
  */
 void pushHelper(CPU* cpu, reg& source);
 
-/**
- * @brief A helper function for turning a word of data into a hex notation
- * string. Note: this function expects `output*` to be exactly the size of 
- * 7 chars. No error checking is done to avoid a segmentation fault.
- * 
- * @param value - The word to convert into hex notation.
- * @param output - The output string buffer to populate.
- */
-void convertWordToHexNotation(word value, char* output);
-/**
- * @brief A helper function for turning a word of data into a binary notation
- * string. Note: this function expects `output*` to be exactly the size of 
- * 10 chars. No error checking is done to avoid a segmentation fault.
- * 
- * @param value - The word to convert into binary notation.
- * @param output - The output string buffer to populate.
- */
-void convertWordToBinaryNotation(word value, char *output);
-
 class CPU {
 
     // Friends all sets of instructions so they can have access to the CPUs private data. 
@@ -62,7 +44,7 @@ class CPU {
 private:
     // A flag used to determine whether debug messages are printed to console.
     bool verbose = false;
-
+    
     // Main Registers. 
     reg reg_AF;
     reg reg_BC;
@@ -95,15 +77,22 @@ private:
     // A pointer to memory. 
     Memory* memory = nullptr;
 
-    // The clock speed of the CPU -> 4194304Hz or 8400000Hz in CGB mode 
-    cycles clockSpeed = (cycles) CLOCKSPEED;
+    // An array holding all current breakpoints. Simply add the desired value of PC to this register to pause execution.
+    std::vector<word> CPUBreakpoints = {
+    };
+
+    // A bool indicating the CPU is operating using the double speed clock,
+    bool doubleSpeedMode = false;
+
+    // Keeps track of the "cycle currency" the CPU can spend.
+    cycles cyclesSinceLastInstuction = 0;
 
 public:
 
     /**
      * @brief Runs the initialize routine for the CPU.
      */
-    void init();
+    void setInitalValues();
     
     /**
      * @brief Toggles the CPU's verbose variable. While verbose is set to true,
@@ -141,16 +130,16 @@ public:
     void bindMemory(Memory* mem) { memory = mem; }
 
     /**
-     * @brief Runs the CPU for the specified number of cycles.
-     * Returns the number of cycles the CPU actually ran for. 
-     * If the returned value is negative, the CPU ran for longer 
-     * than the desired cycles.
+     * @brief Attempt to run the CPU. This will increase the CPU's internal 
+     * cycle counter. Once that cycle counter is high enough to run the desired
+     * instuction, that instuction is actually executed.
      * 
-     * @param numCycles The number of cycles to execute for.
+     * This function will return the number of cycles the CPU ran for or 
+     * 0 if the cycle counter in not yet high enough.
      * 
      * @return int 
      */
-    int executeCycles(cycles numCycles);
+    cycles cycle();
 
     /**
      * @brief Fetches and executes the next instuction pointed to by
@@ -166,7 +155,7 @@ public:
      * 
      * @return cycles 
      */
-    cycles getClockSpeed() { return clockSpeed; }
+    cycles getClockSpeed() { return doubleSpeedMode ? CLOCKSPEED_CGBMODE : CLOCKSPEED; }
 
     /**
      * @brief Prints the current state of the CPU to std::cout.
@@ -193,12 +182,6 @@ public:
      * enable flag.
      */
     void enableInterrupts();
-
-    /**
-     * @brief Part of the initialization routine. Writes the 
-     * Nintendo logo to the expected location in VRAM.
-     */
-    void initializeVRAM();
 };
 
 #endif

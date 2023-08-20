@@ -156,6 +156,7 @@ bool App::OnInit()
 		std::bind(&BackgroundViewerFrame::updateSDLDisplays, backgroundViewerFrame)
 	);
 
+	emuThread->SetPriority(wxPRIORITY_MAX);
 	// Begin the emulation thread's execution.
 	emuThread->Run();
 

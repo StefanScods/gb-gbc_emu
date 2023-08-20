@@ -5,7 +5,7 @@
 #include "include\emulationThread.h"
 #include "..\core\include\cpu.h"
 #include "..\core\include\core.h"
-#include "..\core\include\memory.h"
+#include "..\core\include\ppu.h"
 
 #include "..\core\include\defines.h"
 #include <iostream>
@@ -87,13 +87,13 @@ void TileViewerFrame::OnCloseWindow(wxCloseEvent &event)
     SDL_RenderFillRect(zoomedTileRenderer, &zoomedTile);
     // Update screen.
     SDL_RenderPresent(zoomedTileRenderer);
-    this->Hide();
+    Hide();
 }
 
 void TileViewerFrame::handleEmulatorCoreUpdateEvent(wxCommandEvent &event)
 {
     // Return early if not active.
-    if (!this->IsShown())
+    if (!IsShown())
         return;
 }
 
@@ -147,8 +147,9 @@ void TileViewerFrame::updateSDLDisplays(){
     if (!appContext->getRunningEmulationState() || !this->IsShown())
         return;
 
-    Memory* memory = this->emuCore->getMemory();
-    memory->acquireMutexLock();
+    emuCore->acquireMutexLock();
+    PPU* ppu = emuCore->getPPU();
+    
 
     // Generate the mouse position relative to the top of the context of this frame.
     const wxPoint mouseLocation = ScreenToClient(::wxGetMousePosition());
@@ -181,7 +182,7 @@ void TileViewerFrame::updateSDLDisplays(){
             void* lockedPixels = nullptr;
             int pitch = NULL;
             SDL_LockTexture(mainTileMapTexture, NULL, &lockedPixels, &pitch);
-            SDL_memcpy(lockedPixels, memory->getTileDataWithoutPalette(tileIndex, bankNumber), INT8_PER_TILE);
+            SDL_memcpy(lockedPixels, ppu->getTileDataWithoutPalette(tileIndex, bankNumber), INT8_PER_TILE);
             SDL_UnlockTexture(mainTileMapTexture);
 
             // Render the texture.
@@ -199,7 +200,7 @@ void TileViewerFrame::updateSDLDisplays(){
                 void* lockedPixels = nullptr;
                 int pitch = NULL;
                 SDL_LockTexture(zoomedTileTexture, NULL, &lockedPixels, &pitch);
-                SDL_memcpy(lockedPixels, memory->getTileDataWithoutPalette(tileIndex, bankNumber), INT8_PER_TILE);
+                SDL_memcpy(lockedPixels, ppu->getTileDataWithoutPalette(tileIndex, bankNumber), INT8_PER_TILE);
                 SDL_UnlockTexture(zoomedTileTexture);
 
                 // Render the texture.
@@ -213,7 +214,7 @@ void TileViewerFrame::updateSDLDisplays(){
         }
     }
 
-    memory->releaseMutexLock();
+    emuCore->releaseMutexLock();
 
     // Update the display.
     SDL_RenderPresent(zoomedTileRenderer);

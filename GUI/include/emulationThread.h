@@ -81,6 +81,7 @@ private:
     // SDL2 window vars.
     SDL_Window* sdlWindow = nullptr;
     SDL_Renderer* sdlRenderer = nullptr;
+    SDL_Texture* backgroundLayer = nullptr;
     // SDL2 events.
     SDL_Event sdlEvent;
 

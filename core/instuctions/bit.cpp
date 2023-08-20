@@ -103,47 +103,49 @@ cycles Bit::prefix_cb(CPU* cpu){
     byte regNumber  = (opCode & 0x7); // extract the regs
     byte bitNumber = (opCode & 0x38)>>3; //extract the bit number
 
-    reg8 regOperand; 
+    byte temp = 0;
+    reg8 regOperand = &temp;
+    
+    bool modifyingIO = false;   
+    word address;
 
     switch(regNumber){
         case 0x0:
-            std::cout << "Reg: B" << std::endl;
             regOperand = cpu->B;
             break;
 
         case 0x1:
-            std::cout << "Reg: C" << std::endl;
             regOperand = cpu->C;
             break;
 
         case 0x2:
-            std::cout << "Reg: D" << std::endl;
             regOperand = cpu->D;
             break;
 
         case 0x3:
-            std::cout << "Reg: E" << std::endl;
             regOperand = cpu->E;
             break;
         
         case 0x4:
-            std::cout << "Reg: H" << std::endl;
             regOperand = cpu->H;
             break;
 
         case 0x5: 
-            std::cout << "Reg: L" << std::endl;
             regOperand = cpu->L;
             break;
 
         case 0x6:
-            std::cout << "Reg: (" << cpu->reg_HL.read() << ")" << std::endl;
-            regOperand = cpu->memory->getBytePointer(cpu->reg_HL.read());
+            address = cpu->reg_HL.read();
+            if(address >= IOPORTS_START && address <= IOPORTS_END){
+                modifyingIO = true;
+                temp = cpu->memory->read(address);
+            } else {
+                regOperand = cpu->memory->getBytePointer(address);
+            }
             usedCycles += mHL_CYCLES;
             break;
 
         case 0x7:
-            std::cout << "Reg: A" << std::endl;
             regOperand = cpu->A;
             break;
 
@@ -153,8 +155,6 @@ cycles Bit::prefix_cb(CPU* cpu){
     }
        
     if(insType ==  RLC){
-        std::cout << "Ins: RLC" << std::endl; 
-
         byte bit7 = readBit(*(regOperand), 7);
         *(regOperand) = (*(regOperand) << 1) | bit7; //rotates to the left 
 
@@ -165,8 +165,6 @@ cycles Bit::prefix_cb(CPU* cpu){
     }
 
     else if(insType ==  RRC){
-        std::cout << "Ins: RRC" << std::endl; 
-
         byte bit0 = readBit(*(regOperand), 0);
 
         *(regOperand) = (*(regOperand) >> 1) | (bit0<<7); //rotates to the right 
@@ -178,8 +176,6 @@ cycles Bit::prefix_cb(CPU* cpu){
     }
     
     else if(insType ==  RL){
-        std::cout << "Ins: RL" << std::endl; 
-
         byte bit7 = readBit(*(regOperand), 7);
         byte oldCarry = readBit(*(cpu->F), FLAG_C);
         *(regOperand) = (*(regOperand) << 1) | oldCarry; //rotates to the left 
@@ -191,8 +187,6 @@ cycles Bit::prefix_cb(CPU* cpu){
     }
 
     else if(insType ==  RR){
-        std::cout << "Ins: RR" << std::endl; 
-
         byte oldCarry = readBit(*(cpu->F), FLAG_C);
         byte bit0 = readBit(*(regOperand), 0);
 
@@ -205,8 +199,6 @@ cycles Bit::prefix_cb(CPU* cpu){
     }
 
     else if(insType ==  SLA){
-        std::cout << "Ins: SLA" << std::endl;
-               
         byte bit7 = readBit(*(regOperand), 7);
         *(regOperand) = (*(regOperand) << 1); //shifts to the left 
 
@@ -217,8 +209,6 @@ cycles Bit::prefix_cb(CPU* cpu){
     }
 
     else if(insType ==  SRA){
-        std::cout << "Ins: SRA" << std::endl; 
-
         byte bit0 = readBit(*(regOperand), 0);
         byte bit7 = readBit(*(regOperand), 7);
 
@@ -233,8 +223,6 @@ cycles Bit::prefix_cb(CPU* cpu){
     }
 
     else if(insType ==  SWAP){
-        std::cout << "Ins: SWAP" << std::endl;
-
         byte temp  =  *(regOperand) >> 4;
         *(regOperand) = *(regOperand) << 4 | temp; //swaps the top and bottom nybbles 
 
@@ -245,8 +233,6 @@ cycles Bit::prefix_cb(CPU* cpu){
     }
 
     else if(insType ==  SRL){
-        std::cout << "Ins: SRL" << std::endl; 
-
         byte bit0 = readBit(*(regOperand), 0);
 
         *(regOperand) = (*(regOperand) >> 1); //shifts to the right 
@@ -258,28 +244,22 @@ cycles Bit::prefix_cb(CPU* cpu){
     }
 
     else if(insType >=  BIT && insType < RES){
-        std::cout << "Bit: " << (int) bitNumber << std::endl;
-        std::cout << "Ins: BIT" << std::endl; 
-
-
         writeBit(*(cpu->F), FLAG_Z, readBit(*(regOperand), bitNumber));
         writeBit(*(cpu->F), FLAG_N, 0);
         writeBit(*(cpu->F), FLAG_H, 1); 
     }
 
     else if(insType >=  RES && insType < SET){
-        std::cout << "Bit: " << (int) bitNumber << std::endl;
-        std::cout << "Ins: RES" << std::endl; 
-
-
           writeBit(*(regOperand), bitNumber, 0);
     }
 
     else{
-        std::cout << "Bit: " << (int) bitNumber << std::endl;
-        std::cout << "Ins: SET" << std::endl;  
-
         writeBit(*(regOperand), bitNumber, 1);
+    }
+
+    // If operated on IO, ensure the appropriate handling is done.
+    if(modifyingIO){
+        cpu->memory->write(address, *(regOperand));
     }
 
     return usedCycles;

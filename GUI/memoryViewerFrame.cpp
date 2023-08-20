@@ -163,8 +163,8 @@ void MemoryViewerFrame::handleEmulatorCoreUpdateEvent(wxCommandEvent &event)
         return;
 
     // Acquire the mutex lock which protects the memory. 
-    Memory* memory = this->emuCore->getMemory();
-    memory->acquireMutexLock();
+    Memory* memory = emuCore->getMemory();
+    emuCore->acquireMutexLock();
 
     // Determine the row range to render. 
     int scrollbarPosition = (int) round((float) memoryViewGrid->GetScrollPos(wxVERTICAL) * 3.0 / 4.0);
@@ -212,7 +212,7 @@ void MemoryViewerFrame::handleEmulatorCoreUpdateEvent(wxCommandEvent &event)
     selectedDataTextElement->SetLabelText(selectedDataText);
 
     // Release the lock.
-    memory->releaseMutexLock();
+    emuCore->releaseMutexLock();
 }
 
 void MemoryViewerFrame::OnCloseWindow(wxCloseEvent &event)

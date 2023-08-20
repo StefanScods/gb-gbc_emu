@@ -4,106 +4,51 @@ Memory class implementation for a GameBoy color emulator
 date: 2021-11-13
 */
 #include "include\memory.h"
+#include "include\timer.h"
+#include "include\cpu.h"
+#include "include\ioController.h"
+#include "include\ppu.h"
 
 #include <iostream>
 
-bool Memory::init()
+bool Memory::init(CPU* d_cpu, IOController* d_ioController, PPU* d_ppu)
 {
-    dirtyVRAM = true;
+    cpu = d_cpu;
+    ioController = d_ioController;
+    ppu = d_ppu;
 
-    // Dynamically alloc the memory arrays and zero each memory.
+    // Dynamically alloc the memory arrays.
     romBank0 = new byte[ROMBANK0_END - ROMBANK0_START + 1];
     if (romBank0 == nullptr)
         return false;
-    for (int address = 0; address < ROMBANK0_END - ROMBANK0_START + 1; ++address)
-    {
-        romBank0[(word)address] = 0;
-    }
     romBankn = new byte[ROMBANKN_END - ROMBANKN_START + 1];
     if (romBankn == nullptr)
         return false;
-    for (int address = 0; address < ROMBANKN_END - ROMBANKN_START + 1; ++address)
-    {
-        romBankn[(word)address] = 0;
-    }
-
     vRAMBank1 = new byte[VRAM_END - VRAM_START + 1];
     if (vRAMBank1 == nullptr)
         return false;
     vRAMBank2 = new byte[VRAM_END - VRAM_START + 1];
     if (vRAMBank2 == nullptr)
         return false;
-    for (int address = 0; address < VRAM_END - VRAM_START + 1; ++address)
-    {
-        vRAMBank1[(word)address] = 0;
-        vRAMBank2[(word)address] = 0;
-    }
-
     externalRAM = new byte[EXTERNALRAM_END - EXTERNALRAM_START + 1];
     if (externalRAM == nullptr)
         return false;
-
-    for (int address = 0; address < EXTERNALRAM_END - EXTERNALRAM_START + 1; ++address)
-    {
-        externalRAM[(word)address] = 0;
-    }
-
     wRAM0 = new byte[WRAMBANK0_END - WRAMBANK0_START + 1];
     if (wRAM0 == nullptr)
         return false;
-    for (int address = 0; address < WRAMBANK0_END - WRAMBANK0_START + 1; ++address)
-    {
-        wRAM0[(word)address] = 0;
-    }
     wRAM1 = new byte[WRAMBANK1_END - WRAMBANK1_START + 1];
     if (wRAM1 == nullptr)
         return false;
-    for (int address = 0; address < WRAMBANK1_END - WRAMBANK1_START + 1; ++address)
-    {
-        wRAM1[(word)address] = 0;
-    }
-
     spriteAttributeTable = new byte[OAM_END - OAM_START + 1];
     if (spriteAttributeTable == nullptr)
         return false;
-    for (int address = 0; address < OAM_END - OAM_START + 1; ++address)
-    {
-        spriteAttributeTable[(word)address] = 0;
-    }
- 
-    ioPorts = new byte[IOPORTS_END - IOPORTS_START + 1];
-    if (ioPorts == nullptr)
-        return false;
-    for (int address = 0; address < IOPORTS_END - IOPORTS_START + 1; ++address)
-    {
-        ioPorts[(word)address] = 0;
-    }
-
     hRAM = new byte[HRAM_END - HRAM_START + 1];
     if (hRAM == nullptr)
         return false;
-    for (int address = 0; address < HRAM_END - HRAM_START + 1; ++address)
-    {
-        hRAM[(word)address] = 0;
-    }
 
-    interruptEnableRegister = 0;
-
-   // Create the background maps.
-    backgroundMap0 = new uint8_t[INT8_PER_BG_MAP];
-    if (backgroundMap0 == nullptr)
-        return false;
-    // Create the tile map.
-    tileMap = new uint8_t[PIXELS_PER_TILE * TILES_PER_BANK * 2];
-    if (tileMap == nullptr)
-        return false;
-    nonColouredTile = new uint8_t[INT8_PER_TILE];
-    if (nonColouredTile == nullptr)
-        return false;
-
+    // All allocs successful.
     return true;
 }
-
 bool Memory::destroy()
 {
     if (romBank0 == nullptr)
@@ -118,14 +63,112 @@ bool Memory::destroy()
     delete[] wRAM0;
     delete[] wRAM1;
     delete[] spriteAttributeTable;
-    delete[] ioPorts;
     delete[] hRAM;
 
-    delete[] backgroundMap0;
-    delete[] tileMap;
-    delete[] nonColouredTile;
-    
     return true;
+}
+
+void Memory::setInitalValues(){
+    zeroAllBlocksOfMemory();
+    // Update I/O values. 
+    write(0xFF05, 0x00); // TIMA
+    write(0xFF06, 0x00); // TMA
+    write(0xFF07, 0x00); // TAC
+    write(0xFF10, 0x80); // NR10
+    write(0xFF11, 0xBF); // NR11
+    write(0xFF12, 0xF3); // NR12
+    write(0xFF14, 0xBF); // NR14
+    write(0xFF16, 0x3F); // NR21
+    write(0xFF17, 0x00); // NR22
+    write(0xFF19, 0xBF); // NR24
+    write(0xFF1A, 0x7F); // NR30
+    write(0xFF1B, 0xFF); // NR31
+    write(0xFF1C, 0x9F); // NR32
+    write(0xFF1E, 0xBF); // NR33
+    write(0xFF20, 0xFF); // NR41
+    write(0xFF21, 0x00); // NR42
+    write(0xFF22, 0x00); // NR43
+    write(0xFF23, 0xBF); // NR30
+    write(0xFF24, 0x77); // NR50
+    write(0xFF25, 0xF3); // NR51
+    write(0xFF26, 0xF1); // NR52
+    write(0xFF40, 0x91); // LCDC
+    write(0xFF42, 0xD0); // SCY
+    write(0xFF43, 0x00); // SCX
+    write(0xFF45, 0x00); // LYC
+    write(0xFF47, 0xFC); // BGP
+    write(0xFF48, 0xFF); // OBP0
+    write(0xFF49, 0xFF); // OBP1
+    write(0xFF4A, 0x00); // WY
+    write(0xFF4B, 0x00); // WX
+    write(0xFFFF, 0x00); // IE
+    initializeVRAM();
+}
+void Memory::zeroAllBlocksOfMemory(){
+    for (int address = 0; address < ROMBANK0_END - ROMBANK0_START + 1; ++address)
+        romBank0[(word)address] = 0;
+
+    for (int address = 0; address < ROMBANKN_END - ROMBANKN_START + 1; ++address)
+        romBankn[(word)address] = 0;
+    for (int address = 0; address < VRAM_END - VRAM_START + 1; ++address){
+        vRAMBank1[(word)address] = 0;
+        vRAMBank2[(word)address] = 0;
+    }
+    for (int address = 0; address < EXTERNALRAM_END - EXTERNALRAM_START + 1; ++address)
+        externalRAM[(word)address] = 0;
+    for (int address = 0; address < WRAMBANK0_END - WRAMBANK0_START + 1; ++address)
+        wRAM0[(word)address] = 0;
+    for (int address = 0; address < WRAMBANK1_END - WRAMBANK1_START + 1; ++address)
+        wRAM1[(word)address] = 0;
+    for (int address = 0; address < OAM_END - OAM_START + 1; ++address)
+        spriteAttributeTable[(word)address] = 0;
+    for (int address = 0; address < HRAM_END - HRAM_START + 1; ++address)
+        hRAM[(word)address] = 0;
+    interruptEnableRegister = 0;
+}
+void Memory::initializeVRAM(){   
+    // Overwrite the first 416 bytes of VRAM with the Nintendo logo Tile Data. 
+    const int TILE_VALUES_TO_EDIT = 416;
+    const byte INITAL_TILE_STATE[TILE_VALUES_TO_EDIT] =
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+          0xF0, 0x00, 0xF0, 0x00, 0xFC, 0x00, 0xFC, 0x00, 0xFC, 0x00, 0xFC, 0x00, 0xF3, 0x00, 0xF3, 0x00, 
+          0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 0x3C, 0x00, 
+          0xF0, 0x00, 0xF0, 0x00, 0xF0, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF3, 0x00, 0xF3, 0x00, 
+          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xCF, 0x00, 0xCF, 0x00, 
+          0x00, 0x00, 0x00, 0x00, 0x0F, 0x00, 0x0F, 0x00, 0x3F, 0x00, 0x3F, 0x00, 0x0F, 0x00, 0x0F, 0x00, 
+          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0xC0, 0x00, 0x0F, 0x00, 0x0F, 0x00, 
+          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x00, 0xF0, 0x00, 
+          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF3, 0x00, 0xF3, 0x00, 
+          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0xC0, 0x00, 
+          0x03, 0x00, 0x03, 0x00, 0x03, 0x00, 0x03, 0x00, 0x03, 0x00, 0x03, 0x00, 0xFF, 0x00, 0xFF, 0x00, 
+          0xC0, 0x00, 0xC0, 0x00, 0xC0, 0x00, 0xC0, 0x00, 0xC0, 0x00, 0xC0, 0x00, 0xC3, 0x00, 0xC3, 0x00, 
+          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFC, 0x00, 0xFC, 0x00, 
+          0xF3, 0x00, 0xF3, 0x00, 0xF0, 0x00, 0xF0, 0x00, 0xF0, 0x00, 0xF0, 0x00, 0xF0, 0x00, 0xF0, 0x00, 
+          0x3C, 0x00, 0x3C, 0x00, 0xFC, 0x00, 0xFC, 0x00, 0xFC, 0x00, 0xFC, 0x00, 0x3C, 0x00, 0x3C, 0x00, 
+          0xF3, 0x00, 0xF3, 0x00, 0xF3, 0x00, 0xF3, 0x00, 0xF3, 0x00, 0xF3, 0x00, 0xF3, 0x00, 0xF3, 0x00,
+          0xF3, 0x00, 0xF3, 0x00, 0xC3, 0x00, 0xC3, 0x00, 0xC3, 0x00, 0xC3, 0x00, 0xC3, 0x00, 0xC3, 0x00,
+          0xCF, 0x00, 0xCF, 0x00, 0xCF, 0x00, 0xCF, 0x00, 0xCF, 0x00, 0xCF, 0x00, 0xCF, 0x00, 0xCF, 0x00,
+          0x3C, 0x00, 0x3C, 0x00, 0x3F, 0x00, 0x3F, 0x00, 0x3C, 0x00, 0x3C, 0x00, 0x0F, 0x00, 0x0F, 0x00, 
+          0x3C, 0x00, 0x3C, 0x00, 0xFC, 0x00, 0xFC, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFC, 0x00, 0xFC, 0x00, 
+          0xFC, 0x00, 0xFC, 0x00, 0xF0, 0x00, 0xF0, 0x00, 0xF0, 0x00, 0xF0, 0x00, 0xF0, 0x00, 0xF0, 0x00, 
+          0xF3, 0x00, 0xF3, 0x00, 0xF3, 0x00, 0xF3, 0x00, 0xF3, 0x00, 0xF3, 0x00, 0xF0, 0x00, 0xF0, 0x00, 
+          0xC3, 0x00, 0xC3, 0x00, 0xC3, 0x00, 0xC3, 0x00, 0xC3, 0x00, 0xC3, 0x00, 0xFF, 0x00, 0xFF, 0x00, 
+          0xCF, 0x00, 0xCF, 0x00, 0xCF, 0x00, 0xCF, 0x00, 0xCF, 0x00, 0xCF, 0x00, 0xC3, 0x00, 0xC3, 0x00, 
+          0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00, 0xFC, 0x00, 0xFC, 0x00,
+          0x3C, 0x00, 0x42, 0x00, 0xB9, 0x00, 0xA5, 0x00, 0xB9, 0x00, 0xA5, 0x00, 0x42, 0x00, 0x3C, 0x00 };
+    for(word i = 0; i<TILE_VALUES_TO_EDIT; i++){
+        write(VRAM_START+i, INITAL_TILE_STATE[i]);
+    }
+
+    // Overwrite the next 48 bytes after 0x9900 of VRAM with the Nintendo logo Background Map Data. 
+    const int MAP_VALUES_TO_EDIT = 48;
+    const byte INITAL_MAP_STATE[MAP_VALUES_TO_EDIT] = 
+        { 0x00, 0X00, 0X00, 0X00, 0X01, 0X02, 0X03, 0X04, 0X05, 0X06, 0X07, 0X08, 0X09, 0X0A, 0X0B, 0X0C, 
+          0X19, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 0X00, 
+          0X00, 0X00, 0X00, 0X00, 0X0D, 0X0E, 0X0F, 0X10, 0X11, 0X12, 0X13, 0X14, 0X15, 0X16, 0X17, 0X18 };
+    for(word i = 0; i<MAP_VALUES_TO_EDIT; i++){
+        write(0x9900+i, INITAL_MAP_STATE[i]);
+    }
 }
 
 void Memory::storeROMBank(int ROMBankNumber, std::ifstream *romFile)
@@ -155,25 +198,21 @@ void Memory::storeROMBank(int ROMBankNumber, std::ifstream *romFile)
 
 void Memory::write(word address, byte d_data)
 {
-
     // Memory Map.
 
     // 0000-3FFF   16KB ROM Bank 00     (in cartridge, fixed at bank 00).
-    if (address >= ROMBANK0_START && address <= ROMBANK0_END)
-    {
-        // romBank0[address - ROMBANK0_START] = d_data; //read only
+    if (address >= ROMBANK0_START && address <= ROMBANK0_END){
+        // Read Only.
     }
 
     // 4000-7FFF   16KB ROM Bank 01..NN (in cartridge, switchable bank number).
-    else if (address >= ROMBANKN_START && address <= ROMBANKN_END)
-    {
-        // romBankn[address - ROMBANKN_START] = d_data; //read only
+    else if (address >= ROMBANKN_START && address <= ROMBANKN_END){
+        // Read Only.
     }
 
     // 8000-9FFF   8KB Video RAM (VRAM) (switchable bank 0-1 in CGB Mode).
     else if (address >= VRAM_START && address <= VRAM_END)
     {
-        dirtyVRAM = true;
         if(selectedVRAMBank) vRAMBank1[address - VRAM_START] = d_data;
         else vRAMBank2[address - VRAM_START] = d_data;
     }
@@ -218,8 +257,7 @@ void Memory::write(word address, byte d_data)
     // FF00-FF7F   I/O Ports.
     else if (address >= IOPORTS_START && address <= IOPORTS_END)
     {
-        ioPorts[address - IOPORTS_START] = d_data;
-        handleIOUpdate(address, d_data);
+        ioController->write(address, d_data);
     }
 
     // FF80-FFFE   High RAM (HRAM).
@@ -253,7 +291,7 @@ const byte Memory::read(word address)
 
     // 8000-9FFF   8KB Video RAM (VRAM) (switchable bank 0-1 in CGB Mode).
     else if (address >= VRAM_START && address <= VRAM_END)
-    {
+    {   
         if(selectedVRAMBank) return vRAMBank1[address - VRAM_START];
         else return vRAMBank2[address - VRAM_START];
     }
@@ -299,7 +337,7 @@ const byte Memory::read(word address)
     // FF00-FF7F   I/O Ports.
     else if (address >= IOPORTS_START && address <= IOPORTS_END)
     {
-        return ioPorts[address - IOPORTS_START];
+        return ioController->read(address);
     }
 
     // FF80-FFFE   High RAM (HRAM).
@@ -314,10 +352,8 @@ const byte Memory::read(word address)
         return interruptEnableRegister;
     }
 }
-
 byte *Memory::getBytePointer(word address)
 {
-
     // Memory Map.
 
     // 0000-3FFF   16KB ROM Bank 00     (in cartridge, fixed at bank 00).
@@ -335,7 +371,6 @@ byte *Memory::getBytePointer(word address)
     // 8000-9FFF   8KB Video RAM (VRAM) (switchable bank 0-1 in CGB Mode).
     else if (address >= VRAM_START && address <= VRAM_END)
     {   
-        dirtyVRAM = true;
         if(selectedVRAMBank) return vRAMBank1 + address - VRAM_START;
         else return vRAMBank2 + address - VRAM_START;
     }
@@ -374,15 +409,13 @@ byte *Memory::getBytePointer(word address)
     // FEA0-FEFF   Not Usable.
     else if (address >= NOTUSABLE_START && address <= NOTUSABLE_END)
     {
-        //!!! maybe do an error check???
-        return 0;
+        return nullptr;
     }
 
     // FF00-FF7F   I/O Ports.
     else if (address >= IOPORTS_START && address <= IOPORTS_END)
-    {
-        std::cerr << "Error: IO update not handled in this case" << std::endl;
-        return ioPorts + address - IOPORTS_START;
+    {   
+        return nullptr;
     }
 
     // FF80-FFFE   High RAM (HRAM).
@@ -397,161 +430,3 @@ byte *Memory::getBytePointer(word address)
         return &interruptEnableRegister;
     }
 }
-
-void Memory::updateTile(int tileIndex, bool vRAMBank){
-    // Get a pointer to the VRAM bank.
-    byte* VRAMPointer = nullptr;
-    if(vRAMBank) VRAMPointer = vRAMBank1;
-    else VRAMPointer = vRAMBank2;
-
-    word tileAddress = tileIndex * BYTES_PER_TILE;
-
-    // Loop over the 8 lines which make up a tile.
-    for(int lineNumber = 0; lineNumber<TILE_DIMENSION; lineNumber++){
-        // Read two bytes per line.
-        byte VRAMTileData1 = *(VRAMPointer+(tileAddress+lineNumber*2));
-        byte VRAMTileData2 = *(VRAMPointer+0x11+(tileAddress+lineNumber*2));
-
-        // Loop over the 8 pixels per line.
-        for(int pixelNumber = TILE_DIMENSION-1; pixelNumber >= 0; pixelNumber--){
-
-            // Compute the colour index.
-            int colourIndex = ((VRAMTileData2 & 0b1) << 1) | (VRAMTileData1 & 0b1);
-            int pixelPosition = PIXELS_PER_TILE*(tileIndex + vRAMBank*TILES_PER_BANK) + (lineNumber * TILE_DIMENSION + pixelNumber);
-            tileMap[pixelPosition] = colourIndex;
-
-            // Shift by 2 to get the next colour.
-            VRAMTileData1 = VRAMTileData1 >> 1;
-            VRAMTileData2 = VRAMTileData2 >> 1;
-        }
-    }
-}
-
-void Memory::handleDirtyVRAM(bool CGBMode){
-    // Return early if there is nothing to do.
-    if(!dirtyVRAM) return;
-
-    // Update Tile Map.
-    // Loop over all tiles in both banks of VRAM.
-    for(int bankNumber = 0; bankNumber <= 1; bankNumber++){
-        for(int tileIndex = 0; tileIndex < TILES_PER_BANK; tileIndex++){
-            updateTile(tileIndex, bankNumber);
-        }
-    }
-    // Update background map0.
-    if(CGBMode){
-        std::cerr << "Error: GameBoy Colour Mode is currently unsupported!" << std::endl;
-        dirtyPalettes = false;
-        return;
-    }
-
-    byte* startOfTileMapPointer = getBytePointer(BGM0_DATA_START);
-    for(int mapIndex = 0; mapIndex < BGM0_DATA_END - BGM0_DATA_START + 1; mapIndex++){
-        // Get which tile to draw.
-        byte tileIndex = *(startOfTileMapPointer + mapIndex);
-        int mapX = mapIndex % BG_MAP_WIDTH_TILES;
-        int mapY = mapIndex / BG_MAP_WIDTH_TILES;
-        // Get the palette to apply -> always BGP0 on non-CGB mode.
-        byte* startOfPalette =  getPaletteColour(false, 0);
-        // Loop over the tile data and render the tile with the background palette applied.
-        for(int lineNumber = 0; lineNumber<TILE_DIMENSION; lineNumber++){
-            for(int pixelNumber = 0; pixelNumber<TILE_DIMENSION; pixelNumber++){
-                // Determine which colour index to use.
-                uint32_t pixelPositionInMap = tileIndex * PIXELS_PER_TILE + lineNumber*TILE_DIMENSION + pixelNumber;
-                byte* startOfSwatch = startOfPalette + (4 * tileMap[pixelPositionInMap]);
-                // Calculate where each pixel is on the master array.
-                uint32_t pixelPositionInBGM0 = pixelNumber * sizeof(uint32_t) + mapX * TILE_PITCH + lineNumber * BG_MAP_PITCH + mapY * BG_MAP_PITCH * TILE_DIMENSION;
-                backgroundMap0[pixelPositionInBGM0    ] = *(startOfSwatch + 2); // Blue.
-                backgroundMap0[pixelPositionInBGM0 + 1] = *(startOfSwatch + 1); // Green.
-                backgroundMap0[pixelPositionInBGM0 + 2] = *(startOfSwatch    ); // Red.
-                backgroundMap0[pixelPositionInBGM0 + 3] = *(startOfSwatch + 3); // Alpha.
-            }
-        }
-    }
-    dirtyVRAM = false;
-}
-
-void Memory::handleDirtyPalettes(bool CGBMode){
-    // no-op;
-    if(!dirtyPalettes) return;
-       
-    // Handle the monochrome mode.
-    if(!CGBMode){
-        // Read BGP at 0xFF47 and construct the colour.
-        byte bgTileData = read(0xFF47);
-        for(int swatchIndex = 0; swatchIndex < SWATCHES_PER_PALETTE; swatchIndex++){
-            const byte* selectedBrightness = &MONOCHROME_COLOURS[(bgTileData & 0x3) * 3];
-            backgroundColours[swatchIndex * 4 + 3] = 0xFF;                         // Alpha.
-            backgroundColours[swatchIndex * 4 + 2] = *(selectedBrightness + 2);    // Blue.
-            backgroundColours[swatchIndex * 4 + 1] = *(selectedBrightness + 1);    // Green.
-            backgroundColours[swatchIndex * 4 + 0] = *(selectedBrightness + 0);    // Red.
-            bgTileData = bgTileData >> 2;
-        }
-        // Read OBP0 and 1 at 0xFF48/0xFF49 and construct the colour.
-        for(int paletteIndex = 0; paletteIndex < NUMBER_OF_OBJECT_PALETTES_NON_COLOR; paletteIndex++){
-            byte obTileData = read(0xFF48 + paletteIndex);
-            for(int swatchIndex = 0; swatchIndex < SWATCHES_PER_PALETTE; swatchIndex++){
-                const byte* selectedBrightness = &MONOCHROME_COLOURS[(obTileData & 0x3) * 3];
-                int offset = paletteIndex * SWATCHES_PER_PALETTE * 4;
-                // Set the alpha of swatch0 to 0 (transparent).
-                objectColours[offset + swatchIndex * 4 + 3] = swatchIndex ? 0xFF : 0x00;    // Alpha.                  // Alpha.
-                objectColours[offset + swatchIndex * 4 + 2] = *(selectedBrightness + 2);    // Blue.
-                objectColours[offset + swatchIndex * 4 + 1] = *(selectedBrightness + 1);    // Green.
-                objectColours[offset + swatchIndex * 4 + 0] = *(selectedBrightness + 0);    // Red.
-                obTileData = obTileData >> 2;
-            }
-        }
-
-        dirtyPalettes = false;
-        return;
-    }
-
-    // Handle the GameBoy Colour Mode.
-    std::cerr << "Error: GameBoy Colour Palettes are currently unsupported!" << std::endl;
-    dirtyPalettes = false;
-}
-
-byte* Memory::getPaletteColour(boolean objectPalette, int index){
-    if(objectPalette) return &objectColours[4*SWATCHES_PER_PALETTE*index];
-    return &backgroundColours[4*SWATCHES_PER_PALETTE*index];;
-}
-
-uint8_t* Memory::getTileDataWithoutPalette(int tileIndex, bool bankNumber){
-    for(int lineNumber = 0; lineNumber<TILE_DIMENSION; lineNumber++){
-        for(int pixelNumber = 0; pixelNumber<TILE_DIMENSION; pixelNumber++){
-        
-            // Determine which colour index to use.
-            uint32_t pixelPositionInMap = bankNumber*TILES_PER_BANK*PIXELS_PER_TILE + tileIndex*PIXELS_PER_TILE + lineNumber*TILE_DIMENSION + pixelNumber;
-            // Apply a monochrome colour mapping.
-            int8_t colourToRender = 255 - 85 * tileMap[pixelPositionInMap];
-            
-            // Update the one pixel's colour.
-            uint32_t pixelPositionInColouredTile = lineNumber * TILE_PITCH  + pixelNumber * sizeof(uint32_t);
-            nonColouredTile[pixelPositionInColouredTile    ] = colourToRender; // Blue.
-            nonColouredTile[pixelPositionInColouredTile + 1] = colourToRender; // Green.
-            nonColouredTile[pixelPositionInColouredTile + 2] = colourToRender; // Red.
-            nonColouredTile[pixelPositionInColouredTile + 3] = 0xFF; // Alpha.
-        }
-    }
-
-    // Return the completed tile.
-    return nonColouredTile;
-}
-
-void Memory::handleIOUpdate(word address, byte data){
-    switch(address){
-        // BGP - BG Palette Data (R/W) - Non CGB Mode Only.
-        case 0xFF47:
-        // OBP0 - Object Palette 0 Data (R/W) - Non CGB Mode Only.
-        case 0xFF48:
-        // OBP1 - Object Palette 1 Data (R/W) - Non CGB Mode Only.
-        case 0xFF49:
-            dirtyPalettes = true;
-            break;
-
-        default:
-            std::cerr << "Error: I/O Device At 0x" << std::hex << address << std::dec <<" Not Yet Supported!" << std::endl;
-            break;
-    }
-}
-

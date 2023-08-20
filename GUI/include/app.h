@@ -36,8 +36,8 @@ enum wxMenuIDs {
 };
 
 const char APP_TITLE[] = "RedPandaEmu";
-#define MAIN_WINDOW_WIDTH 600
-#define MAIN_WINDOW_HEIGHT 480
+#define MAIN_WINDOW_WIDTH 160
+#define MAIN_WINDOW_HEIGHT 144
 #define MAIN_WINDOW_DISPLAY_PIXEL_DEPTH 24
 
 const char CPU_STATE_DISPLAY_TITLE[] = "CPU State";

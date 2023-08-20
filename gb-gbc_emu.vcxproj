@@ -130,7 +130,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Shell32.lib;wxbase32ud.lib;wxmsw32ud_core.lib;SDL2.lib;SDL2main.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll;$(SolutionDir)dependencies\sdl\SDL2\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\C++\gb-gbc_emu\x64\Debug;$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll;$(SolutionDir)dependencies\sdl\SDL2\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -153,7 +153,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>SDL2.lib;SDL2main.lib;Shell32.lib;wxbase32u.lib;wxmsw32u_core.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)dependencies\sdl\SDL2\lib\x64;$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\C++\gb-gbc_emu\x64\Release;$(SolutionDir)dependencies\sdl\SDL2\lib\x64;$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -168,10 +168,13 @@
     <ClCompile Include="core\instuctions\jump_call.cpp" />
     <ClCompile Include="core\instuctions\load_store.cpp" />
     <ClCompile Include="core\instuctions\misc_control.cpp" />
+    <ClCompile Include="core\ioController.cpp" />
     <ClCompile Include="core\memory.cpp" />
+    <ClCompile Include="core\ppu.cpp" />
     <ClCompile Include="core\register.cpp" />
     <ClCompile Include="core\defines.cpp" />
     <ClCompile Include="core\sdlController.cpp" />
+    <ClCompile Include="core\timer.cpp" />
     <ClCompile Include="GUI\app.cpp" />
     <ClCompile Include="GUI\backgroundViewerFrame.cpp" />
     <ClCompile Include="GUI\cpuStateFrame.cpp" />
@@ -189,9 +192,12 @@
     <ClInclude Include="core\include\cpu.h" />
     <ClInclude Include="core\include\defines.h" />
     <ClInclude Include="core\include\instructionSet.h" />
+    <ClInclude Include="core\include\ioController.h" />
     <ClInclude Include="core\include\memory.h" />
+    <ClInclude Include="core\include\ppu.h" />
     <ClInclude Include="core\include\register.h" />
     <ClInclude Include="core\include\sdlController.h" />
+    <ClInclude Include="core\include\timer.h" />
     <ClInclude Include="core\instuctions\include\arithmetic.h" />
     <ClInclude Include="core\instuctions\include\bit.h" />
     <ClInclude Include="core\instuctions\include\jump_call.h" />

@@ -59,8 +59,9 @@ private:
     SDL_Renderer *bgMapRenderer = nullptr;
 
 	// Window properties.
-	const int BACKGROUND_MAP_WIDTH = BG_MAP_WIDTH_PIXELS;
-	const int BACKGROUND_MAP_HEIGHT = BG_MAP_WIDTH_PIXELS;
+	const int BACKGROUND_MAP_SCALE = 2;
+	const int BACKGROUND_MAP_WIDTH = BG_MAP_WIDTH_PIXELS * BACKGROUND_MAP_SCALE;
+	const int BACKGROUND_MAP_HEIGHT = BG_MAP_WIDTH_PIXELS * BACKGROUND_MAP_SCALE;
 };
 
 #endif

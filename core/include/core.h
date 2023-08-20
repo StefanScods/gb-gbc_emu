@@ -5,13 +5,15 @@ The header declaration for the main emulator core.
 #define CORE_H
 
 #include <wx/wxprec.h>
-#include <vector>
 #include <string>
+#include <mutex> 
 
 #include "SDL.h"
 
 #include "cpu.h"
 #include "memory.h"
+#include "ppu.h"
+#include "ioController.h"
 #include "register.h"
 #include "defines.h"
 #include "cartridge.h"
@@ -24,42 +26,23 @@ private:
     CPU cpu;
     Memory memory;
     Cartridge cartridge;
+    PPU ppu;
+    IOController ioController; 
 
     ExecutionModes executionMode = PAUSE;
 
     bool emulatingGBColour = false;
 
-    // Used to determine how many cycles to run per frame.
-    cycles cyclesPerFrame;
     // A flag indicating a ROM is loaded.
     bool loadedROM = false;
 
-    // Variables used to determine debug stepping behaviour.
-
-    // An array holding all current breakpoints. Simply add the desired value of PC to this register to pause execution.
-    std::vector<word> CPUBreakpoints = {
-        0x021e
-    };
-
-    // A boolean indicating if a user is currently holding the "step next frame" button.
-    bool holdingStepNextFrameButton = false;
-    // Determines the number of frames remaining before the hole core can step a frame again.
-    int holdingStepNextFrameDelay = 0;
-    // Used to implement decreasing pauses between steps.
-    int holdingStepNextFrameDelayStage = 1;
-    // A boolean indicating if a user is currently holding the "step next instuction" button.
-    bool holdingStepNextInstuctionButton = false;
-    // Determines the number of frames remaining before the CPU can step again.
-    int holdingStepNextInstuctionDelay = 0;
-    // Used to implement decreasing pauses between steps.
-    int holdingStepNextInstuctionDelayStage = 1;
-
-
+    std::mutex mtx;
 public:
     // Make the core's controller public so that the rest of the codebase can modify bindings without needing wrapper functions.
     SDLController controller;
 
     Core(ExecutionModes mode);
+    ~Core();
 
     /**
      * @brief The main body of the emulator core. This function 
@@ -79,20 +62,23 @@ public:
      * @returns Memory*.
      */
     Memory* getMemory(){ return &memory;}
+    /**
+     * @brief An accessor function for retrieve the PPU sub-object.
+     * 
+     * @returns PPU*.
+     */
+    PPU* getPPU(){ return &ppu;}
 
     /**
-     * @brief Runs the emulator core for exactly one frame.
+     * @brief Runs the emulator core for frame in emulator 
+     * application time (not one frame of GameBoy Time).
+     * 
+     * @param breakOnCPU - Stops emulation after executing
+     * a single CPU instuction.
      * 
      * @returns void.
      */
-    void runForFrame();
-    /**
-     * @brief Sets `cyclesPerFrame` to reach the target 
-     * framerate.
-     * 
-     * @returns void.
-     */
-    void updateCyclesPerFrame();
+    void runForFrame(bool breakOnCPU);
 
     /**
      * @brief Dumps all important emulation states to stdio.
@@ -110,6 +96,16 @@ public:
      * @param CPU_StateBuffer The buffer to populate. 
      */
     void populateCpuStateBuffer(CPU_State* CPU_StateBuffer);
+
+    /**
+     * @brief Fetches and executes the next instuction pointed to by
+     * the CPU's program counter register. Runs any auxillary hardware 
+     * for the amount of cycles the CPU ran for. Returns the number of 
+     * cycles the CPU ran for.
+     * 
+     * @return cycles 
+     */
+    cycles fetchAndExecute();
 
     /**
      * @brief A callback function which sets the emulator's
@@ -132,35 +128,20 @@ public:
      * @returns void.
      */
     void toggleEmulatorExecution();
-
     /**
-     * @brief A callback function which sets `holdingStepNextFrameButton`
-     * to true.
+     * @brief A callback function which sets the emulator's
+     * execution state to STEP.
      * 
      * @returns void.
      */
-    void keyDownStepNextFrameButton();
+    void stepNextFrameButton();
     /**
-     * @brief A callback function which sets `holdingStepNextFrameButton`
-     * to false. This function also resets any debug step logic. 
+     * @brief A callback function which sets the emulator's
+     * execution state to STEP_CPU.
      * 
      * @returns void.
      */
-    void keyUpStepNextFrameButton();
-    /**
-     * @brief A callback function which sets `holdingStepNextInstuctionButton`
-     * to true.
-     * 
-     * @returns void.
-     */
-    void keyDownStepNextInstuctionButton();
-    /**
-     * @brief A callback function which sets `holdingStepNextInstuctionButton`
-     * to false. This function also resets any debug step logic. 
-     * 
-     * @returns void.
-     */
-    void keyUpStepNextInstuctionButton();
+    void stepNextInstuctionButton();
 
     /**
      * @brief Loads a ROM file and begins emulating it as a cartridge.
@@ -171,13 +152,28 @@ public:
     bool loadROM(std::string filePath);
 
     /**
+     * @brief The logic for when the TIMA timer 
+     * overflows.
+     */
+    void TIMATimerOverflowLogic();
+
+    /**
      * @brief Sets the emulator to either emulate the GameBoy or
      * GameBoyColor. This is determined by the GBC flag within the 
      * game's ROM file.
      */
     void setCGBMode(bool isCGB){ emulatingGBColour = isCGB; }
     bool getCGBMode(){ return emulatingGBColour; }
-    ~Core();
+
+
+     /**
+     * @brief Acquires the mutex lock which protects the memory sub-system.
+     */
+    void acquireMutexLock(){ mtx.lock();}
+    /**
+     * @brief Releases the mutex lock which protects the memory sub-system.
+     */
+    void releaseMutexLock(){ mtx.unlock();}
 };
 
 #endif

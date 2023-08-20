@@ -5,6 +5,7 @@
 #include <functional>
 #include "include/emulationThread.h"
 #include "../core/include/core.h"
+#include "../core/include/ppu.h"
 
 // Enables debug cout statements for this file.
 #define ENABLE_DEBUG_PRINTS true
@@ -47,6 +48,11 @@ bool EmulationThread::initializeEmulator(){
 		return false;
 	}
 
+	backgroundLayer = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+	if (backgroundLayer == NULL) {
+		std::cerr << "Failed to create SDL texture. Error: " << SDL_GetError() << std::endl;
+		return false;
+	}
 	// Initialization was a success.
 	return true;
 }
@@ -58,19 +64,14 @@ void* EmulationThread::Entry()
 		exit(1);
 	}
 
-	int x = 0;
-	int y = 0;
-
 	// Bind important keys.
 	emuCore->controller.bindKeyUp(SDL_SCANCODE_HOME, std::bind(&Core::printCurrentState, emuCore));
 	emuCore->controller.bindKeyUp(SDL_SCANCODE_PAUSE, std::bind(&Core::toggleEmulatorExecution, emuCore));
 
 	// Step next frame binds to the key "PAGE UP"
-	emuCore->controller.bindKeyDown(SDL_SCANCODE_PAGEUP, std::bind(&Core::keyDownStepNextFrameButton, emuCore));
-	emuCore->controller.bindKeyUp(SDL_SCANCODE_PAGEUP, std::bind(&Core::keyUpStepNextFrameButton, emuCore));
+	emuCore->controller.bindKeyUp(SDL_SCANCODE_PAGEUP, std::bind(&Core::stepNextFrameButton, emuCore));
 	// Step next instuction binds to the key "PAGE UP"
-	emuCore->controller.bindKeyDown(SDL_SCANCODE_PAGEDOWN, std::bind(&Core::keyDownStepNextInstuctionButton, emuCore));
-	emuCore->controller.bindKeyUp(SDL_SCANCODE_PAGEDOWN, std::bind(&Core::keyUpStepNextInstuctionButton, emuCore));
+	emuCore->controller.bindKeyUp(SDL_SCANCODE_PAGEDOWN, std::bind(&Core::stepNextInstuctionButton, emuCore));
 
 	// Main event loop.
 	while (appContext->getRunningEmulationState())
@@ -84,16 +85,25 @@ void* EmulationThread::Entry()
 		// Runs the emulator.
 		emuCore->emulatorMain();
 
-		x++;
-		y++;
+		PPU* ppu = emuCore->getPPU();
+		// Copy the entire background layer into a texture.
+		void* lockedPixels = nullptr;
+		int pitch = NULL;
+		SDL_LockTexture(backgroundLayer, NULL, &lockedPixels, &pitch);
+		SDL_memcpy(lockedPixels, ppu->getVideoBufferBG(), INT8_PER_SCREEN);
+		SDL_UnlockTexture(backgroundLayer);
 
 		// Clear Screen.
 		SDL_SetRenderDrawColor(sdlRenderer, 0xFF, 0x00, 0xFF, 0xFF);
 		SDL_RenderClear(sdlRenderer);
 
-		// Draw a red line.
-		SDL_SetRenderDrawColor(sdlRenderer, 0xFF, 0x0, 0x0, 0xFF);
-		SDL_RenderDrawLine(sdlRenderer, 0, 0, x % MAIN_WINDOW_WIDTH, y % MAIN_WINDOW_HEIGHT);
+		// Render the background layer texture.
+		SDL_Rect textureRenderLocation;
+		textureRenderLocation.x = 0;
+		textureRenderLocation.y = 0;
+		textureRenderLocation.w = MAIN_WINDOW_WIDTH;
+		textureRenderLocation.h = MAIN_WINDOW_HEIGHT;
+		SDL_RenderCopy(sdlRenderer, backgroundLayer, NULL, &textureRenderLocation);
 
 		// Update screen.
 		SDL_RenderPresent(sdlRenderer);
