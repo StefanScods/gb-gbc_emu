@@ -11,6 +11,12 @@ The header implementation for the main emulator core.
 #include <wx/wxprec.h>
 #include <algorithm>
 
+// An array holding all current breakpoints. Simply add the desired value of PC to this register to pause execution.
+std::vector<word> CPUBreakpoints = {
+    // 0x29a6,
+    // 0x64FD
+};
+
 Core::Core(ExecutionModes mode) {
 
     executionMode = mode;
@@ -75,6 +81,12 @@ void Core::runForFrame(bool breakOnCPU) {
         cycles cpuWork = cpu.cycle();
         ppu.cycle(emulatingGBColour);
         ioController.cycle();
+        handleInterrupts();
+
+        if(std::find(CPUBreakpoints.begin(),CPUBreakpoints.end(), cpu.getPC()) != CPUBreakpoints.end()){
+            breakOnCPU = true;
+            pauseEmulatorExecution();
+        }
   
         // Stop execution if the CPU finished an instuction. 
         if(breakOnCPU && cpuWork) break;
@@ -103,4 +115,52 @@ void Core::toggleEmulatorExecution(){
     if(executionMode != CONTINUE) return continueEmulatorExecution();
     // <CONTINUE> -> <PAUSE>
     pauseEmulatorExecution();
+}
+
+void Core::handleInterrupts(){
+    // Return early if the CPU disabled all interrupts.
+    if(!cpu.getMasterInterruptEnabledFlag()) return;
+
+    byte interruptEnableMask = memory.read(INTERRUPT_ENABLE_REGISTER_ADDR);
+    byte interruptFlags = memory.read(INTERRUPT_FLAG_REGISTER_ADDR);
+
+    // Calculate the interrupts that are both high and enabled.
+    byte validInterrupts = interruptEnableMask & interruptFlags;
+
+    // V-Blank.
+    if (readBit(validInterrupts, 0)) {
+        // Clear the interrupt.
+        writeBit(interruptFlags, 0, 0);
+        memory.write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
+        // Force the CPU to invoke its handler.
+        return cpu.setActiveInterruptHandler(0x0040);
+    // LCD Stat.
+    } else if  (readBit(validInterrupts, 1)) {
+        // Clear the interrupt.
+        writeBit(interruptFlags, 1, 0);
+        memory.write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
+        // Force the CPU to invoke its handler.
+        return cpu.setActiveInterruptHandler(0x0048);
+    // Timer.
+    } else if  (readBit(validInterrupts, 2)) {
+        // Clear the interrupt.
+        writeBit(interruptFlags, 2, 0);
+        memory.write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
+        // Force the CPU to invoke its handler.
+       return cpu.setActiveInterruptHandler(0x0050);
+     // Serial.   
+    } else if  (readBit(validInterrupts, 3)) {
+        // Clear the interrupt.
+        writeBit(interruptFlags, 3, 0);
+        memory.write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
+        // Force the CPU to invoke its handler.
+        return cpu.setActiveInterruptHandler(0x0058);
+    // Joypad. 
+    } else if  (readBit(validInterrupts, 4)) {
+        // Clear the interrupt.
+        writeBit(interruptFlags, 4, 0);
+        memory.write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
+        // Force the CPU to invoke its handler.
+        return cpu.setActiveInterruptHandler(0x0060);
+    }
 }

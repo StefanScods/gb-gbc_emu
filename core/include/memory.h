@@ -7,6 +7,7 @@ date: 2021-11-13
 */
 #include "defines.h"
 #include <fstream>
+#include <set>
 
 class Timer;
 class CPU;
@@ -33,6 +34,8 @@ private:
     bool selectedVRAMBank = 0;
     byte* vRAMBank1 = nullptr;
     byte* vRAMBank2 = nullptr;
+
+    std::set<int> dirtyTiles;
 
     byte* externalRAM = nullptr;
 
@@ -77,6 +80,16 @@ public:
      */
     bool destroy();
 
+    /**
+     * @brief Updated the dirty VRAM trackers depending on the passed address.
+     *
+     * @param address The address of affected VRAM.
+     * @param d_selectedVRAMBank The bank of VRAM to target.
+     */
+    void updateDirtyVRAM(word address, bool d_selectedVRAMBank); 
+    const std::set<int> & getDirtyTiles(){ return dirtyTiles; }
+    void clearDirtyTiles(){ dirtyTiles.clear(); }
+
     //accessors + mutators //-> !no error checking is done in these functions for the sake of speed  -> !!!might wanna make safe versions
     void write(word address, byte d_data);
     const byte read(word address);
@@ -89,7 +102,6 @@ public:
     // Toggle between VRAM banks.
     void setvRAMBANK(bool vRAMBankNumber){selectedVRAMBank = vRAMBankNumber;}
     bool getSelectedvRAMBANK(){return selectedVRAMBank;}
-
 };
 
 #endif

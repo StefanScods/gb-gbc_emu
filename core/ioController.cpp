@@ -31,13 +31,16 @@ void IOController::TIMATimerOverflowLogic(){
     // Populate the timer with the TMA-Timer modulo value.
     TIMATimer.resetTimer(memory->read(0xFF06));
     // Raise a timer interrupt by setting bit two of the IF register.
-    byte value = memory->read(0xFF0F);
+    byte value = memory->read(INTERRUPT_FLAG_REGISTER_ADDR);
     writeBit(value, 2, true);
-    memory->write(0xFF0F, value);
+    memory->write(INTERRUPT_FLAG_REGISTER_ADDR, value);
 }
 
 byte IOController::read(word address){
     switch(address){
+        // P1/JOYP: Joypad (R/W).
+        case 0xFF00:
+            return joypad.read();
         // DIV: Divider register.
         case 0xFF04:
             return DIVTimer.read();
@@ -50,6 +53,9 @@ byte IOController::read(word address){
         // TAC: Timer control
         case 0xFF07:
             return TAC;
+        // IF - Interrupt Flag
+        case 0xFF0F:
+            return IF;
         // STAT: LCD status.
         case 0xFF41:
             //return ppu->STAT;  
@@ -61,7 +67,7 @@ byte IOController::read(word address){
             return ppu->SCX;
         // LY: LCD Y coordinate [read-only].
         case 0xFF44:
-            //return ppu->scanline;
+            return ppu->scanline;
         // LYC: LY compare.
         case 0xFF45:
             return ppu->LYC;
@@ -83,6 +89,9 @@ byte IOController::read(word address){
 }
 void IOController::write(word address, byte data){
     switch(address){
+        // P1/JOYP: Joypad (R/W).
+        case 0xFF00:
+            return joypad.write(data);
         // DIV: Divider register.
         case 0xFF04:
             DIVTimer.resetTimer(0);
@@ -124,6 +133,9 @@ void IOController::write(word address, byte data){
 
             TIMATimer.setIncrementFrequency(cpu->getClockSpeed() / clockSpeedFactor); 
             break;}
+        // IF - Interrupt Flag
+        case 0xFF0F:
+            IF = data;
         // STAT: LCD status.
         case 0xFF41:
             ppu->writeToSTAT(data); 

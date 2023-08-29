@@ -99,7 +99,6 @@ cycles LoadAndStore::ld_ma16_sp(CPU* cpu){
 }
 
 cycles LoadAndStore::ldh_ma8_a(CPU* cpu){
-     
     byte dataToWrite = *(cpu->A);
     word addressToWrite = cpu->parsedData | 0xFF00;
     cpu->memory->write(addressToWrite, dataToWrite); 
@@ -441,6 +440,9 @@ cycles LoadAndStore::ld_l_mhl(CPU* cpu){
 }
 
 cycles LoadAndStore::ld_mhl_a(CPU* cpu){
+    if(cpu->reg_HL.read() == 0xFF80){
+        std::cout << "a" << std::endl;
+    }
     cpu->memory->write(cpu->reg_HL.read(), *(cpu->A));
     return LD_mHL_A;
 }

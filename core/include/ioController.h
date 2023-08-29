@@ -6,6 +6,7 @@
 
 #include "defines.h"
 #include "timer.h"
+#include "joypad.h"
 
 class CPU;
 class PPU;
@@ -20,6 +21,9 @@ private:
     PPU* ppu = nullptr;
     Memory* memory = nullptr;
 
+    // Joypad.
+    Joypad joypad;
+
     // Timers.
     Timer DIVTimer;
     Timer TIMATimer;
@@ -30,6 +34,8 @@ private:
     byte BGP = 0;
     byte OBP0 = 0;
     byte OBP1 = 0;
+
+    byte IF = 0xFF;
 
 public:
 

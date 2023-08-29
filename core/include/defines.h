@@ -114,6 +114,7 @@ const int INT8_PER_SCREEN = SCREEN_WIDTH*SCREEN_HEIGHT*sizeof(uint32_t)/sizeof(u
 #define HRAM_END 0xFFFE
 
 #define INTERRUPT_ENABLE_REGISTER_ADDR 0xFFFF
+#define INTERRUPT_FLAG_REGISTER_ADDR 0xFF0F
 
 // The number of instructions in the instuction set.
 #define NUM_INSTRUCTIONS 256

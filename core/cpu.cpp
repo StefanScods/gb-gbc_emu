@@ -8,10 +8,10 @@
 void popHelper(CPU *cpu, reg &dest)
 {
     // Pop the data off the stack.
-    cpu->SP++;
     word data = cpu->memory->read(cpu->SP.read());
     cpu->SP++;
     data = data | (cpu->memory->read(cpu->SP.read())) << 8;
+    cpu->SP++;
 
     // Load reg with the popped data.
     dest = data;
@@ -22,10 +22,10 @@ void pushHelper(CPU *cpu, reg &source)
     word data = source.read();
 
     // Push the data onto the stack.
+    cpu->SP--;
     cpu->memory->write(cpu->SP.read(), data >> 8);
     cpu->SP--;
     cpu->memory->write(cpu->SP.read(), data & 0xFF);
-    cpu->SP--;
 }
 
 void CPU::setInitalValues()
@@ -38,6 +38,9 @@ void CPU::setInitalValues()
 
     PC = (word)0x0100;
     SP = (word)0xFFFE;
+
+    masterInterruptEnableFlag = true;
+    activeInterruptVector = 0x0000;
 }
 
 byte CPU::readNextInstructionByte()
@@ -85,13 +88,30 @@ cycles CPU::fetchAndExecute()
     // Clear the cashed cycles.
     cyclesSinceLastInstuction = 0;
     // Execute the instuction and return number of cycles.
-    return nextInstruction.execute(this);
+    cycles executedCycles =  nextInstruction.execute(this);
+    return executedCycles;
 }
 
 cycles CPU::cycle(){
     cyclesSinceLastInstuction++;
     // Run for two cycles if running in double speed mode.
     if(doubleSpeedMode) cyclesSinceLastInstuction++;
+
+    // Handle interrupts if there is an active handler.
+    if(activeInterruptVector != 0x0000){
+        // It takes 5 cycles to swap to the interrupt handler.
+        if(5 > cyclesSinceLastInstuction) return 0;
+        cyclesSinceLastInstuction-=5;
+
+        // Push the current value of PC to the stack.
+        pushHelper(this, PC);
+        // Update PC to point to the interrupt vector.
+        PC = activeInterruptVector;
+        // Clear the active interrupt vector.
+        activeInterruptVector = 0x0000;
+        // Return the 5 cycles it took to do the above work.
+        return 5;
+    }
 
     // Check the next instuction.
     Instruction nextInstruction = instructionSet.set[memory->read(PC.read())];
@@ -149,11 +169,20 @@ void CPU::populateCpuStateBuffer(CPU_State *CPU_StateBuffer)
 void CPU::disableInterrupts()
 {
     // Disable all interrupts.
-    memory->write(INTERRUPT_ENABLE_REGISTER_ADDR, 0x00);
+    activeInterruptVector = 0x0000;
+    masterInterruptEnableFlag = false;
 }
 void CPU::enableInterrupts()
 {
-    // todo!!! delay this such that the code "ei; di;" would prevent any interrupts.
-    // Enable all interrupts.
-    memory->write(INTERRUPT_ENABLE_REGISTER_ADDR, 0xFF);
+    // Enable the interrupts defined in IE register.
+    masterInterruptEnableFlag = true;
+}
+
+void CPU::setActiveInterruptHandler(word interruptVectorAddress) {
+    // Turn of interrupts while the handler is active.
+    disableInterrupts();
+    // Set the interrupt handler address.
+    activeInterruptVector = interruptVectorAddress;
+    // Clear the cashed cycles.
+    cyclesSinceLastInstuction = 0;
 }

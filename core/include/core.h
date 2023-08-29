@@ -165,6 +165,14 @@ public:
     void setCGBMode(bool isCGB){ emulatingGBColour = isCGB; }
     bool getCGBMode(){ return emulatingGBColour; }
 
+    /**
+     * @brief Checks the CPU's master interrupt flag along with the enable interrupt 
+     * register + the interrupt flags to see if there a interrupt to respond to.
+     * If so, the core will evoke the CPU to begin handling the interrupt.
+     * 
+     * Call this function after all the hardware has cycled.
+    */
+    void handleInterrupts();
 
      /**
      * @brief Acquires the mutex lock which protects the memory sub-system.

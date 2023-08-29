@@ -76,16 +76,16 @@ private:
 
     // A pointer to memory. 
     Memory* memory = nullptr;
-
-    // An array holding all current breakpoints. Simply add the desired value of PC to this register to pause execution.
-    std::vector<word> CPUBreakpoints = {
-    };
-
+    
     // A bool indicating the CPU is operating using the double speed clock,
     bool doubleSpeedMode = false;
 
     // Keeps track of the "cycle currency" the CPU can spend.
     cycles cyclesSinceLastInstuction = 0;
+
+    // Used to disable all interrupts, overriding any enabled bits in the IE Register.
+    bool masterInterruptEnableFlag = false;
+    word activeInterruptVector = 0x0000;
 
 public:
 
@@ -173,6 +173,10 @@ public:
     void populateCpuStateBuffer(CPU_State* CPU_StateBuffer);
 
     /**
+     * Returns the CPU's master interrupt enable flag.
+    */
+    bool getMasterInterruptEnabledFlag(){ return masterInterruptEnableFlag; }
+    /**
      * @brief Disables all interrupts using the interrupt master 
      * enable flag.
      */
@@ -182,6 +186,11 @@ public:
      * enable flag.
      */
     void enableInterrupts();
+    /**
+     * @brief Sets the address of the active interrupt handler. This triggers the CPU 
+     * to jump to this address during cycle().
+    */
+    void setActiveInterruptHandler(word interruptVectorAddress);
 };
 
 #endif

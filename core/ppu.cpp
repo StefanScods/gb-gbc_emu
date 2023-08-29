@@ -4,6 +4,10 @@ The class implementation for the emulator's PPU / LCD  display.
 #include "include/ppu.h"
 #include "include/memory.h"
 #include "include/register.h"
+#include <set>
+
+// Enables debug cout statements for this file.
+#define ENABLE_DEBUG_PRINTS false
 
 bool PPU::init(){
    // Create the background maps.
@@ -105,13 +109,24 @@ void PPU::cycle(bool CGBMode){
 void PPU::increaseScanline(){
     // Increment the scanline and move to the next mode depending on which scanline we are on.
     scanline++;
+    // V-BLANK.
     if(scanline > LAST_VISIBLE_SCANLINE){
         mode = 1;
+
+        // Raise the VBlank Interrupt flag.
+        if(scanline == LAST_VISIBLE_SCANLINE + 1){
+            byte interruptFlags = memory->read(INTERRUPT_FLAG_REGISTER_ADDR);
+            writeBit(interruptFlags, 0, true);
+            memory->write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
+        }
+       
+        // Loop back to the visible scanlines.
         if(scanline == NUM_SCANLINES){
             scanline = 0;
             mode = 2;
         }
     }
+    // Visible scanline.
     else{
         mode = 2;
     }
@@ -158,14 +173,20 @@ void PPU::renderCurrentScanlineVRAM(bool CGBMode){
     }
 }
 
-
 void PPU::updateTileMap(){
-    // Loop over all tiles in both banks of VRAM.
-    for(int bankNumber = 0; bankNumber <= 1; bankNumber++){
-        for(int tileIndex = 0; tileIndex < TILES_PER_BANK; tileIndex++){
-            updateTile(tileIndex, bankNumber);
-        }
+    // Loop over all the tiles marked dirty.
+    std::set<int> dirtyTiles = memory->getDirtyTiles();
+    std::set<int>::iterator itr;
+    for(itr = dirtyTiles.begin(); itr != dirtyTiles.end(); itr++){
+       
+        // Update the tile marked as dirty.
+        int bankNumber = (*itr) / TILES_PER_BANK;
+        int tileIndex = (*itr) % TILES_PER_BANK;
+        if (ENABLE_DEBUG_PRINTS)
+            std::cout << "Updating Tile: " << tileIndex << std::endl;
+        updateTile(tileIndex, bankNumber);
     }
+     memory->clearDirtyTiles();
 }
 
 void PPU::updateTile(int tileIndex, bool vRAMBank){
@@ -180,10 +201,10 @@ void PPU::updateTile(int tileIndex, bool vRAMBank){
     for(int lineNumber = 0; lineNumber<TILE_DIMENSION; lineNumber++){
         // Read two bytes per line.
         byte VRAMTileData1 = *(VRAMPointer+(tileAddress+lineNumber*2));
-        byte VRAMTileData2 = *(VRAMPointer+0x11+(tileAddress+lineNumber*2));
+        byte VRAMTileData2 = *(VRAMPointer+0x1+(tileAddress+lineNumber*2));
 
         // Loop over the 8 pixels per line.
-        for(int pixelNumber = TILE_DIMENSION-1; pixelNumber >= 0; pixelNumber--){
+        for(int pixelNumber = TILE_DIMENSION - 1; pixelNumber >= 0; pixelNumber--){
 
             // Compute the colour index.
             int colourIndex = ((VRAMTileData2 & 0b1) << 1) | (VRAMTileData1 & 0b1);

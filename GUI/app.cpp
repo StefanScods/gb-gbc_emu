@@ -146,7 +146,7 @@ bool App::OnInit()
 	oamViewerFrame = new OAMViewerFrame(emuCore, emuThread);
 	oamViewerFrame->Hide();
 	backgroundViewerFrame = new BackgroundViewerFrame(this, emuCore, emuThread);
-	backgroundViewerFrame->Show();
+	backgroundViewerFrame->Hide();
 
 	// Add additional render events to the SDL render loop. 
 	emuThread->addAdditionalRenderEvent(
@@ -161,7 +161,7 @@ bool App::OnInit()
 	emuThread->Run();
 
 	// Load the ROM file.
-	loadCartridge("C:/C++/gb-gbc_emu/testroms/Tetris.gb");
+	loadCartridge("Tetris.gb");
 
 	return true;
 }

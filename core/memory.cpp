@@ -11,6 +11,9 @@ date: 2021-11-13
 
 #include <iostream>
 
+// Enables debug cout statements for this file.
+#define ENABLE_DEBUG_PRINTS false
+
 bool Memory::init(CPU* d_cpu, IOController* d_ioController, PPU* d_ppu)
 {
     cpu = d_cpu;
@@ -169,6 +172,24 @@ void Memory::initializeVRAM(){
     for(word i = 0; i<MAP_VALUES_TO_EDIT; i++){
         write(0x9900+i, INITAL_MAP_STATE[i]);
     }
+
+    // Mark all tiles as dirty.
+    for(int i = 0; i <2*TILES_PER_BANK; i++){
+        dirtyTiles.insert(i);
+    }
+}
+
+void Memory::updateDirtyVRAM(word address, bool d_selectedVRAMBank){
+    // Filter out non-tile map events.
+    if(address < TILE_DATA_START || address >= TILE_DATA_END){
+        return;
+    }
+
+    // Determine the effected tile by starting the tile map address at 0x0000 and shifting by 4 as each tile is 16 bytes (divide by 16).
+    int effectedTile = ((address - TILE_DATA_START) >> 4) + TILES_PER_BANK * d_selectedVRAMBank;
+    if (ENABLE_DEBUG_PRINTS)
+        std::cout << "VRAM write effecting tile: " << effectedTile << "\nAddress: 0x" << std::hex << address << std::dec << "\n" << std::endl;
+    dirtyTiles.insert(effectedTile);
 }
 
 void Memory::storeROMBank(int ROMBankNumber, std::ifstream *romFile)
@@ -215,6 +236,7 @@ void Memory::write(word address, byte d_data)
     {
         if(selectedVRAMBank) vRAMBank1[address - VRAM_START] = d_data;
         else vRAMBank2[address - VRAM_START] = d_data;
+        updateDirtyVRAM(address, selectedVRAMBank);
     }
 
     // A000-BFFF   8KB External RAM     (in cartridge, switchable bank, if any).
@@ -373,6 +395,7 @@ byte *Memory::getBytePointer(word address)
     {   
         if(selectedVRAMBank) return vRAMBank1 + address - VRAM_START;
         else return vRAMBank2 + address - VRAM_START;
+        updateDirtyVRAM(address, selectedVRAMBank);
     }
 
     // A000-BFFF   8KB External RAM     (in cartridge, switchable bank, if any).
