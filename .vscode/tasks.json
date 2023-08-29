@@ -1,0 +1,86 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "clean (release)",
+            "type": "shell",
+            "command": "rm",
+            "args": [
+                "-r",
+                "-Force",
+                "./x64/Release"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "build (release)",
+            "type": "shell",
+            "command": "msbuild",
+            "args": [
+                "gb-gbc_emu.sln",
+                "/property:Configuration=Release",
+                "/property:Platform=x64"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "run (release)",
+            "type": "shell",
+            "command": ".\\x64\\Release\\gb-gbc_emu.exe",
+            "args": [],
+            "group": "none",
+            "dependsOn": "build (release)",
+            "presentation": {
+                "reveal": "always"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "clean (debug)",
+            "type": "shell",
+            "command": "rm",
+            "args": [
+                "-r",
+                "-Force",
+                "./x64/Debug"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "build (debug)",
+            "type": "shell",
+            "command": "msbuild",
+            "args": [
+                "gb-gbc_emu.sln",
+                "/property:Configuration=Debug",
+                "/property:Platform=x64"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "run (debug)",
+            "type": "shell",
+            "command": ".\\x64\\Debug\\gb-gbc_emu.exe",
+            "args": [],
+            "group": "none",
+            "dependsOn": "build (debug)",
+            "presentation": {
+                "reveal": "always"
+            }
+        }
+    ]
+}
