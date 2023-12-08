@@ -13,7 +13,6 @@ The header implementation for the main emulator core.
 
 // An array holding all current breakpoints. Simply add the desired value of PC to this register to pause execution.
 std::vector<word> CPUBreakpoints = {
-    // 0x29a6,
     // 0x64FD
 };
 
@@ -80,7 +79,7 @@ void Core::runForFrame(bool breakOnCPU) {
         // Run hardware.
         cycles cpuWork = cpu.cycle();
         ppu.cycle(emulatingGBColour);
-        ioController.cycle();
+        ioController.cycle(cpu.getDoubleSpeedMode());
         handleInterrupts();
 
         if(std::find(CPUBreakpoints.begin(),CPUBreakpoints.end(), cpu.getPC()) != CPUBreakpoints.end()){
@@ -118,14 +117,17 @@ void Core::toggleEmulatorExecution(){
 }
 
 void Core::handleInterrupts(){
-    // Return early if the CPU disabled all interrupts.
-    if(!cpu.getMasterInterruptEnabledFlag()) return;
-
     byte interruptEnableMask = memory.read(INTERRUPT_ENABLE_REGISTER_ADDR);
     byte interruptFlags = memory.read(INTERRUPT_FLAG_REGISTER_ADDR);
 
     // Calculate the interrupts that are both high and enabled.
     byte validInterrupts = interruptEnableMask & interruptFlags;
+
+    // Turn off low power mode if there is an interrupt pending.
+    if(validInterrupts != 0) cpu.setLowPowerMode(false);
+    
+    // Return early if the CPU disabled all interrupts.
+    if(!cpu.getMasterInterruptEnabledFlag()) return;
 
     // V-Blank.
     if (readBit(validInterrupts, 0)) {

@@ -5,6 +5,7 @@
 #include <functional>
 #include "include/emulationThread.h"
 #include "../core/include/core.h"
+#include "../core/include/joypad.h"
 #include "../core/include/ppu.h"
 
 // Enables debug cout statements for this file.
@@ -53,6 +54,17 @@ bool EmulationThread::initializeEmulator(){
 		std::cerr << "Failed to create SDL texture. Error: " << SDL_GetError() << std::endl;
 		return false;
 	}
+
+	objectLayer = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+	if (objectLayer == NULL) {
+		std::cerr << "Failed to create SDL texture. Error: " << SDL_GetError() << std::endl;
+		return false;
+	}
+
+	// Set alpha blend textures.
+	SDL_SetRenderDrawBlendMode(sdlRenderer, SDL_BLENDMODE_BLEND);
+	SDL_SetTextureBlendMode(objectLayer, SDL_BLENDMODE_BLEND);
+
 	// Initialization was a success.
 	return true;
 }
@@ -70,8 +82,35 @@ void* EmulationThread::Entry()
 
 	// Step next frame binds to the key "PAGE UP"
 	emuCore->controller.bindKeyUp(SDL_SCANCODE_PAGEUP, std::bind(&Core::stepNextFrameButton, emuCore));
-	// Step next instuction binds to the key "PAGE UP"
+	// Step next instuction binds to the key "PAGE DOWN"
 	emuCore->controller.bindKeyUp(SDL_SCANCODE_PAGEDOWN, std::bind(&Core::stepNextInstuctionButton, emuCore));
+
+
+	// Joypad Keys.
+	// Up.
+	emuCore->controller.bindKeyUp(SDL_SCANCODE_W, std::bind(&Joypad::releaseUp, emuCore->getJoypad()));
+	emuCore->controller.bindKeyDown(SDL_SCANCODE_W, std::bind(&Joypad::pressUp, emuCore->getJoypad()));
+	// Down.
+	emuCore->controller.bindKeyUp(SDL_SCANCODE_S, std::bind(&Joypad::releaseDown, emuCore->getJoypad()));
+	emuCore->controller.bindKeyDown(SDL_SCANCODE_S, std::bind(&Joypad::pressDown, emuCore->getJoypad()));
+	// Left.
+	emuCore->controller.bindKeyUp(SDL_SCANCODE_A, std::bind(&Joypad::releaseLeft, emuCore->getJoypad()));
+	emuCore->controller.bindKeyDown(SDL_SCANCODE_A, std::bind(&Joypad::pressLeft, emuCore->getJoypad()));
+	// Right.
+	emuCore->controller.bindKeyUp(SDL_SCANCODE_D, std::bind(&Joypad::releaseRight, emuCore->getJoypad()));
+	emuCore->controller.bindKeyDown(SDL_SCANCODE_D, std::bind(&Joypad::pressRight, emuCore->getJoypad()));
+	// A.
+	emuCore->controller.bindKeyUp(SDL_SCANCODE_RETURN, std::bind(&Joypad::releaseA, emuCore->getJoypad()));
+	emuCore->controller.bindKeyDown(SDL_SCANCODE_RETURN, std::bind(&Joypad::pressA, emuCore->getJoypad()));
+	// B.
+	emuCore->controller.bindKeyUp(SDL_SCANCODE_RSHIFT, std::bind(&Joypad::releaseB, emuCore->getJoypad()));
+	emuCore->controller.bindKeyDown(SDL_SCANCODE_RSHIFT, std::bind(&Joypad::pressB, emuCore->getJoypad()));
+	// Start.
+	emuCore->controller.bindKeyUp(SDL_SCANCODE_Q, std::bind(&Joypad::releaseStart, emuCore->getJoypad()));
+	emuCore->controller.bindKeyDown(SDL_SCANCODE_Q, std::bind(&Joypad::pressStart, emuCore->getJoypad()));
+	// Select.
+	emuCore->controller.bindKeyUp(SDL_SCANCODE_E, std::bind(&Joypad::releaseSelect, emuCore->getJoypad()));
+	emuCore->controller.bindKeyDown(SDL_SCANCODE_E, std::bind(&Joypad::pressSelect, emuCore->getJoypad()));
 
 	// Main event loop.
 	while (appContext->getRunningEmulationState())
@@ -93,6 +132,10 @@ void* EmulationThread::Entry()
 		SDL_memcpy(lockedPixels, ppu->getVideoBufferBG(), INT8_PER_SCREEN);
 		SDL_UnlockTexture(backgroundLayer);
 
+		SDL_LockTexture(objectLayer, NULL, &lockedPixels, &pitch);
+		SDL_memcpy(lockedPixels, ppu->getVideoBufferObject(), INT8_PER_SCREEN);
+		SDL_UnlockTexture(objectLayer);
+
 		// Clear Screen.
 		SDL_SetRenderDrawColor(sdlRenderer, 0xFF, 0x00, 0xFF, 0xFF);
 		SDL_RenderClear(sdlRenderer);
@@ -104,6 +147,7 @@ void* EmulationThread::Entry()
 		textureRenderLocation.w = MAIN_WINDOW_WIDTH;
 		textureRenderLocation.h = MAIN_WINDOW_HEIGHT;
 		SDL_RenderCopy(sdlRenderer, backgroundLayer, NULL, &textureRenderLocation);
+		SDL_RenderCopy(sdlRenderer, objectLayer, NULL, &textureRenderLocation);
 
 		// Update screen.
 		SDL_RenderPresent(sdlRenderer);

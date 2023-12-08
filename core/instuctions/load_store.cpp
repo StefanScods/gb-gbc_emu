@@ -440,9 +440,6 @@ cycles LoadAndStore::ld_l_mhl(CPU* cpu){
 }
 
 cycles LoadAndStore::ld_mhl_a(CPU* cpu){
-    if(cpu->reg_HL.read() == 0xFF80){
-        std::cout << "a" << std::endl;
-    }
     cpu->memory->write(cpu->reg_HL.read(), *(cpu->A));
     return LD_mHL_A;
 }
@@ -539,17 +536,14 @@ cycles LoadAndStore::ld_a_ma16(CPU* cpu){
 
 cycles LoadAndStore::ld_hl_sp_pp8(CPU* cpu){
 
-    signedByte imm8 = (signedByte) cpu->parsedData;
-
-    //do arithmetic in a larger buffer so we can check for overflow
-    uint32_t result = (uint32_t) cpu->SP.read() + (int32_t) imm8; 
+    signedByte imm8 = -1;
 
     writeBit(*(cpu->F), FLAG_Z, 0);
     writeBit(*(cpu->F), FLAG_N, 0);
-    writeBit(*(cpu->F), FLAG_C, (result > 0xFF)); //carry flag if result is greater than a 16 bit number 
-    writeBit(*(cpu->F), FLAG_H, ((((cpu->SP.read() & 0xF) + imm8) > 0xF))); //half carry flag if the 12th bit overflows -> !!! maybe find a better method 
+    writeBit(*(cpu->F), FLAG_C, (( cpu->SP.read() & 0xFF) + (imm8 & 0xFF)) > 0xFF);
+    writeBit(*(cpu->F), FLAG_H, (((cpu->SP.read() & 0xF ) + (imm8 & 0xF )) > 0xF));
 
-    cpu->reg_HL = (word) (result & 0xFFFF); //take the bottom 16 bits 
+    cpu->SP = (word) (cpu->SP.read() + imm8);
 
     return LD_HL_SPpr8_CYCLES;
 }

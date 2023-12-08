@@ -257,22 +257,22 @@ cycles Arithmetic::add_hl_sp(CPU* cpu){
 }
 
 
- cycles Arithmetic::daa(CPU* cpu){ //!!! probs wrong -> idk how to do this mess 
-    byte temp = 0;
+ cycles Arithmetic::daa(CPU* cpu){ 
+    byte correctionOffset = 0;
 
-    if((!readBit(*(cpu->A), FLAG_N) &&  *(cpu->A) > 0x99) || readBit(*(cpu->A), FLAG_C)){
-        temp |= 0x60;
+    if(readBit(*(cpu->F), FLAG_C) || (!readBit(*(cpu->F), FLAG_N) && (*(cpu->A)) > 0x99)){
+        correctionOffset |= 0x60;
         writeBit(*(cpu->F), FLAG_C, 1);
-    }
-    if((!readBit( *(cpu->A), FLAG_N) &&  *(cpu->A) && 0xF > 0x9) || readBit(*(cpu->A), FLAG_H)){
-        temp |= 0x6;
+    } 
+    if(readBit(*(cpu->F), FLAG_H) || (!readBit(*(cpu->F), FLAG_N) && (*(cpu->A) & 0xF ) > 0x9 )){
+        correctionOffset |= 0x6;
     }
 
-    if(readBit( *(cpu->A), FLAG_N))  *(cpu->A)+=temp;
-    else *(cpu->A)-=temp;
+    if(readBit(*(cpu->F), FLAG_N))  *(cpu->A)-=correctionOffset;
+    else *(cpu->A)+=correctionOffset;
 
     writeBit(*(cpu->F), FLAG_Z,  *(cpu->A) == 0);
-    writeBit(*(cpu->F), FLAG_Z, 0);
+    writeBit(*(cpu->F), FLAG_H, 0);
 
     return DAA_CYCLES;
  }
@@ -507,7 +507,7 @@ cycles Arithmetic::adc_a_d(CPU* cpu){
     
     bool CY = readBit(*(cpu->F), FLAG_C);
 
-    word result = *(cpu->A) + *(cpu->D + CY);
+    word result = *(cpu->A) + *(cpu->D) + CY;
 
     bool carry = result > 0xFF;
     
@@ -1250,13 +1250,12 @@ cycles Arithmetic::cp_a_d8(CPU* cpu){
 cycles Arithmetic::add_sp_r8(CPU* cpu){
 
     signedByte imm8 = (signedByte) cpu->parsedData;
-      
-    writeBit(*(cpu->F), FLAG_Z,  cpu->SP.read() == 0);
+
+    writeBit(*(cpu->F), FLAG_Z, (cpu->SP.read() + imm8) == 0);
     writeBit(*(cpu->F), FLAG_N, 0);
-    writeBit(*(cpu->F), FLAG_C, ((cpu->SP.read() & 0xFF) + (int32_t) imm8) > 0xFF);
-    writeBit(*(cpu->F), FLAG_H, ((((cpu->SP.read() & 0xF) + ( (int32_t) imm8 & 0xF)) > 0xF)));
+    writeBit(*(cpu->F), FLAG_C, (( cpu->SP.read() & 0xFF) + (imm8 & 0xFF)) > 0xFF);
+    writeBit(*(cpu->F), FLAG_H, (((cpu->SP.read() & 0xF ) + (imm8 & 0xF )) > 0xF));
 
-    cpu->SP = (word) (cpu->SP.read() + imm8);
-
+    cpu->SP = (word)(cpu->SP.read() + imm8);
     return ADD_SP_r8_CYCLES;
 }

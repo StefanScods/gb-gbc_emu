@@ -158,7 +158,7 @@ public:
         set[LD_mHL_E] = {"LD_mHL_E",LD_mHL_E_LENGTH, LD_mHL_E_CYCLES, std::bind(&LoadAndStore::ld_mhl_e, &loadAndStore, std::placeholders::_1)};
         set[LD_mHL_H] = {"LD_mHL_H",LD_mHL_H_LENGTH, LD_mHL_H_CYCLES, std::bind(&LoadAndStore::ld_mhl_h, &loadAndStore, std::placeholders::_1)};
         set[LD_mHL_L] = {"LD_mHL_L",LD_mHL_L_LENGTH, LD_mHL_L_CYCLES, std::bind(&LoadAndStore::ld_mhl_l, &loadAndStore, std::placeholders::_1)};
-        set[HALT] = {"HALT",HALT_LENGTH, HALT_CYCLES, std::bind(&MiscAndControl::notSupported, &miscAndControl, std::placeholders::_1)};
+        set[HALT] = {"HALT",HALT_LENGTH, HALT_CYCLES, std::bind(&MiscAndControl::halt, &miscAndControl, std::placeholders::_1)};
         set[LD_mHL_A] = {"LD_mHL_A_LENGTH",LD_mHL_A, LD_mHL_A_CYCLES, std::bind(&LoadAndStore::ld_mhl_a, &loadAndStore, std::placeholders::_1)};
         set[LD_A_B] = {"LD_A_B",LD_A_B_LENGTH, LD_A_B_CYCLES, std::bind(&LoadAndStore::ld_a_b, &loadAndStore, std::placeholders::_1)};
         set[LD_A_C] = {"LD_A_C",LD_A_C_LENGTH, LD_A_C_CYCLES, std::bind(&LoadAndStore::ld_a_c, &loadAndStore, std::placeholders::_1)};

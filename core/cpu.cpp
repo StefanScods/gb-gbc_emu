@@ -28,6 +28,10 @@ void pushHelper(CPU *cpu, reg &source)
     cpu->memory->write(cpu->SP.read(), data & 0xFF);
 }
 
+CPU::CPU(){
+    reg_AF.setAsFlagReg();
+}
+
 void CPU::setInitalValues()
 {
     // Init routine according to http://bgb.bircd.org/pandocs.htm#powerupsequence.
@@ -45,9 +49,14 @@ void CPU::setInitalValues()
 
 byte CPU::readNextInstructionByte()
 {
+    // Fetch the next byte of the instruction.
     byte nextOpcode = memory->read(PC.read());
-    incPC();
 
+    // If the CPU is currently facing the double read bug, don't increase PC this time.
+    if(doubleReadBug) doubleReadBug = false;
+    // Else increase the PC.
+    else incPC();
+    
     return nextOpcode;
 }
 
@@ -93,6 +102,13 @@ cycles CPU::fetchAndExecute()
 }
 
 cycles CPU::cycle(){
+    // If we are in low power mode do nothing.
+    if(lowPowerMode){
+        // If theres at least one cycle in halt, we are not effected by the double read bug.
+        setDoubleReadBug(false);
+        return 0;
+    }
+
     cyclesSinceLastInstuction++;
     // Run for two cycles if running in double speed mode.
     if(doubleSpeedMode) cyclesSinceLastInstuction++;
@@ -179,8 +195,10 @@ void CPU::enableInterrupts()
 }
 
 void CPU::setActiveInterruptHandler(word interruptVectorAddress) {
-    // Turn of interrupts while the handler is active.
+    // Turn off interrupts while the handler is active.
     disableInterrupts();
+    // If we run an interrupt handler we are not effected by the double read bug.
+    setDoubleReadBug(false);
     // Set the interrupt handler address.
     activeInterruptVector = interruptVectorAddress;
     // Clear the cashed cycles.

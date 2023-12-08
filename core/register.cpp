@@ -24,21 +24,25 @@ reg::reg(byte d_high, byte d_low){
 
 word reg::read(){
     word output = high << 8;
-    output = output | low; 
+    output = output | low;
+
+    // Force the lowest 4 bits to be zero if this is a flag reg.
+    if(flagReg) output = output & 0xFFF0;
 
     return output;
 }
 
 reg& reg::operator= (const word d_data){
-    low = d_data & 0XFF;
+    // Force the lowest 4 bits to be zero if this is a flag reg else save the whole value.
+    low = d_data & (flagReg ? 0XF0 : 0XFF);
     high = d_data >> 8;
-
+    
     return *this;
 }
 
 reg& reg::operator= (const byte d_data){
 
-    std::cout << "ERROR: byte assigment to reg16" <<std::endl;
+    std::cout << "ERROR: byte assigment to reg16" << std::endl;
 
     low = d_data;
     return *this;

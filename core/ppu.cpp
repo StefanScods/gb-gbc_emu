@@ -5,9 +5,23 @@ The class implementation for the emulator's PPU / LCD  display.
 #include "include/memory.h"
 #include "include/register.h"
 #include <set>
+#include <algorithm>
 
 // Enables debug cout statements for this file.
 #define ENABLE_DEBUG_PRINTS false
+
+
+void OAMEntry::update(byte* bytes){
+    yPos = bytes[0];
+    xPos = bytes[1];
+    tileIndex = bytes[2];
+    // Parse the last byte.
+    priority = readBit(bytes[3], 7);
+    yFlip = readBit(bytes[3], 6);
+    xFlip = readBit(bytes[3], 5);
+    dmgPalette = readBit(bytes[3], 3);
+    colourPalette = bytes[3] & 0b0111;
+}
 
 bool PPU::init(){
    // Create the background maps.
@@ -21,9 +35,22 @@ bool PPU::init(){
     nonColouredTile = new uint8_t[INT8_PER_TILE];
     if (nonColouredTile == nullptr)
         return false;
+    objectAttributeMemory = new OAMEntry[NUMBER_OF_OBJECTS];
+    if (objectAttributeMemory == nullptr)
+        return false;
+
     videoBufferBackgroundLayer = new uint8_t[INT8_PER_SCREEN];
     if (videoBufferBackgroundLayer == nullptr)
         return false;
+    videoBufferObjectLayer = new uint8_t[INT8_PER_SCREEN];
+    if (videoBufferObjectLayer == nullptr)
+        return false;
+    // Clear the video buffer.
+    std::fill(
+        videoBufferObjectLayer, 
+        videoBufferObjectLayer+INT8_PER_SCREEN, 
+        0
+    );
 
     // All alloc successful.
     return true;
@@ -34,6 +61,10 @@ void PPU::destroy(){
     delete[] backgroundMap0;
     delete[] tileMap;
     delete[] nonColouredTile;
+    delete[] objectAttributeMemory;
+
+    delete[] videoBufferBackgroundLayer;
+    delete[] videoBufferObjectLayer;
 }
 
 void PPU::cycle(bool CGBMode){
@@ -79,6 +110,8 @@ void PPU::cycle(bool CGBMode){
         case 2:
             // Start of Mode 2.
             if(cyclesCounter == 1){
+                updateOAM();
+                determineObjectToRender();
             // End of Mode 2.
             } else if (cyclesCounter == MODE2_LEN){
                 // Loop the cycles counter at a mode transition.
@@ -143,6 +176,11 @@ void PPU::renderCurrentScanlineVRAM(bool CGBMode){
         return;
     }
 
+    renderBGMapScanline(CGBMode);
+    renderObjectsScanline(CGBMode);
+}
+
+void PPU::renderBGMapScanline(bool CGBMode){
     // Get the map to render from.
     byte* startOfTileMapPointer = memory->getBytePointer(BGM0_DATA_START);
     // Get the palette to apply -> always BGP0 on non-CGB mode.
@@ -165,13 +203,55 @@ void PPU::renderCurrentScanlineVRAM(bool CGBMode){
         byte* startOfSwatch = startOfPalette + (4 * tileMap[pixelPositionInMap]);
 
         // Calculate where each pixel is on the master array.
-        uint32_t pixelPositionToRender = scanline * SCREEN_WIDTH * sizeof(uint32_t) + i * sizeof(uint32_t);
+        uint32_t pixelPositionToRender = scanline * INT8_PER_SCANELINE + i * sizeof(uint32_t);
         videoBufferBackgroundLayer[pixelPositionToRender    ] = *(startOfSwatch + 2); // Blue.
         videoBufferBackgroundLayer[pixelPositionToRender + 1] = *(startOfSwatch + 1); // Green.
         videoBufferBackgroundLayer[pixelPositionToRender + 2] = *(startOfSwatch    ); // Red.
         videoBufferBackgroundLayer[pixelPositionToRender + 3] = *(startOfSwatch + 3); // Alpha.
     }
 }
+
+void PPU::renderObjectsScanline(bool CGBMode){
+
+    // Clear scanline.
+    int currentIndexIntoVideoBuffer = scanline * INT8_PER_SCANELINE;
+    std::fill(
+        videoBufferObjectLayer + currentIndexIntoVideoBuffer, 
+        videoBufferObjectLayer+currentIndexIntoVideoBuffer+INT8_PER_SCANELINE, 
+        0
+    );
+
+    // Loop over all objects on this scanline.
+    std::vector<int>::iterator itr;
+    for(itr = objectsToRender.begin(); itr != objectsToRender.end(); itr++){
+        // Determine what part of this object we are drawing on this scanline.
+        int yPosOfObject = scanline + SCANLINE_Y_OFFSET - objectAttributeMemory[(*itr)].yPos;
+
+        byte* startOfPalette =  getPaletteColour(true, objectAttributeMemory[(*itr)].dmgPalette);
+        // Draw the part of object on this scanline.
+        for(int i = 0; i < TILE_DIMENSION; i++){
+
+            // Determine the position of the object on this scanline and handle hidden pixels.
+            int xPosOnScreen = objectAttributeMemory[(*itr)].xPos + i;
+            if( xPosOnScreen < SCANLINE_X_OFFSET || xPosOnScreen >= SCREEN_WIDTH + SCANLINE_X_OFFSET) continue;
+            xPosOnScreen -= SCANLINE_X_OFFSET;
+
+            // Determine which colour to use.
+            uint32_t pixelPositionInMap = objectAttributeMemory[(*itr)].tileIndex * PIXELS_PER_TILE + yPosOfObject*TILE_DIMENSION + i;
+            // Transparent pixel case.
+            if(tileMap[pixelPositionInMap] == 0) continue;
+            byte* startOfSwatch = startOfPalette + (4 * tileMap[pixelPositionInMap]);
+
+            // Calculate where each pixel is on the master array.
+            uint32_t pixelPositionToRender = currentIndexIntoVideoBuffer + (xPosOnScreen) * sizeof(uint32_t);
+            videoBufferObjectLayer[pixelPositionToRender    ] = *(startOfSwatch + 2); // Blue.
+            videoBufferObjectLayer[pixelPositionToRender + 1] = *(startOfSwatch + 1); // Green.
+            videoBufferObjectLayer[pixelPositionToRender + 2] = *(startOfSwatch    ); // Red.
+            videoBufferObjectLayer[pixelPositionToRender + 3] = *(startOfSwatch + 3); // Alpha.
+        }
+    }
+}
+
 
 void PPU::updateTileMap(){
     // Loop over all the tiles marked dirty.
@@ -317,4 +397,23 @@ void PPU::writeToSTAT(byte data){
     // Copy the read-only bits of STAT into data.
     data = data | (STAT & 0b10000111);
     STAT = data;
+}
+
+void PPU::updateOAM(){
+    byte* OAMPointer = memory->getBytePointer(OAM_START);
+    for(int i = 0; i < NUMBER_OF_OBJECTS; i++){
+        objectAttributeMemory[i].update(OAMPointer);
+        OAMPointer += BYTES_PER_OBJECT;
+    }
+}
+
+// Todo!!! Implement the 10 objects per scanline limit.
+void PPU::determineObjectToRender(){
+    objectsToRender.clear();
+
+    // Todo!!! sort by x value.
+    for(int i = 0; i < NUMBER_OF_OBJECTS; i++){
+        if(objectAttributeMemory[i].yPos <= scanline + SCANLINE_Y_OFFSET && objectAttributeMemory[i].yPos + TILE_DIMENSION > scanline + SCANLINE_Y_OFFSET)
+            objectsToRender.push_back(i);
+    }
 }

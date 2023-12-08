@@ -9,6 +9,26 @@
 
 class Memory;
 
+class OAMEntry{
+public:
+    // Byte 0.
+    byte yPos = 0;
+    // Byte 1.
+    byte xPos = 0;
+    // Byte 2.
+    byte tileIndex = 0;
+    // Byte 3.
+    bool priority = 0;
+    bool yFlip = 0;
+    bool xFlip = 0;
+    bool dmgPalette = 0;
+    byte colourPalette = 0;
+    /**
+     * @brief Reads 4 bytes and updates the entry.
+     */
+    void update(byte* bytes);
+};
+
 class PPU{
 private:
     friend class Memory;
@@ -34,16 +54,23 @@ private:
     byte objectColours[4*SWATCHES_PER_PALETTE*NUMBER_OF_PALETTES] = {0xFF};
     byte backgroundColours[4*SWATCHES_PER_PALETTE*NUMBER_OF_PALETTES] = {0xFF};
 
+
     // Pixel data for the current background layer.
     uint8_t* videoBufferBackgroundLayer = nullptr;
+    // Pixel data for the current Object layer.
+    uint8_t* videoBufferObjectLayer = nullptr;
+
     // Pixel data for the entire background map - this is only used to visualize the entire map with the map viewer.
     uint8_t* backgroundMap0 = nullptr;
     // Pixel data for each tile.
     uint8_t* tileMap = nullptr;
     // An intermediate array for fetching a single tile without a palette.
     uint8_t* nonColouredTile = nullptr;
+    // Parsed Data for each object.
+    OAMEntry* objectAttributeMemory = nullptr;
+    std::vector<int> objectsToRender;
 
-     // Keeps track of the "cycle currency" the PPU can spend.
+    // Keeps track of the "cycle currency" the PPU can spend.
     cycles cyclesCounter = 0;
 
 public:
@@ -84,6 +111,22 @@ public:
      * GameBoy vs GameBoy Colour modes. 
      */
     void renderCurrentScanlineVRAM(bool CGBMode);
+
+    /**
+     * @brief Renders the current scanline of GB VRAM to the video buffer.
+     * 
+     * @param CGBMode - A boolean indicating whether to interpret VRAM in
+     * GameBoy vs GameBoy Colour modes. 
+     */
+    void renderBGMapScanline(bool CGBMode);
+
+    /**
+     * @brief Renders the current scanline of Object VRAM to the video buffer.
+     * 
+     * @param CGBMode - A boolean indicating whether to interpret VRAM in
+     * GameBoy vs GameBoy Colour modes. 
+     */
+    void renderObjectsScanline(bool CGBMode);
 
     /**
      * @brief This function reinterprets the entire tile map.
@@ -134,6 +177,9 @@ public:
     uint8_t* getVideoBufferBG(){
         return videoBufferBackgroundLayer;
     };
+    uint8_t* getVideoBufferObject(){
+        return videoBufferObjectLayer;
+    };
 
     /**
      * @brief Get the Palette Colour at the passed index;
@@ -174,6 +220,16 @@ public:
      * @param data The data to write to the stat register.
      */
     void writeToSTAT(byte data);
+
+    /**
+     * @brief Parse VRAM and update relevant elements of the Object Attribute Table.
+    */
+    void updateOAM();
+
+    /**
+     * @brief Scan the OAM to determine which element to render this scanline.
+    */
+    void determineObjectToRender();
 };
 
 #endif;

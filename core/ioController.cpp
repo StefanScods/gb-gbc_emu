@@ -18,13 +18,16 @@ void IOController::start(){
     DIVTimer.setRunning(true);
 }
 
-void IOController::cycle(){
-    DIVTimer.cycle();
-    TIMATimer.cycle(std::bind(&IOController::TIMATimerOverflowLogic, this));
+void IOController::cycle(bool cpuDoubleSpeed){
+    DIVTimer.cycle(cpuDoubleSpeed);
+    TIMATimer.cycle(cpuDoubleSpeed, std::bind(&IOController::TIMATimerOverflowLogic, this));
+
+    dmaController.cycle(cpuDoubleSpeed);
 }
 
 void IOController::bindMemory(Memory* d_memory){
     memory = d_memory;
+    dmaController.bindMemory(d_memory);
 }
 
 void IOController::TIMATimerOverflowLogic(){
@@ -106,7 +109,7 @@ void IOController::write(word address, byte data){
             break;
         // TAC: Timer control
         case 0xFF07: {
-            TAC = data;
+            TAC = data | 0b11111000;
             // Bit 2 defines the timer enable.
             bool enable = (TAC & 0b100) >> 2;
             TIMATimer.setRunning(enable);
@@ -131,7 +134,7 @@ void IOController::write(word address, byte data){
                     break;
                 }
 
-            TIMATimer.setIncrementFrequency(cpu->getClockSpeed() / clockSpeedFactor); 
+            TIMATimer.setIncrementFrequency(clockSpeedFactor); 
             break;}
         // IF - Interrupt Flag
         case 0xFF0F:
@@ -155,6 +158,11 @@ void IOController::write(word address, byte data){
         case 0xFF45:
             ppu->LYC = data;
             break;
+        // DMA: OAM DMA source address & start.
+        case 0xFF46: {
+            word targetAddress = ((word) data) << 8;
+            dmaController.startTransfer(targetAddress);
+            break;}
         // BGP - BG Palette Data (R/W) - Non CGB Mode Only.
         case 0xFF47:
             BGP = data;

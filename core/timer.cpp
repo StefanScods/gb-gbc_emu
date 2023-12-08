@@ -11,10 +11,11 @@ void Timer::setRunning(bool state){
     running = state;
 }
 
-void Timer::cycle(voidFuncWithNoArguments overflowOperation){
+void Timer::cycle(bool cpuDoubleSpeed, voidFuncWithNoArguments overflowOperation){
     // Return early if not running.
-    if(!running) return;
+    if(!running || clockSpeed == 0) return;
     cyclesPassed ++;
+    if(cpuDoubleSpeed) cyclesPassed ++;
 
     // Increment the register at the desired frequency.
     if(cyclesPassed >= clockSpeed){

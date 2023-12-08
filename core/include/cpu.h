@@ -44,6 +44,12 @@ class CPU {
 private:
     // A flag used to determine whether debug messages are printed to console.
     bool verbose = false;
+
+    // A flag which determines if the CPU is currently in low power mode. This flag is turned on while the CPU is halted or stoped.
+    bool lowPowerMode = false;
+
+    // A flag to handle the double read coming out of halt.
+    bool doubleReadBug = false;
     
     // Main Registers. 
     reg reg_AF;
@@ -88,6 +94,7 @@ private:
     word activeInterruptVector = 0x0000;
 
 public:
+    CPU();
 
     /**
      * @brief Runs the initialize routine for the CPU.
@@ -100,6 +107,20 @@ public:
      * activity.
      */
     void toggleVerbose() {verbose = !verbose;}
+
+    /**
+     * @brief Set's the CPU's low power mode flag.
+     */
+    void setLowPowerMode(bool state){lowPowerMode = state;}
+
+    /**
+     * @brief Set's the CPU's double read bug flag to simulate a hardware issue.
+     */
+    void setDoubleReadBug(bool state){doubleReadBug = state;}
+    /**
+     * @brief Get's the current state of the CPU's double read bug flag.
+     */
+    bool getDoubleReadBug(){return doubleReadBug;}
 
     /**
      * @brief Reads the next instruction byte as pointed to by the PC. Returns
@@ -157,6 +178,12 @@ public:
      */
     cycles getClockSpeed() { return doubleSpeedMode ? CLOCKSPEED_CGBMODE : CLOCKSPEED; }
 
+    /**
+     * @brief Returns the whether the CPU is running at double speed.
+     * @return bool 
+     */
+    bool getDoubleSpeedMode(){return doubleSpeedMode;}
+    
     /**
      * @brief Prints the current state of the CPU to std::cout.
      */

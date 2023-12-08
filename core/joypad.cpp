@@ -27,20 +27,19 @@ byte Joypad::read(){
 }
 
 void Joypad::write(byte d_data){
-    data = data & 0XDF;
-    data = data | (0x30 & d_data);
+    data = (0x30 & d_data) | 0b11001111;
 }
 
 void Joypad::reset(){
-    a = false;
-    b = false;
-    start = false;
-    select = false;
+    a = true;
+    b = true;
+    start = true;
+    select = true;
 
-    up = false;
-    down = false;
-    left = false;
-    right = false;
+    up = true;
+    down = true;
+    left = true;
+    right = true;
 
     data = 0xFF;
 }

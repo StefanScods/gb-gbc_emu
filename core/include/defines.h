@@ -78,6 +78,7 @@ enum ExecutionModes {
 #define SCREEN_WIDTH 160
 #define SCREEN_HEIGHT 144
 const int INT8_PER_SCREEN = SCREEN_WIDTH*SCREEN_HEIGHT*sizeof(uint32_t)/sizeof(uint8_t);
+const int INT8_PER_SCANELINE = SCREEN_WIDTH*sizeof(uint32_t)/sizeof(uint8_t);
 
 // Memory Map.
 #define ROMBANK0_START 0x0000
@@ -151,6 +152,12 @@ const int LCD_CYCLES_PER_FRAME = CYCLES_PER_SCANLINE * NUM_SCANLINES;
 #define MODE1_LEN CYCLES_PER_SCANLINE
 #define MODE2_LEN 80
 #define MODE3_LEN 172
+
+// DMA Defines.
+#define CYCLES_PER_OAM_DMA 160
+#define NUMBER_OF_ADDRESS_PER_OAM_DMA_TRANSFER 0xDF+1
+
+
 
 // Cartridge Defines.
 
@@ -243,6 +250,13 @@ const int PIXELS_PER_GB_MAP = BG_MAP_WIDTH_PIXELS * BG_MAP_WIDTH_PIXELS;
 const int INT8_PER_BG_MAP = sizeof(uint32_t)/sizeof(uint8_t) * PIXELS_PER_GB_MAP;
 
 const int AMOUNT_BG_TO_UPDATE_PER_CYCLE = (BGM0_DATA_END - BGM0_DATA_START + 1) / 128;
+
+// OAM Defines.
+#define NUMBER_OF_OBJECTS 40
+#define BYTES_PER_OBJECT 4
+
+#define SCANLINE_Y_OFFSET 16
+#define SCANLINE_X_OFFSET 8
 
 // OP Codes.
 #define NOP 0x00

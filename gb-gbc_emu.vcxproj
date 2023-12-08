@@ -163,6 +163,7 @@
     <ClCompile Include="core\cartridge.cpp" />
     <ClCompile Include="core\core.cpp" />
     <ClCompile Include="core\cpu.cpp" />
+    <ClCompile Include="core\dmaController.cpp" />
     <ClCompile Include="core\instuctions\arithmetic.cpp" />
     <ClCompile Include="core\instuctions\bit.cpp" />
     <ClCompile Include="core\instuctions\jump_call.cpp" />
@@ -192,6 +193,7 @@
     <ClInclude Include="core\include\core.h" />
     <ClInclude Include="core\include\cpu.h" />
     <ClInclude Include="core\include\defines.h" />
+    <ClInclude Include="core\include\dmaController.h" />
     <ClInclude Include="core\include\instructionSet.h" />
     <ClInclude Include="core\include\ioController.h" />
     <ClInclude Include="core\include\joypad.h" />

@@ -7,7 +7,7 @@ date: 2021-11-13
 */
 
 #include "..\..\include\defines.h"
-class CPU; //foward declarration
+class CPU; //forward declaration
 class LoadAndStore{
     
 public:

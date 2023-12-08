@@ -1,5 +1,5 @@
 /*
-a implementaion file for the misc/control instuctions for the gb/gbc cpu
+An implementation file for the misc/control instuctions for the gb/gbc cpu
 
 date: 2021-11-13
 */
@@ -20,8 +20,14 @@ cycles MiscAndControl::nop(CPU* cpu){
 //!!! IMPLEMENT THIS AHHHHHHHHHHHHHHHHHHHHH
 cycles MiscAndControl::stop(CPU* cpu){
     notSupported(cpu);
-
     return STOP_CYCLES;
+}
+
+cycles MiscAndControl::halt(CPU* cpu){
+    cpu->setLowPowerMode(true);
+    cpu->setDoubleReadBug(true);
+
+    return HALT_CYCLES;
 }
 
 cycles MiscAndControl::di(CPU* cpu){

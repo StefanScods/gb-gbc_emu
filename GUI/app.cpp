@@ -161,7 +161,7 @@ bool App::OnInit()
 	emuThread->Run();
 
 	// Load the ROM file.
-	loadCartridge("Tetris.gb");
+	loadCartridge("D:/C++/gb-gbc_emu/testroms/Tetris.gb");
 
 	return true;
 }

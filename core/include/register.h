@@ -10,6 +10,8 @@ date: 2021-11-12
 class reg{
 
 private:
+    // This changes read and write behaviour of the lower 4 bits of the low byte.
+    bool flagReg = false;
     byte high;
     byte low;
 
@@ -51,6 +53,9 @@ public:
 
     //returns the word {high,low}
     word read();
+    
+    // Marks this register as a "flag" register. 
+    void setAsFlagReg(){flagReg = true;}
 };
 
 //sets the bit of a given byte and position to a value 

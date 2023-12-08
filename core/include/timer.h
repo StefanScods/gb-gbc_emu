@@ -9,7 +9,7 @@ The header declaration for the emulator's external timer.
 
 class Timer {
 private:
-    byte data = 0;
+    byte data = 0xFF;
     cycles clockSpeed = 0;
     bool running = false;
 
@@ -23,7 +23,7 @@ public:
     void setIncrementFrequency(cycles frequency);
     void setRunning(bool state);
     void resetTimer(byte resetValue);
-    void cycle(voidFuncWithNoArguments overflowOperation = NULL);
+    void cycle(bool cpuDoubleSpeed, voidFuncWithNoArguments overflowOperation = NULL);
 };
 
 #endif

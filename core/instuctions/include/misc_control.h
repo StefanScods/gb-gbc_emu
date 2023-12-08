@@ -14,7 +14,7 @@ class CPU; //forward declaration
 class MiscAndControl{
     
 public:
-    //a temp function for not supported opperations 
+    // A temp function for not supported operations .
     cycles notSupported(CPU* cpu);
 
     /*
@@ -32,6 +32,14 @@ public:
     Bytes: 2
     Flags: None affected.*/
     cycles stop(CPU* cpu);
+
+    /*
+    HALT
+    Enter CPU low-power consumption mode until an interrupt occurs. The exact behavior of this instruction depends on the state of the IME flag.
+    Cycles: -
+    Bytes: 1
+    Flags: None affected.*/
+    cycles halt(CPU* cpu);
 
     /*DI
     Disable Interrupts by clearing the IME flag.

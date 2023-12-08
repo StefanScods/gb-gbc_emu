@@ -12,6 +12,7 @@ The header declaration for the main emulator core.
 
 #include "cpu.h"
 #include "memory.h"
+#include "joypad.h"
 #include "ppu.h"
 #include "ioController.h"
 #include "register.h"
@@ -57,13 +58,21 @@ public:
     void emulatorMain();
 
     /**
-     * @brief An accessor function for retrieve the memory sub-object.
+     * @brief An accessor function for retrieving the memory sub-object.
      * 
      * @returns Memory*.
      */
     Memory* getMemory(){ return &memory;}
+
     /**
-     * @brief An accessor function for retrieve the PPU sub-object.
+     * @brief An accessor function for retrieving the IO joypad.
+     * 
+     * @returns Memory*.
+     */
+    Joypad* getJoypad() {return ioController.getJoypad();}
+
+    /**
+     * @brief An accessor function for retrieving the PPU sub-object.
      * 
      * @returns PPU*.
      */

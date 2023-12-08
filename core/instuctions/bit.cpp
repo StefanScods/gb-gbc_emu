@@ -212,8 +212,6 @@ cycles Bit::prefix_cb(CPU* cpu){
         byte bit0 = readBit(*(regOperand), 0);
         byte bit7 = readBit(*(regOperand), 7);
 
-        std::cout << bit7 <<std::endl;
-
         *(regOperand) = (*(regOperand) >> 1) | (bit7 << 7); //airithmetic shifts to the right 
 
         writeBit(*(cpu->F), FLAG_Z, *(regOperand) == 0);
@@ -244,7 +242,7 @@ cycles Bit::prefix_cb(CPU* cpu){
     }
 
     else if(insType >=  BIT && insType < RES){
-        writeBit(*(cpu->F), FLAG_Z, readBit(*(regOperand), bitNumber));
+        writeBit(*(cpu->F), FLAG_Z, !readBit(*(regOperand), bitNumber));
         writeBit(*(cpu->F), FLAG_N, 0);
         writeBit(*(cpu->F), FLAG_H, 1); 
     }
