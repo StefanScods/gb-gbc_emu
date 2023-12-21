@@ -6,6 +6,7 @@
 
 #include "defines.h"
 #include <vector>
+#include <list>
 
 class Memory;
 
@@ -47,6 +48,16 @@ private:
     byte LYC = 0;
     byte STAT = 0;
 
+    byte LCDC = 0;
+    bool ppuEnable = true;
+    word windowAreaStart = BGM0_DATA_START;
+    bool windowEnable = false;
+    word tileAreaStart = TILE0_DATA_START;
+    word backgroundAreaStart = BGM0_DATA_START;
+    bool doubleObjectSize = false;
+    bool objectEnable = false;
+    bool backgroundEnablePriority = false;
+
     // The current scanline being drawn.
     int scanline = 0;
 
@@ -68,7 +79,7 @@ private:
     uint8_t* nonColouredTile = nullptr;
     // Parsed Data for each object.
     OAMEntry* objectAttributeMemory = nullptr;
-    std::vector<int> objectsToRender;
+    std::list<int> objectsToRender;
 
     // Keeps track of the "cycle currency" the PPU can spend.
     cycles cyclesCounter = 0;
@@ -217,10 +228,17 @@ public:
     /**
      * @brief Used to interface with the STAT register.
      * 
-     * @param data The data to write to the stat register.
+     * @param data The data to write to the STAT register.
      */
     void writeToSTAT(byte data);
 
+    /**
+     * @brief Used to interface with the LCDC register.
+     * 
+     * @param data The data to write to the LCDC register.
+     */
+    void writeToLCDC(byte data);
+    
     /**
      * @brief Parse VRAM and update relevant elements of the Object Attribute Table.
     */

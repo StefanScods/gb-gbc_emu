@@ -7,9 +7,13 @@ The class implementation for the emulator's PPU / LCD  display.
 #include <set>
 #include <algorithm>
 
+// todo!!! handle GBC
+// todo!!! handle LCDC bit 2 = 1 -> 16x8 tiles
+// todo!!! handle BG-to-OBJ Priority
+// todo!!! handle window rendering
+
 // Enables debug cout statements for this file.
 #define ENABLE_DEBUG_PRINTS false
-
 
 void OAMEntry::update(byte* bytes){
     yPos = bytes[0];
@@ -68,6 +72,9 @@ void PPU::destroy(){
 }
 
 void PPU::cycle(bool CGBMode){
+    // Pause execution if the PPU is disabled.
+    if(!ppuEnable) return;
+
     /**
      * The PPU renders to the LCD in rows called scan lines. There are 154 scanlines in the display, 
      * 144 visible, 10 in the "v-blank" zone. It takes the PPU 456 cycles to render a scanline.
@@ -182,7 +189,7 @@ void PPU::renderCurrentScanlineVRAM(bool CGBMode){
 
 void PPU::renderBGMapScanline(bool CGBMode){
     // Get the map to render from.
-    byte* startOfTileMapPointer = memory->getBytePointer(BGM0_DATA_START);
+    byte* startOfTileMapPointer = memory->getBytePointer(backgroundAreaStart);
     // Get the palette to apply -> always BGP0 on non-CGB mode.
     byte* startOfPalette =  getPaletteColour(false, 0);
     // Determine the map data to render.
@@ -196,8 +203,10 @@ void PPU::renderBGMapScanline(bool CGBMode){
         int pixelX = currX % TILE_DIMENSION;
         int mapIndex = mapY * BG_MAP_WIDTH_TILES + mapX;
         // Get which tile to draw.
+        // Wacky offset case -> access the 3rd block of the bank -> https://gbdev.io/pandocs/Tile_Data.html#vram-tile-data.
+        if(tileAreaStart == TILE0_DATA_START && mapIndex < TILES_PER_BANK_THIRD) mapIndex += TILES_PER_BANK_THIRD*2;
         byte tileIndex = *(startOfTileMapPointer + mapIndex);
-
+        
         // Determine which colour to use.
         uint32_t pixelPositionInMap = tileIndex * PIXELS_PER_TILE + pixelY*TILE_DIMENSION + pixelX;
         byte* startOfSwatch = startOfPalette + (4 * tileMap[pixelPositionInMap]);
@@ -212,7 +221,6 @@ void PPU::renderBGMapScanline(bool CGBMode){
 }
 
 void PPU::renderObjectsScanline(bool CGBMode){
-
     // Clear scanline.
     int currentIndexIntoVideoBuffer = scanline * INT8_PER_SCANELINE;
     std::fill(
@@ -221,11 +229,17 @@ void PPU::renderObjectsScanline(bool CGBMode){
         0
     );
 
+    // Skip if disabling objects.
+    if(!objectEnable) return;
+
+    int renderedObjects = 0;
     // Loop over all objects on this scanline.
-    std::vector<int>::iterator itr;
+    std::list<int>::iterator itr;
     for(itr = objectsToRender.begin(); itr != objectsToRender.end(); itr++){
         // Determine what part of this object we are drawing on this scanline.
         int yPosOfObject = scanline + SCANLINE_Y_OFFSET - objectAttributeMemory[(*itr)].yPos;
+        // Apply vertical mirror.
+        if(objectAttributeMemory[(*itr)].yFlip) yPosOfObject = (TILE_DIMENSION-1) - yPosOfObject;
 
         byte* startOfPalette =  getPaletteColour(true, objectAttributeMemory[(*itr)].dmgPalette);
         // Draw the part of object on this scanline.
@@ -235,20 +249,33 @@ void PPU::renderObjectsScanline(bool CGBMode){
             int xPosOnScreen = objectAttributeMemory[(*itr)].xPos + i;
             if( xPosOnScreen < SCANLINE_X_OFFSET || xPosOnScreen >= SCREEN_WIDTH + SCANLINE_X_OFFSET) continue;
             xPosOnScreen -= SCANLINE_X_OFFSET;
+            
+            int tileX = i;
+            // Apply horizontal mirror.
+            if(objectAttributeMemory[(*itr)].xFlip) tileX = (TILE_DIMENSION-1) - i;
 
             // Determine which colour to use.
-            uint32_t pixelPositionInMap = objectAttributeMemory[(*itr)].tileIndex * PIXELS_PER_TILE + yPosOfObject*TILE_DIMENSION + i;
+            uint32_t pixelPositionInMap = objectAttributeMemory[(*itr)].tileIndex * PIXELS_PER_TILE + yPosOfObject*TILE_DIMENSION + tileX;
             // Transparent pixel case.
             if(tileMap[pixelPositionInMap] == 0) continue;
             byte* startOfSwatch = startOfPalette + (4 * tileMap[pixelPositionInMap]);
 
             // Calculate where each pixel is on the master array.
             uint32_t pixelPositionToRender = currentIndexIntoVideoBuffer + (xPosOnScreen) * sizeof(uint32_t);
+
+            // Skip over pixels which are already drawn.
+            if(videoBufferObjectLayer[pixelPositionToRender+3]!=0) continue;
+
+            // Draw pixel.
             videoBufferObjectLayer[pixelPositionToRender    ] = *(startOfSwatch + 2); // Blue.
             videoBufferObjectLayer[pixelPositionToRender + 1] = *(startOfSwatch + 1); // Green.
             videoBufferObjectLayer[pixelPositionToRender + 2] = *(startOfSwatch    ); // Red.
             videoBufferObjectLayer[pixelPositionToRender + 3] = *(startOfSwatch + 3); // Alpha.
         }
+
+        // Put a cap on the number of objects rendered on a single scanline.
+        renderedObjects++;
+        if(renderedObjects >= OBJECT_PER_SCANLINE) break;
     }
 }
 
@@ -339,7 +366,7 @@ void PPU::updateBackgroundMap(bool CGBMode){
     }
 
     // Handle the monochrome mode.
-    byte* startOfTileMapPointer = memory->getBytePointer(BGM0_DATA_START);
+    byte* startOfTileMapPointer = memory->getBytePointer(backgroundAreaStart);
     for(int mapIndex = 0; mapIndex < BGM0_DATA_END - BGM0_DATA_START + 1; mapIndex++){
         // Get which tile to draw.
         byte tileIndex = *(startOfTileMapPointer + mapIndex);
@@ -399,6 +426,18 @@ void PPU::writeToSTAT(byte data){
     STAT = data;
 }
 
+void PPU::writeToLCDC(byte data){
+    backgroundEnablePriority = readBit(data, 0);
+    objectEnable = readBit(data, 1);
+    doubleObjectSize = readBit(data, 2);
+    backgroundAreaStart = readBit(data, 3) ? BGM1_DATA_START : BGM0_DATA_START;
+    tileAreaStart = readBit(data, 4) ? TILE1_DATA_START : TILE0_DATA_START;
+    windowEnable = readBit(data, 5);
+    windowAreaStart = readBit(data, 6) ? BGM1_DATA_START : BGM0_DATA_START;
+    ppuEnable = readBit(data, 7);
+    LCDC = data;
+}
+
 void PPU::updateOAM(){
     byte* OAMPointer = memory->getBytePointer(OAM_START);
     for(int i = 0; i < NUMBER_OF_OBJECTS; i++){
@@ -407,13 +446,24 @@ void PPU::updateOAM(){
     }
 }
 
-// Todo!!! Implement the 10 objects per scanline limit.
 void PPU::determineObjectToRender(){
     objectsToRender.clear();
-
-    // Todo!!! sort by x value.
     for(int i = 0; i < NUMBER_OF_OBJECTS; i++){
-        if(objectAttributeMemory[i].yPos <= scanline + SCANLINE_Y_OFFSET && objectAttributeMemory[i].yPos + TILE_DIMENSION > scanline + SCANLINE_Y_OFFSET)
-            objectsToRender.push_back(i);
+        // Check if object is on scanline.
+        if(objectAttributeMemory[i].yPos <= scanline + SCANLINE_Y_OFFSET && objectAttributeMemory[i].yPos + TILE_DIMENSION > scanline + SCANLINE_Y_OFFSET){
+            // Add objects in render order.
+            bool added = false;
+            std::list<int>::iterator itr;
+            for(itr = objectsToRender.begin(); itr != objectsToRender.end(); itr++){
+                // Smaller x pos have greater priority.
+                if(objectAttributeMemory[i].xPos < objectAttributeMemory[*itr].xPos ){
+                    objectsToRender.insert(std::next(itr), i);
+                    added = true;
+                    break;
+                }
+            }
+            // Add to the end if largest in the list or if first element.
+            if(!added) objectsToRender.push_back(i);
+        }  
     }
 }

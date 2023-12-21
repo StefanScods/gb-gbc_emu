@@ -59,9 +59,12 @@ byte IOController::read(word address){
         // IF - Interrupt Flag
         case 0xFF0F:
             return IF;
+        // LCDC: LCD control
+        case 0xFF40:
+            return ppu->LCDC;  
         // STAT: LCD status.
         case 0xFF41:
-            //return ppu->STAT;  
+            return ppu->STAT;  
         // SCY: Viewport Y.
         case 0xFF42:
             return ppu->SCY;
@@ -74,7 +77,6 @@ byte IOController::read(word address){
         // LYC: LY compare.
         case 0xFF45:
             return ppu->LYC;
-            break;
         // BGP - BG Palette Data (R/W) - Non CGB Mode Only.
         case 0xFF47:
             return BGP ;
@@ -139,6 +141,11 @@ void IOController::write(word address, byte data){
         // IF - Interrupt Flag
         case 0xFF0F:
             IF = data;
+            break;
+        // LCDC: LCD control
+        case 0xFF40:
+            ppu->writeToLCDC(data); 
+            break;
         // STAT: LCD status.
         case 0xFF41:
             ppu->writeToSTAT(data); 

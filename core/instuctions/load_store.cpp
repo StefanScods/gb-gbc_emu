@@ -102,7 +102,6 @@ cycles LoadAndStore::ldh_ma8_a(CPU* cpu){
     byte dataToWrite = *(cpu->A);
     word addressToWrite = cpu->parsedData | 0xFF00;
     cpu->memory->write(addressToWrite, dataToWrite); 
-
     return LDH_ma8_A_CYCLES;
 }
 

@@ -220,7 +220,6 @@ void Memory::storeROMBank(int ROMBankNumber, std::ifstream *romFile)
 void Memory::write(word address, byte d_data)
 {
     // Memory Map.
-
     // 0000-3FFF   16KB ROM Bank 00     (in cartridge, fixed at bank 00).
     if (address >= ROMBANK0_START && address <= ROMBANK0_END){
         // Read Only.

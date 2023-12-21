@@ -106,11 +106,11 @@ void* EmulationThread::Entry()
 	emuCore->controller.bindKeyUp(SDL_SCANCODE_RSHIFT, std::bind(&Joypad::releaseB, emuCore->getJoypad()));
 	emuCore->controller.bindKeyDown(SDL_SCANCODE_RSHIFT, std::bind(&Joypad::pressB, emuCore->getJoypad()));
 	// Start.
-	emuCore->controller.bindKeyUp(SDL_SCANCODE_Q, std::bind(&Joypad::releaseStart, emuCore->getJoypad()));
-	emuCore->controller.bindKeyDown(SDL_SCANCODE_Q, std::bind(&Joypad::pressStart, emuCore->getJoypad()));
+	emuCore->controller.bindKeyUp(SDL_SCANCODE_Q, std::bind(&Joypad::releaseSelect, emuCore->getJoypad()));
+	emuCore->controller.bindKeyDown(SDL_SCANCODE_Q, std::bind(&Joypad::pressSelect, emuCore->getJoypad()));
 	// Select.
-	emuCore->controller.bindKeyUp(SDL_SCANCODE_E, std::bind(&Joypad::releaseSelect, emuCore->getJoypad()));
-	emuCore->controller.bindKeyDown(SDL_SCANCODE_E, std::bind(&Joypad::pressSelect, emuCore->getJoypad()));
+	emuCore->controller.bindKeyUp(SDL_SCANCODE_E, std::bind(&Joypad::releaseStart, emuCore->getJoypad()));
+	emuCore->controller.bindKeyDown(SDL_SCANCODE_E, std::bind(&Joypad::pressStart, emuCore->getJoypad()));
 
 	// Main event loop.
 	while (appContext->getRunningEmulationState())
