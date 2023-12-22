@@ -62,9 +62,8 @@ private:
     int scanline = 0;
 
     // Arrays for holding colour data.
-    byte objectColours[4*SWATCHES_PER_PALETTE*NUMBER_OF_PALETTES] = {0xFF};
-    byte backgroundColours[4*SWATCHES_PER_PALETTE*NUMBER_OF_PALETTES] = {0xFF};
-
+    byte objectColours[4*SWATCHES_PER_PALETTE*NUMBER_OF_PALETTES];
+    byte backgroundColours[4*SWATCHES_PER_PALETTE*NUMBER_OF_PALETTES];
 
     // Pixel data for the current background layer.
     uint8_t* videoBufferBackgroundLayer = nullptr;
@@ -97,6 +96,16 @@ public:
      * @brief Deallocates all dynamic memory.
      */
     void destroy();
+
+    /**
+     * @brief Zeros all dynamic memory.
+     */
+    void zeroAllBlocksOfMemory();
+
+    /**
+     * @brief Resets the PPU to inital values.
+     */
+    void reset();
 
     /**
      * @brief Binds a memory module to the CPU. All future PPU operations are

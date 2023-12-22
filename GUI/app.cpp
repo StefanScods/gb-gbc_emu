@@ -35,12 +35,20 @@ wxBEGIN_EVENT_TABLE(MainWindowFrame, wxFrame)
 	EVT_COMMAND(wxID_ANY, EMULATOR_CORE_UPDATE_EVENT, MainWindowFrame::handleEmulatorCoreUpdateEvent)
 
 	EVT_MENU(wxID_EXIT, MainWindowFrame::OnMenuQuitButton)
+	EVT_MENU(wxMenuIDs::OPEN_ROM, MainWindowFrame::OnMenuOpenROMButton)
+	
 	EVT_MENU(wxMenuIDs::OPEN_CPU_STATE_VIEW, MainWindowFrame::OnMenuOpenCPUStateViewButton)
 	EVT_MENU(wxMenuIDs::OPEN_MEMORY_VIEWER_VIEW, MainWindowFrame::OnMenuOpenMemoryViewerViewButton)
 	EVT_MENU(wxMenuIDs::OPEN_PALETTE_VIEWER_VIEW, MainWindowFrame::OnMenuOpenPaletteViewerViewButton)
 	EVT_MENU(wxMenuIDs::OPEN_TILE_VIEWER_VIEW, MainWindowFrame::OnMenuOpenTileViewerViewButton)
 	EVT_MENU(wxMenuIDs::OPEN_OAM_VIEWER_VIEW, MainWindowFrame::OnMenuOpenOAMViewerViewButton)
 	EVT_MENU(wxMenuIDs::OPEN_BACKGROUND_VIEWER_VIEW, MainWindowFrame::OnMenuOpenBackgroundViewerViewButton)
+	
+	EVT_MENU(wxMenuIDs::DISPLAY_SIZE_1, MainWindowFrame::handleTimes1SizeEvent)
+	EVT_MENU(wxMenuIDs::DISPLAY_SIZE_2, MainWindowFrame::handleTimes2SizeEvent)
+	EVT_MENU(wxMenuIDs::DISPLAY_SIZE_3, MainWindowFrame::handleTimes3SizeEvent)
+	EVT_MENU(wxMenuIDs::DISPLAY_SIZE_4, MainWindowFrame::handleTimes4SizeEvent)
+	EVT_MENU(wxMenuIDs::DISPLAY_SIZE_5, MainWindowFrame::handleTimes5SizeEvent)
 wxEND_EVENT_TABLE()
 
 wxBEGIN_EVENT_TABLE(CPUStateFrame, wxFrame)
@@ -81,19 +89,21 @@ void App::loadCartridge(std::string filepath){
 		std::cerr << "Initialize the emulation core before opening a cartridge!" << std::endl;
 		exit(1);
 	}
-
+	emuCore->pauseEmulatorExecution();
+	emuCore->acquireMutexLock();
+	// Reset the emulator.
+	emuCore->resetCore();
 	// Attempt to load the ROM file.
 	if(!emuCore->loadROM(filepath)){
 		exit(1);
 	}
 
-	// Start emulation.
-	runningEmulator = true;
 	// Begins running the emulator's fetch and execute loop.
 	emuCore->continueEmulatorExecution();
 
 	// On Success, send an event.
 	sendCartridgeLoadedEvent();
+	emuCore->releaseMutexLock();
 }
 
 bool App::OnInit()
@@ -155,15 +165,11 @@ bool App::OnInit()
 	emuThread->addAdditionalRenderEvent(
 		std::bind(&BackgroundViewerFrame::updateSDLDisplays, backgroundViewerFrame)
 	);
-
-	emuThread->SetPriority(wxPRIORITY_MAX);
 	// Begin the emulation thread's execution.
+	emuThread->SetPriority(wxPRIORITY_MAX);
 	emuThread->Run();
 
-	// Load the ROM file.
-	loadCartridge("D:/C++/gb-gbc_emu/testroms/Tetris.gb");
-
-	return true;
+	return runningEmulator;
 }
 
 int App::OnExit()
@@ -257,7 +263,6 @@ void App::sendCartridgeLoadedEvent(){
 
 	// Create an event.
 	wxCommandEvent event(ON_CARTRIDGE_LOADED_EVENT);
-
 
 	// Send the event to the child windows.
 	wxPostEvent(this, event);

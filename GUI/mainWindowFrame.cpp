@@ -6,8 +6,10 @@
 #include "include\emulationThread.h"
 #include "..\core\include\core.h"
 #include "..\core\include\defines.h"
+#include <wx/filedlg.h>
 #include <iostream>
 #include <string.h>
+#include <sstream> 
 
 // Enables debug cout statements for this file.
 #define ENABLE_DEBUG_PRINTS false
@@ -23,20 +25,12 @@ MainWindowFrame::MainWindowFrame(Core *d_emuCore, App* d_appContext ) : wxFrame(
 
 	this->SetBackgroundColour(wxColour(0x0, 0x0, 0x0, 0xFF));
 
-	// Create a sizer to maintain the desired size of the main display.
-	wxGridSizer* mainDisplaySizer  = new wxGridSizer(1, 1, 0, 0);
-
-	// Create a panel used as the emulator's display.
-	displayPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(MAIN_WINDOW_WIDTH, MAIN_WINDOW_HEIGHT),  wxALIGN_TOP || wxALIGN_LEFT || wxDEFAULT_FRAME_STYLE & ~wxRESIZE_BORDER);
-	mainDisplaySizer->Add(displayPanel, 0);
-
-	// Render the sizer.
-	SetSizer(mainDisplaySizer);
-
 	// Construct the top menubar.
 	menuBar = new wxMenuBar();
 	// File Menu
 	fileMenuLayout = new wxMenu();
+	fileMenuLayout->Append(wxMenuIDs::OPEN_ROM, _T("&Open ROM"));
+	fileMenuLayout->AppendSeparator();
 	fileMenuLayout->Append(wxID_EXIT, _T("&Quit"));
 	menuBar->Append(fileMenuLayout, _T("&File"));
 
@@ -50,9 +44,37 @@ MainWindowFrame::MainWindowFrame(Core *d_emuCore, App* d_appContext ) : wxFrame(
 	toolsMenuLayout->Append(wxMenuIDs::OPEN_BACKGROUND_VIEWER_VIEW, _T("&Open Background Viewer"));
 	menuBar->Append(toolsMenuLayout, _T("&Tools"));
 
+	// Display Menu.
+	displayMenuLayout = new wxMenu();
+	// Add pixel perfect resolutions.
+	for(int i = 1; i <= 5; i++){
+		std::string label =
+			"&x" + 
+			std::to_string(i) + 
+			" (" + 
+			std::to_string(SCREEN_WIDTH*i) + 
+			"x" + 
+			std::to_string(SCREEN_HEIGHT*i) + 
+			")";
+		displayMenuLayout->Append(wxMenuIDs::DISPLAY_SIZE_1 - 1 + i, label.c_str());
+	}
+
+	menuBar->Append(displayMenuLayout, _T("&Display"));
+
 	// Render the top menu bar.
 	SetMenuBar(menuBar);
 
+	// Create a sizer to maintain the desired size of the main display.
+	mainDisplaySizer = new wxGridSizer(1, 1, 0, 0);
+
+	// Create a panel used as the emulator's display.
+	displayPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(MAIN_WINDOW_WIDTH, MAIN_WINDOW_HEIGHT), wxDEFAULT_FRAME_STYLE & ~wxRESIZE_BORDER);
+	mainDisplaySizer->Add(displayPanel, 0, wxSHAPED | wxALIGN_CENTER);
+
+	// Render the sizer.
+	SetSizer(mainDisplaySizer);
+	// Set inital size of screen to be 3x the default res.
+	pixelPerfectResizer(3);
 }
 
 MainWindowFrame::~MainWindowFrame()
@@ -60,6 +82,17 @@ MainWindowFrame::~MainWindowFrame()
 	if (ENABLE_DEBUG_PRINTS)
 		std::cout << "Exiting: Main Window Frame" << std::endl;
 
+}
+
+void MainWindowFrame::pixelPerfectResizer(int multiplier) {
+	displayPanel->SetMinSize(
+		wxSize(
+			SCREEN_WIDTH  * multiplier,
+			SCREEN_HEIGHT * multiplier
+		)
+	);
+	mainDisplaySizer->Layout();
+	Fit();
 }
 
 // Event Handlers.
@@ -80,6 +113,18 @@ void MainWindowFrame::OnCloseWindow(wxCloseEvent& event){
 
 void MainWindowFrame::OnMenuQuitButton(wxCommandEvent& event){
 	Close(true);
+}
+
+void MainWindowFrame::OnMenuOpenROMButton(wxCommandEvent& event){
+	wxFileDialog openFileDialog(this, _("Select ROM"), "", "",
+                       "GameBoy / GameBoy Color (*.gb,*.gbc)|*.gb;*.gbc|All Files|*", wxFD_FILE_MUST_EXIST);
+
+	// Wait for the user to select a file or cancel.
+	if (openFileDialog.ShowModal() == wxID_CANCEL) return;
+
+	// Load the selected file.
+	std::string filePath(openFileDialog.GetPath().c_str());
+	appContext->loadCartridge(filePath);
 }
 
 void MainWindowFrame::OnMenuOpenCPUStateViewButton(wxCommandEvent& event){

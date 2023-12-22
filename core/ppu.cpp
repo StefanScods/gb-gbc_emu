@@ -49,15 +49,61 @@ bool PPU::init(){
     videoBufferObjectLayer = new uint8_t[INT8_PER_SCREEN];
     if (videoBufferObjectLayer == nullptr)
         return false;
-    // Clear the video buffer.
+
+    // All alloc successful.
+    return true;
+}
+void PPU::zeroAllBlocksOfMemory(){
+    std::fill(
+        backgroundMap0, 
+        backgroundMap0+INT8_PER_BG_MAP, 
+        0
+    );
+    std::fill(
+        tileMap, 
+        tileMap+ PIXELS_PER_TILE * TILES_PER_BANK * 2, 
+        0
+    );
+    std::fill(
+        nonColouredTile, 
+        nonColouredTile+INT8_PER_TILE, 
+        0
+    );
     std::fill(
         videoBufferObjectLayer, 
         videoBufferObjectLayer+INT8_PER_SCREEN, 
         0
     );
+    std::fill(
+        videoBufferBackgroundLayer, 
+        videoBufferBackgroundLayer+INT8_PER_SCREEN, 
+        0
+    );
+    std::fill(
+        objectColours, 
+        objectColours+4*SWATCHES_PER_PALETTE*NUMBER_OF_PALETTES, 
+        0
+    );
+    std::fill(
+        backgroundColours, 
+        backgroundColours+4*SWATCHES_PER_PALETTE*NUMBER_OF_PALETTES, 
+        0
+    );
+    updateOAM();
+}
 
-    // All alloc successful.
-    return true;
+void PPU::reset(){
+    // The current mode of the PPU. This controls what the PPU is doing per cycle. 
+    mode = 2;
+    cyclesCounter = 0;
+
+    // Clear the buffers.
+    zeroAllBlocksOfMemory();
+    SCY = 0;
+    SCX = 0;
+    LYC = 0;
+    writeToSTAT(0);
+    writeToLCDC(0);
 }
 
 void PPU::destroy(){
@@ -142,6 +188,7 @@ void PPU::cycle(bool CGBMode){
             }
             break;
         default:
+            std::cout << "ERROR: Invalid PPU mode!" << std::endl;
             break;
     }
 }

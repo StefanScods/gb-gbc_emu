@@ -45,6 +45,16 @@ public:
 	bool open(const char* filepath, Core* core);
 
 	/**
+	 * @brief Returns whether a ROM cart is currently loaded.
+	 */
+	bool isROMLoaded(){return romLoaded;}
+
+	/**
+	 * @brief Returns whether a ROM cart is a GBC cart only.
+	 */
+	bool isGBCROM(){return CGB_flag;}
+
+	/**
 	 * @brief Closes the loaded ROM file and performs any required clean up.
 	 */
 	void close();

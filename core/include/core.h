@@ -32,11 +32,6 @@ private:
 
     ExecutionModes executionMode = PAUSE;
 
-    bool emulatingGBColour = false;
-
-    // A flag indicating a ROM is loaded.
-    bool loadedROM = false;
-
     std::mutex mtx;
 public:
     // Make the core's controller public so that the rest of the codebase can modify bindings without needing wrapper functions.
@@ -44,6 +39,11 @@ public:
 
     Core(ExecutionModes mode);
     ~Core();
+
+    /**
+     * @brief Sets up the initial state of the emulator.
+    */
+    void resetCore();
 
     /**
      * @brief The main body of the emulator core. This function 
@@ -167,12 +167,9 @@ public:
     void TIMATimerOverflowLogic();
 
     /**
-     * @brief Sets the emulator to either emulate the GameBoy or
-     * GameBoyColor. This is determined by the GBC flag within the 
-     * game's ROM file.
-     */
-    void setCGBMode(bool isCGB){ emulatingGBColour = isCGB; }
-    bool getCGBMode(){ return emulatingGBColour; }
+     * @brief Returns if we are currently running a GBC only cart.
+    */
+    bool getCGBMode(){ return cartridge.isGBCROM(); }
 
     /**
      * @brief Checks the CPU's master interrupt flag along with the enable interrupt 

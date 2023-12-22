@@ -32,6 +32,11 @@ public:
 	 * @brief The WxWidget menu's quit button event handler.
 	 */
 	void OnMenuQuitButton(wxCommandEvent& event);
+
+	/**
+	 * @brief The WxWidget menu's open ROM button event handler.
+	 */
+	void OnMenuOpenROMButton(wxCommandEvent& event);
 	/**
 	 * @brief The WxWidget menu's open CPU state view button event handler.
 	 */
@@ -48,11 +53,11 @@ public:
 	 * @brief The WxWidget menu's open tile viewer view button event handler.
 	 */
 	void OnMenuOpenTileViewerViewButton(wxCommandEvent& event);
-		/**
+	/**
 	 * @brief The WxWidget menu's open OAM viewer view button event handler.
 	 */
 	void OnMenuOpenOAMViewerViewButton(wxCommandEvent& event);
-		/**
+	/**
 	 * @brief The WxWidget menu's open background viewer view button event handler.
 	 */
 	void OnMenuOpenBackgroundViewerViewButton(wxCommandEvent& event);
@@ -61,6 +66,19 @@ public:
 	 * @brief The event handler for the `EMULATOR_CORE_UPDATE_EVENT` wxWidget event.
 	 */
 	void handleEmulatorCoreUpdateEvent(wxCommandEvent& event);
+
+	/**
+	 * @brief Helper function to resize the main display into a pixel perfect aspect ratio.
+	 * 
+	 * @param multiplier The resize multiplier scale.
+	*/
+	void pixelPerfectResizer(int multiplier);
+
+	void handleTimes1SizeEvent(wxCommandEvent& event){pixelPerfectResizer(1);}
+	void handleTimes2SizeEvent(wxCommandEvent& event){pixelPerfectResizer(2);}
+	void handleTimes3SizeEvent(wxCommandEvent& event){pixelPerfectResizer(3);}
+	void handleTimes4SizeEvent(wxCommandEvent& event){pixelPerfectResizer(4);}
+	void handleTimes5SizeEvent(wxCommandEvent& event){pixelPerfectResizer(5);}
 
 	/**
 	 * @brief Gets the pointer to the displayPanel object.
@@ -83,11 +101,13 @@ private:
 
 	// GB Display -> Used to generate an SDL window.
 	wxPanel* displayPanel = nullptr;
+	wxGridSizer* mainDisplaySizer = nullptr;
 
 	// Menu bar elements.
 	wxMenuBar* menuBar = nullptr;
 	wxMenu* fileMenuLayout = nullptr;
 	wxMenu* toolsMenuLayout = nullptr;
+	wxMenu* displayMenuLayout = nullptr;
 };
 
 #endif

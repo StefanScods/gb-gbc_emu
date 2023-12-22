@@ -13,11 +13,9 @@ The header implementation for the main emulator core.
 
 // An array holding all current breakpoints. Simply add the desired value of PC to this register to pause execution.
 std::vector<word> CPUBreakpoints = {
-    // 0x64FD
 };
 
 Core::Core(ExecutionModes mode) {
-
     executionMode = mode;
     ppu.init();
     ioController.init(&cpu, &ppu);
@@ -27,12 +25,18 @@ Core::Core(ExecutionModes mode) {
     ppu.bindMemory(&memory);
     ioController.bindMemory(&memory);
 
-    // Set CPU and Memory to default state.
+    // Set Core to default state.
+    resetCore();
+}
+
+void Core::resetCore(){
+    // Clear Cartridge.
+    cartridge.close();
+
+    ppu.reset();
+    ioController.reset();
     cpu.setInitalValues();
     memory.setInitalValues();
-
-    // Start running I/O devices.
-    ioController.start();
 }
 
 Core::~Core() {
@@ -41,11 +45,12 @@ Core::~Core() {
 }
 
 bool Core::loadROM(std::string filePath){
-    bool success = cartridge.open(filePath.c_str(), this);
-    return success;
+    bool loadedROM = cartridge.open(filePath.c_str(), this);
+    return loadedROM;
 }
 
 void Core::emulatorMain(){
+    acquireMutexLock();
     // Determine what the core should do depending on the executionMode.
     switch(executionMode){
         case PAUSE:
@@ -64,6 +69,7 @@ void Core::emulatorMain(){
 
     // Keep the emulator paused if not in CONTINUE mode;
     if(executionMode != CONTINUE) executionMode = PAUSE;
+    releaseMutexLock();
 }
 
 void Core::populateCpuStateBuffer(CPU_State* CPU_StateBuffer){
@@ -73,12 +79,11 @@ void Core::populateCpuStateBuffer(CPU_State* CPU_StateBuffer){
 
 
 void Core::runForFrame(bool breakOnCPU) {
-   acquireMutexLock();
     cycles cycleCounter = 0;
     while (cycleCounter < CYCLES_PER_FRAME) {
         // Run hardware.
         cycles cpuWork = cpu.cycle();
-        ppu.cycle(emulatingGBColour);
+        ppu.cycle(getCGBMode());
         ioController.cycle(cpu.getDoubleSpeedMode());
         handleInterrupts();
 
@@ -91,7 +96,6 @@ void Core::runForFrame(bool breakOnCPU) {
         if(breakOnCPU && cpuWork) break;
         cycleCounter ++;
     }
-    releaseMutexLock();
 }
 
 /**

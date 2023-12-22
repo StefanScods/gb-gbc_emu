@@ -195,9 +195,6 @@ bool Cartridge::open(const char* filepath, Core* core) {
 	delete[] headerDataBuffer;
 	headerDataBuffer = nullptr;
 
-
-	// Set the emulator in GameBoy / GameBoy Colour mode.
-	core->setCGBMode(CGB_flag);
 	// Store the first two banks of ROM into memory.
 	storeROMBankIntoMemory(0, core->getMemory());
 	storeROMBankIntoMemory(1, core->getMemory());
@@ -215,10 +212,9 @@ bool Cartridge::open(const char* filepath, Core* core) {
 }
 
 void Cartridge::close() {
-	if (romLoaded) {
-		romLoaded = false;
-		romFile.close();
-	}
+	if (romLoaded) romFile.close();
+	romLoaded = false;
+	CGB_flag = false;
 }
 
 void Cartridge::storeROMBankIntoMemory(int ROMBankNumber, Memory* memory){

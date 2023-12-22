@@ -31,15 +31,15 @@ void Joypad::write(byte d_data){
 }
 
 void Joypad::reset(){
-    a = true;
-    b = true;
-    start = true;
-    select = true;
+    a = false;
+    b = false;
+    start = false;
+    select = false;
 
-    up = true;
-    down = true;
-    left = true;
-    right = true;
+    up = false;
+    down = false;
+    left = false;
+    right = false;
 
     data = 0xFF;
 }

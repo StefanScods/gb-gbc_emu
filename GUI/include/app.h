@@ -32,7 +32,13 @@ enum wxMenuIDs {
 	OPEN_TILE_VIEWER_VIEW,
 	OPEN_OAM_VIEWER_VIEW,
 	OPEN_BACKGROUND_VIEWER_VIEW,
-	MEMORY_MAP_SEARCHBAR
+	MEMORY_MAP_SEARCHBAR,
+	DISPLAY_SIZE_1,
+	DISPLAY_SIZE_2,
+	DISPLAY_SIZE_3,
+	DISPLAY_SIZE_4,
+	DISPLAY_SIZE_5,
+	OPEN_ROM
 };
 
 const char APP_TITLE[] = "RedPandaEmu";
@@ -141,7 +147,7 @@ public:
 
 private:
 	// A boolean indicating whether the emulator is currently running.
-	bool runningEmulator = false;
+	bool runningEmulator = true;
 
 	EmulationThread *emuThread = nullptr;
 	

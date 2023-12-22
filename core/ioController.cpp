@@ -10,12 +10,27 @@
 void IOController::init(CPU* d_cpu, PPU* d_ppu){
     cpu = d_cpu;
     ppu = d_ppu;
-    // Create the DIV timer.
-    DIVTimer.setIncrementFrequency(cpu->getClockSpeed() / 256);
+
+    reset();
 }
 
-void IOController::start(){
+void IOController::reset(){
+    // Init Register Values.
+    TMA = 0xFF;
+    // TAC.
+    write(0xFF07, 0);
+    BGP = 0xFF;
+    OBP0 = 0xFF;
+    OBP1 = 0xFF;
+    IF = 0xFF;
+    // Init timers.
+    TIMATimer.resetTimer(0);
+    DIVTimer.resetTimer(0);
+    DIVTimer.setIncrementFrequency(cpu->getClockSpeed() / 256);
     DIVTimer.setRunning(true);
+    
+    joypad.reset();
+    dmaController.reset();
 }
 
 void IOController::cycle(bool cpuDoubleSpeed){

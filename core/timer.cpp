@@ -30,9 +30,7 @@ void Timer::cycle(bool cpuDoubleSpeed, voidFuncWithNoArguments overflowOperation
 }
 
 void Timer::resetTimer(byte resetValue){
-    // Return early if not running.
-    if(!running) return;
-    
+
     cyclesPassed = 0;
     data = resetValue;
 }

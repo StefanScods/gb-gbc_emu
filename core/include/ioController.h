@@ -49,7 +49,7 @@ public:
 
     void init(CPU* d_cpu, PPU* d_ppu);
     void bindMemory(Memory* d_memory);
-    void start();
+    void reset();
     void cycle(bool cpuDoubleSpeed);
   
     void TIMATimerOverflowLogic();

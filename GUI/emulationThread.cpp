@@ -140,14 +140,9 @@ void* EmulationThread::Entry()
 		SDL_SetRenderDrawColor(sdlRenderer, 0xFF, 0x00, 0xFF, 0xFF);
 		SDL_RenderClear(sdlRenderer);
 
-		// Render the background layer texture.
-		SDL_Rect textureRenderLocation;
-		textureRenderLocation.x = 0;
-		textureRenderLocation.y = 0;
-		textureRenderLocation.w = MAIN_WINDOW_WIDTH;
-		textureRenderLocation.h = MAIN_WINDOW_HEIGHT;
-		SDL_RenderCopy(sdlRenderer, backgroundLayer, NULL, &textureRenderLocation);
-		SDL_RenderCopy(sdlRenderer, objectLayer, NULL, &textureRenderLocation);
+		// Render the PPU layer textures.
+		SDL_RenderCopy(sdlRenderer, backgroundLayer, NULL, NULL);
+		SDL_RenderCopy(sdlRenderer, objectLayer, NULL, NULL);
 
 		// Update screen.
 		SDL_RenderPresent(sdlRenderer);

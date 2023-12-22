@@ -34,6 +34,7 @@ CPU::CPU(){
 
 void CPU::setInitalValues()
 {
+    cyclesSinceLastInstuction = 0;
     // Init routine according to http://bgb.bircd.org/pandocs.htm#powerupsequence.
     reg_AF = (word)0x01B0;
     reg_BC = (word)0x0013;
