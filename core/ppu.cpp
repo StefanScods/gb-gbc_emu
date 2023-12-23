@@ -250,10 +250,10 @@ void PPU::renderBGMapScanline(bool CGBMode){
         int pixelX = currX % TILE_DIMENSION;
         int mapIndex = mapY * BG_MAP_WIDTH_TILES + mapX;
         // Get which tile to draw.
+        int tileIndex = *(startOfTileMapPointer + mapIndex);
         // Wacky offset case -> access the 3rd block of the bank -> https://gbdev.io/pandocs/Tile_Data.html#vram-tile-data.
-        if(tileAreaStart == TILE0_DATA_START && mapIndex < TILES_PER_BANK_THIRD) mapIndex += TILES_PER_BANK_THIRD*2;
-        byte tileIndex = *(startOfTileMapPointer + mapIndex);
-        
+        if(tileAreaStart == TILE0_DATA_START && tileIndex < TILES_PER_BANK_THIRD) tileIndex += TILES_PER_BANK_THIRD*2;
+            
         // Determine which colour to use.
         uint32_t pixelPositionInMap = tileIndex * PIXELS_PER_TILE + pixelY*TILE_DIMENSION + pixelX;
         byte* startOfSwatch = startOfPalette + (4 * tileMap[pixelPositionInMap]);

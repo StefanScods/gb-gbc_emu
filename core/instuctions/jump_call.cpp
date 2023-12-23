@@ -212,7 +212,7 @@ cycles JumpAndCall::rst_30(CPU* cpu){
 
 cycles JumpAndCall::rst_08(CPU* cpu){
     pushHelper(cpu, cpu->PC);
-    cpu->PC = (word) 0x0000;
+    cpu->PC = (word) 0x0008;
 
     return RST_08H_CYCLES;
 }

@@ -535,14 +535,15 @@ cycles LoadAndStore::ld_a_ma16(CPU* cpu){
 
 cycles LoadAndStore::ld_hl_sp_pp8(CPU* cpu){
 
-    signedByte imm8 = -1;
+    signedByte imm8 = cpu->parsedData;
+    word result = (cpu->SP.read() + imm8);
 
     writeBit(*(cpu->F), FLAG_Z, 0);
     writeBit(*(cpu->F), FLAG_N, 0);
     writeBit(*(cpu->F), FLAG_C, (( cpu->SP.read() & 0xFF) + (imm8 & 0xFF)) > 0xFF);
     writeBit(*(cpu->F), FLAG_H, (((cpu->SP.read() & 0xF ) + (imm8 & 0xF )) > 0xF));
 
-    cpu->SP = (word) (cpu->SP.read() + imm8);
+    cpu->reg_HL = result;
 
     return LD_HL_SPpr8_CYCLES;
 }

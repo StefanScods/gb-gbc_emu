@@ -13,6 +13,7 @@ The header implementation for the main emulator core.
 
 // An array holding all current breakpoints. Simply add the desired value of PC to this register to pause execution.
 std::vector<word> CPUBreakpoints = {
+    // 0x1AA
 };
 
 Core::Core(ExecutionModes mode) {

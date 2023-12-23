@@ -125,6 +125,7 @@
       <PreprocessorDefinitions>WXUSINGDLL;wxMSVC_VERSION_AUTO;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll\mswud;$(SolutionDir)dependencies\sdl\SDL2\lib\x64;$(SolutionDir)dependencies\wxWidgets\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -146,6 +147,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)dependencies\wxWidgets\lib\vc142_x64_dll\mswu;$(SolutionDir)dependencies\wxWidgets\include;$(SolutionDir)dependencies\sdl\SDL2\lib\x64;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -306,9 +308,16 @@
     <ClInclude Include="GUI\include\oamViewerFrame.h" />
     <ClInclude Include="GUI\include\paletteViewerFrame.h" />
     <ClInclude Include="GUI\include\tileViewerFrame.h" />
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SDL2.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="gb-gbc_emu.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="resources\temp.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

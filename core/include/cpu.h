@@ -183,6 +183,10 @@ public:
      * @return bool 
      */
     bool getDoubleSpeedMode(){return doubleSpeedMode;}
+    /**
+     * @brief Toggle's double speed mode and clears the KEY1 arm switch.
+    */
+    void toggleDoubleSpeedMode();
     
     /**
      * @brief Prints the current state of the CPU to std::cout.

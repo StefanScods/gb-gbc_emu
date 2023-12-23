@@ -10,6 +10,7 @@ date: 2021-11-13
 
 cycles MiscAndControl::notSupported(CPU* cpu){
     std::cout<< "ERROR: INSTUCTION NOT SUPPORTED!" << std::endl;
+    cpu->printCurrentState();
     return NOP_CYCLES;
 }
 
@@ -19,7 +20,10 @@ cycles MiscAndControl::nop(CPU* cpu){
 
 //!!! IMPLEMENT THIS AHHHHHHHHHHHHHHHHHHHHH
 cycles MiscAndControl::stop(CPU* cpu){
-    notSupported(cpu);
+    std::cout << "STOP" << std::endl;
+    bool KEY1SwitchArmed = readBit(cpu->memory->read(0xFF4D), 0);
+    if(KEY1SwitchArmed) cpu->toggleDoubleSpeedMode();
+    else cpu->setLowPowerMode(true);
     return STOP_CYCLES;
 }
 

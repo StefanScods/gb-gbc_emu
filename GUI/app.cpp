@@ -117,11 +117,16 @@ bool App::OnInit()
 		exit(1);
 	}
 
+	// Set the app icon.
+	wxIcon icon;
+	icon.CopyFromBitmap(wxICON(IDI_ICON1));
+
 	// Create the emulator core object.
 	emuCore = new Core(PAUSE);
 
 	// Create the main window frame.
 	mainWindow = new MainWindowFrame(emuCore, this);
+	mainWindow->SetIcon(icon);
 	// Create the main emulation thread.
 	emuThread = new EmulationThread(this, emuCore, mainWindow->getDisplayPanel());
 

@@ -41,6 +41,8 @@ private:
 
     byte IF = 0xFF;
 
+    bool KEY1SwitchArmed = false;
+
 public:
     /**
      * @brief Fetches a pointer to the joypad.

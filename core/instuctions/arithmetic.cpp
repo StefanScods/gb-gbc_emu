@@ -1251,7 +1251,7 @@ cycles Arithmetic::add_sp_r8(CPU* cpu){
 
     signedByte imm8 = (signedByte) cpu->parsedData;
 
-    writeBit(*(cpu->F), FLAG_Z, (cpu->SP.read() + imm8) == 0);
+    writeBit(*(cpu->F), FLAG_Z, 0);
     writeBit(*(cpu->F), FLAG_N, 0);
     writeBit(*(cpu->F), FLAG_C, (( cpu->SP.read() & 0xFF) + (imm8 & 0xFF)) > 0xFF);
     writeBit(*(cpu->F), FLAG_H, (((cpu->SP.read() & 0xF ) + (imm8 & 0xF )) > 0xF));

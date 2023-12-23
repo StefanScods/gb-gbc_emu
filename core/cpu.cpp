@@ -32,9 +32,17 @@ CPU::CPU(){
     reg_AF.setAsFlagReg();
 }
 
+void CPU::toggleDoubleSpeedMode(){
+    doubleSpeedMode = !doubleSpeedMode;
+    incPC();
+    memory->write(0xFF4D, 0);
+}
+
 void CPU::setInitalValues()
 {
     cyclesSinceLastInstuction = 0;
+    doubleSpeedMode = false;
+    lowPowerMode = false;
     // Init routine according to http://bgb.bircd.org/pandocs.htm#powerupsequence.
     reg_AF = (word)0x01B0;
     reg_BC = (word)0x0013;
@@ -44,7 +52,7 @@ void CPU::setInitalValues()
     PC = (word)0x0100;
     SP = (word)0xFFFE;
 
-    masterInterruptEnableFlag = true;
+    masterInterruptEnableFlag = false;
     activeInterruptVector = 0x0000;
 }
 

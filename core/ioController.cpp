@@ -23,6 +23,7 @@ void IOController::reset(){
     OBP0 = 0xFF;
     OBP1 = 0xFF;
     IF = 0xFF;
+    KEY1SwitchArmed = false;
     // Init timers.
     TIMATimer.resetTimer(0);
     DIVTimer.resetTimer(0);
@@ -101,6 +102,13 @@ byte IOController::read(word address){
         // OBP1 - Object Palette 1 Data (R/W) - Non CGB Mode Only.
         case 0xFF49:
             return OBP1;
+        //  KEY1 - Prepare speed switch - CGB Mode Only.
+        case 0xFF4D:{
+            byte result = 0b01111110;
+            writeBit(result, 0, KEY1SwitchArmed);
+            writeBit(result, 7, cpu->getDoubleSpeedMode());
+            return result;
+        }
         default:
             //std::cerr << "Error: I/O Device At 0x" << std::hex << address << std::dec <<" Not Yet Supported!" << std::endl;
             return 0;
@@ -196,6 +204,10 @@ void IOController::write(word address, byte data){
         // OBP1 - Object Palette 1 Data (R/W) - Non CGB Mode Only.
         case 0xFF49:
             OBP1 = data;
+            break;
+        //  KEY1 - Prepare speed switch - CGB Mode Only.
+        case 0xFF4D:
+            KEY1SwitchArmed = readBit(data, 0);
             break;
         default:
             //std::cerr << "Error: I/O Device At 0x" << std::hex << address << std::dec <<" Not Yet Supported!" << std::endl;
