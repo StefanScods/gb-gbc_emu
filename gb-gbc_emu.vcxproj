@@ -181,6 +181,7 @@
     <ClCompile Include="core\timer.cpp" />
     <ClCompile Include="GUI\app.cpp" />
     <ClCompile Include="GUI\backgroundViewerFrame.cpp" />
+    <ClCompile Include="GUI\cartridgeViewerFrame.cpp" />
     <ClCompile Include="GUI\cpuStateFrame.cpp" />
     <ClCompile Include="GUI\emulationThread.cpp" />
     <ClCompile Include="GUI\mainWindowFrame.cpp" />
@@ -299,6 +300,7 @@
     <ClInclude Include="dependencies\SDL2_TTF\include\SDL_ttf.h" />
     <ClInclude Include="GUI\include\app.h" />
     <ClInclude Include="GUI\include\backgroundViewerFrame.h" />
+    <ClInclude Include="GUI\include\cartridgeViewerFrame.h" />
     <ClInclude Include="GUI\include\cpuStateDisplay.h" />
     <ClInclude Include="GUI\include\cpuStateFrame.h" />
     <ClInclude Include="GUI\include\emuEvents.h" />

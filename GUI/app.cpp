@@ -15,6 +15,7 @@
 #include "include\tileViewerFrame.h"
 #include "include\oamViewerFrame.h"
 #include "include\backgroundViewerFrame.h"
+#include "include\cartridgeViewerFrame.h"
 
 #include "include\emulationThread.h"
 
@@ -43,6 +44,7 @@ wxBEGIN_EVENT_TABLE(MainWindowFrame, wxFrame)
 	EVT_MENU(wxMenuIDs::OPEN_TILE_VIEWER_VIEW, MainWindowFrame::OnMenuOpenTileViewerViewButton)
 	EVT_MENU(wxMenuIDs::OPEN_OAM_VIEWER_VIEW, MainWindowFrame::OnMenuOpenOAMViewerViewButton)
 	EVT_MENU(wxMenuIDs::OPEN_BACKGROUND_VIEWER_VIEW, MainWindowFrame::OnMenuOpenBackgroundViewerViewButton)
+	EVT_MENU(wxMenuIDs::OPEN_CARTRIDGE_VIEWER_VIEW, MainWindowFrame::OnMenuOpenCartridgeViewerViewButton)
 	
 	EVT_MENU(wxMenuIDs::DISPLAY_SIZE_1, MainWindowFrame::handleTimes1SizeEvent)
 	EVT_MENU(wxMenuIDs::DISPLAY_SIZE_2, MainWindowFrame::handleTimes2SizeEvent)
@@ -84,24 +86,32 @@ wxBEGIN_EVENT_TABLE(BackgroundViewerFrame, wxFrame)
 	EVT_COMMAND(wxID_ANY, EMULATOR_CORE_UPDATE_EVENT, BackgroundViewerFrame::handleEmulatorCoreUpdateEvent)
 wxEND_EVENT_TABLE()
 
+wxBEGIN_EVENT_TABLE(CartridgeViewerFrame, wxFrame)
+	EVT_CLOSE(CartridgeViewerFrame::OnCloseWindow)
+	EVT_COMMAND(wxID_ANY, EMULATOR_CORE_UPDATE_EVENT, CartridgeViewerFrame::handleEmulatorCoreUpdateEvent)
+	EVT_COMMAND(wxID_ANY, ON_CARTRIDGE_LOADED_EVENT, CartridgeViewerFrame::handleOnCartridgeLoadedEvent)
+wxEND_EVENT_TABLE()
+
 void App::loadCartridge(std::string filepath){
 	if(emuCore == nullptr){
 		std::cerr << "Initialize the emulation core before opening a cartridge!" << std::endl;
 		exit(1);
 	}
+	currentlyLoadedFilePath = "";
 	emuCore->pauseEmulatorExecution();
 	emuCore->acquireMutexLock();
 	// Reset the emulator.
 	emuCore->resetCore();
 	// Attempt to load the ROM file.
-	if(!emuCore->loadROM(filepath)){
-		exit(1);
-	}
+	LoadCartridgeReturnCodes returnCode = emuCore->loadROM(filepath);
 
 	// Begins running the emulator's fetch and execute loop.
-	emuCore->continueEmulatorExecution();
+	if(returnCode == SUCCESS) {
+		emuCore->continueEmulatorExecution();
+		currentlyLoadedFilePath = filepath;
+	}
 
-	// On Success, send an event.
+	// Send an event to the rest of the app to indicate a change of cartridge.
 	sendCartridgeLoadedEvent();
 	emuCore->releaseMutexLock();
 }
@@ -162,6 +172,8 @@ bool App::OnInit()
 	oamViewerFrame->Hide();
 	backgroundViewerFrame = new BackgroundViewerFrame(this, emuCore, emuThread);
 	backgroundViewerFrame->Hide();
+	cartridgeViewerFrame = new CartridgeViewerFrame(this, emuCore, emuThread);
+	cartridgeViewerFrame->Hide();
 
 	// Add additional render events to the SDL render loop. 
 	emuThread->addAdditionalRenderEvent(
@@ -219,6 +231,10 @@ void App::closeAllSideFrames()
 		backgroundViewerFrame->Destroy();
 		backgroundViewerFrame = nullptr;
 	}
+	if (cartridgeViewerFrame != nullptr){
+		cartridgeViewerFrame->Destroy();
+		cartridgeViewerFrame = nullptr;
+	}
 }
 
 bool App::initializeSDL2()
@@ -260,6 +276,8 @@ void App::sendEmulationCoreUpdateEvent()
 		wxPostEvent(oamViewerFrame, event);
 	if (backgroundViewerFrame != nullptr && backgroundViewerFrame->IsShown())
 		wxPostEvent(backgroundViewerFrame, event);
+	if (cartridgeViewerFrame != nullptr && cartridgeViewerFrame->IsShown())
+		wxPostEvent(cartridgeViewerFrame, event);
 }
 
 void App::sendCartridgeLoadedEvent(){
@@ -273,6 +291,8 @@ void App::sendCartridgeLoadedEvent(){
 	wxPostEvent(this, event);
 	if (paletteViewerFrame != nullptr)
 		wxPostEvent(paletteViewerFrame, event);
+	if (cartridgeViewerFrame != nullptr)
+		wxPostEvent(cartridgeViewerFrame, event);
 }
 
 void App::showCPUStateFrame()
@@ -304,4 +324,9 @@ void App::showBackgroundViewerFrame()
 {
 	if (backgroundViewerFrame != nullptr)
 		backgroundViewerFrame->Show(true);
+}
+void App::showCartridgeViewerFrame()
+{
+	if (cartridgeViewerFrame != nullptr)
+		cartridgeViewerFrame->Show(true);
 }

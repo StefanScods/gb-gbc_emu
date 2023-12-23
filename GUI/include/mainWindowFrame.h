@@ -61,6 +61,10 @@ public:
 	 * @brief The WxWidget menu's open background viewer view button event handler.
 	 */
 	void OnMenuOpenBackgroundViewerViewButton(wxCommandEvent& event);
+	/**
+	 * @brief The WxWidget menu's open cartridge viewer view button event handler.
+	 */
+	void OnMenuOpenCartridgeViewerViewButton(wxCommandEvent& event);
 
 	/**
 	 * @brief The event handler for the `EMULATOR_CORE_UPDATE_EVENT` wxWidget event.

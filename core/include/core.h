@@ -154,11 +154,14 @@ public:
 
     /**
      * @brief Loads a ROM file and begins emulating it as a cartridge.
-     * Returns a bool indicating success.
+     * Returns an error code indicating success or failure.
      * 
      * @param filePath The absolute path to the ROM file.
+     * 
+     * @returns LoadCartridgeReturnCodes. 0/SUCCESS upon success. 
+     * Positive integer upon failure.
      */
-    bool loadROM(std::string filePath);
+    LoadCartridgeReturnCodes loadROM(std::string filePath);
 
     /**
      * @brief The logic for when the TIMA timer 
@@ -170,6 +173,11 @@ public:
      * @brief Returns if we are currently running a GBC only cart.
     */
     bool getCGBMode(){ return cartridge.isGBCROM(); }
+
+    /**
+     * @brief Returns the currently loaded cartridge.
+    */
+    Cartridge* getCartridge(){ return &cartridge;}
 
     /**
      * @brief Checks the CPU's master interrupt flag along with the enable interrupt 

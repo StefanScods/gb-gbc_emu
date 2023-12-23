@@ -45,9 +45,41 @@ Core::~Core() {
     memory.destroy();
 }
 
-bool Core::loadROM(std::string filePath){
-    bool loadedROM = cartridge.open(filePath.c_str(), this);
-    return loadedROM;
+LoadCartridgeReturnCodes Core::loadROM(std::string filePath){
+    LoadCartridgeReturnCodes returnCode = cartridge.open(filePath.c_str(), this);
+
+    // Display a message upon loading a ROM.
+    std::string message = "";
+    switch (returnCode){
+        case SUCCESS:
+            message = 
+            "Successfully loaded ROM! Playing " +
+            cartridge.getROMName() +
+            "...";
+            break;
+        case CANNOT_READ_FILE:
+            message = "ERROR: Could not open the the ROM file. Check permissions!";
+            break;
+        case INVALID_MEMORY_CONTROLLER:
+            message = 
+                "ERROR: Memory controller currently not supported: " +
+                cartridge.getMemoryControllerName() +
+                "!";
+            break;
+        case INVALID_ROM_SIZE:
+            message = "ERROR: Invalid ROM size!";
+            break;
+        case INVALID_RAM_SIZE:
+            message = "ERROR: Invalid RAM size!";
+            break;
+        case OTHER:
+        default:
+            message = "ERROR: Unknown error has occurred when loading ROM!";
+            break;
+    }
+    std::cout << message << std::endl;
+
+    return returnCode;
 }
 
 void Core::emulatorMain(){

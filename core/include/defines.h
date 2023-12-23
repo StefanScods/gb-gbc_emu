@@ -56,6 +56,15 @@ struct CPU_State{
 
 };
 
+enum LoadCartridgeReturnCodes {
+	SUCCESS = 0,
+	CANNOT_READ_FILE,
+	INVALID_MEMORY_CONTROLLER,
+	INVALID_ROM_SIZE,
+	INVALID_RAM_SIZE,
+	OTHER
+};
+
 // Emulator execution modes.
 enum ExecutionModes {
 	CONTINUE, // Only stop for breakpoints or pauses.

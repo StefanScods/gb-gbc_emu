@@ -36,6 +36,7 @@ MainWindowFrame::MainWindowFrame(Core *d_emuCore, App* d_appContext ) : wxFrame(
 
 	// Tool Menu.
 	toolsMenuLayout = new wxMenu();
+	toolsMenuLayout->Append(wxMenuIDs::OPEN_CARTRIDGE_VIEWER_VIEW, _T("&Open Cartridge Info"));
 	toolsMenuLayout->Append(wxMenuIDs::OPEN_CPU_STATE_VIEW, _T("&Open CPU State View"));
 	toolsMenuLayout->Append(wxMenuIDs::OPEN_MEMORY_VIEWER_VIEW, _T("&Open Memory Viewer"));
 	toolsMenuLayout->Append(wxMenuIDs::OPEN_PALETTE_VIEWER_VIEW, _T("&Open Palette Viewer"));
@@ -98,8 +99,15 @@ void MainWindowFrame::pixelPerfectResizer(int multiplier) {
 // Event Handlers.
 
 void MainWindowFrame::handleEmulatorCoreUpdateEvent(wxCommandEvent& event){
-	// Change the title to reflect the current FPS.
-	this->SetTitle(std::string(APP_TITLE) + " - " + std::to_string(emuThread->getCurrentFPS()));
+	Cartridge* cartridge = emuCore->getCartridge();
+	std::string cartName = "";
+	// If there is a cartridge loaded, show the name in the application title.
+	if(cartridge->isROMLoaded()){
+		cartName = " - ";
+		cartName += cartridge->getROMName();
+	}
+	// Change the title to reflect the current FPS and loaded title.
+	this->SetTitle(std::string(APP_TITLE) + cartName + " - " + std::to_string(emuThread->getCurrentFPS()));
 }
 
 void MainWindowFrame::OnCloseWindow(wxCloseEvent& event){
@@ -144,4 +152,7 @@ void MainWindowFrame::OnMenuOpenOAMViewerViewButton(wxCommandEvent& event){
 }
 void MainWindowFrame::OnMenuOpenBackgroundViewerViewButton(wxCommandEvent& event){
 	appContext->showBackgroundViewerFrame();
+}
+void MainWindowFrame::OnMenuOpenCartridgeViewerViewButton(wxCommandEvent& event){
+	appContext->showCartridgeViewerFrame();
 }
