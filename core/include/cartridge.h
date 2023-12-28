@@ -22,6 +22,12 @@ private:
 	byte destinationCode = 0;
 	byte versionNumber = 0;
 
+	byte mbc1Mask = 0;
+	byte mbc1Mode = 0;
+	byte mbc1ROMBank = 0;
+	byte mbc1ROMSecondaryBank = 0;
+	bool mbc1RAMEnable = false;
+
 	uint32_t romSize = 0;
 	uint32_t ramSize = 0;
 
@@ -33,6 +39,8 @@ private:
 
 	std::ifstream romFile;
 	byte* headerDataBuffer = nullptr;
+	byte* romData = nullptr;
+	byte* externalRAM = nullptr;
 
 	bool romLoaded = false;
 
@@ -94,14 +102,12 @@ public:
 	*/
 	void resolveLicensee();
 
-	/**
-	 * @brief Due to the second ROM bank having a dynamic value, i.e. points to different 
-	 * blocks of the file, this function is used to load a new bank into memory,
-	 * 
-	 * @param ROMBankNumber The bank number to switch too.
-	 * @param memory The pointer to the emulator's memory.
-	 */
-	void storeROMBankIntoMemory(int ROMBankNumber, Memory* memory);
+	// Memory Controllers.
+	byte noMemoryControllerRead(word address);
+	void noMemoryControllerWrite(word address, byte data);
+
+	byte controllerMCB1Read(word address);
+	void controllerMCB1Write(word address, byte data);
 };
 
 

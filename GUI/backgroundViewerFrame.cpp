@@ -93,7 +93,7 @@ void BackgroundViewerFrame::updateSDLDisplays(){
     void* lockedPixels = nullptr;
     int pitch = NULL;
     SDL_LockTexture(bgMapTexture, NULL, &lockedPixels, &pitch);
-    SDL_memcpy(lockedPixels, ppu->getBackgroundMap(0), INT8_PER_BG_MAP);
+    SDL_memcpy(lockedPixels, ppu->getBackgroundMap(), INT8_PER_BG_MAP);
     SDL_UnlockTexture(bgMapTexture);
 
     // Get the viewport offsets and compute the view regions.

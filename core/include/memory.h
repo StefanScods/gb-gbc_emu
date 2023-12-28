@@ -13,31 +13,26 @@ class Timer;
 class CPU;
 class IOController;
 class PPU;
+class Cartridge;
 
 class Memory{
 private:
     friend class PPU;
     friend class IOController;
 
+    memoryControllerWriteFunctionTemplate memoryControllerWrite = NULL;
+    memoryControllerReadFunctionTemplate memoryControllerRead = NULL;
+
     CPU* cpu = nullptr;
     IOController* ioController = nullptr;
     PPU* ppu = nullptr;
+    Cartridge* cartridge = nullptr;
 
-    // I/O Devices;
-    Timer* DIVTimer;
-    Timer* TIMATimer;
-
-    //memory map memory chunks 
-    byte* romBank0 = nullptr;
-    byte* romBankn = nullptr;
-
+    // Memory map memory chunks.
     bool selectedVRAMBank = 0;
     byte* vRAMBank1 = nullptr;
     byte* vRAMBank2 = nullptr;
-
     std::set<int> dirtyTiles;
-
-    byte* externalRAM = nullptr;
 
     byte* wRAM0 = nullptr;
     byte* wRAM1 = nullptr;
@@ -55,8 +50,9 @@ public:
      * @param d_cpu A pointer to the emulator's CPU.
      * @param d_ioController A pointer to the emulator's I/O controller.
      * @param d_ppu A pointer to the emulator's PPU.
+     * @param d_cartridge A pointer to the emulator's cartridge.
      */
-    bool init(CPU* d_cpu, IOController* d_ioController, PPU* d_ppu);
+    bool init(CPU* d_cpu, IOController* d_ioController, PPU* d_ppu, Cartridge* d_cartridge);
 
     /**
      * @brief Sets all blocks of memory to their 
@@ -90,18 +86,25 @@ public:
     const std::set<int> & getDirtyTiles(){ return dirtyTiles; }
     void clearDirtyTiles(){ dirtyTiles.clear(); }
 
-    //accessors + mutators //-> !no error checking is done in these functions for the sake of speed  -> !!!might wanna make safe versions
+    // Accessors + Mutators -> the main data bus / memory map.
     void write(word address, byte d_data);
     const byte read(word address);
-
     byte* getBytePointer(word address); 
 
-    void storeROMBank(int ROMBankNumber, std::ifstream* romFile);
-
-
-    // Toggle between VRAM banks.
-    void setvRAMBANK(bool vRAMBankNumber){selectedVRAMBank = vRAMBankNumber;}
-    bool getSelectedvRAMBANK(){return selectedVRAMBank;}
+    /**
+     * @brief Sets the memory controller function. To be used when updating the
+     * type of cartridge.
+     * 
+     * @param writeFunction The memory controller found on the cartridge which handles writes.
+     * @param readFunction The memory controller found on the cartridge which handles reads.
+    */
+    void setMemoryController(
+        memoryControllerWriteFunctionTemplate writeFunction, 
+        memoryControllerReadFunctionTemplate readFunction
+    ){
+        memoryControllerWrite = writeFunction;
+        memoryControllerRead = readFunction;
+    }
 };
 
 #endif

@@ -14,27 +14,19 @@ date: 2021-11-13
 // Enables debug cout statements for this file.
 #define ENABLE_DEBUG_PRINTS false
 
-bool Memory::init(CPU* d_cpu, IOController* d_ioController, PPU* d_ppu)
+bool Memory::init(CPU* d_cpu, IOController* d_ioController, PPU* d_ppu, Cartridge* d_cartridge)
 {
     cpu = d_cpu;
     ioController = d_ioController;
     ppu = d_ppu;
+    cartridge = d_cartridge;
 
     // Dynamically alloc the memory arrays.
-    romBank0 = new byte[ROMBANK0_END - ROMBANK0_START + 1];
-    if (romBank0 == nullptr)
-        return false;
-    romBankn = new byte[ROMBANKN_END - ROMBANKN_START + 1];
-    if (romBankn == nullptr)
-        return false;
     vRAMBank1 = new byte[VRAM_END - VRAM_START + 1];
     if (vRAMBank1 == nullptr)
         return false;
     vRAMBank2 = new byte[VRAM_END - VRAM_START + 1];
     if (vRAMBank2 == nullptr)
-        return false;
-    externalRAM = new byte[EXTERNALRAM_END - EXTERNALRAM_START + 1];
-    if (externalRAM == nullptr)
         return false;
     wRAM0 = new byte[WRAMBANK0_END - WRAMBANK0_START + 1];
     if (wRAM0 == nullptr)
@@ -54,15 +46,12 @@ bool Memory::init(CPU* d_cpu, IOController* d_ioController, PPU* d_ppu)
 }
 bool Memory::destroy()
 {
-    if (romBank0 == nullptr)
+    if (vRAMBank1 == nullptr)
         return false;
 
     // Deallocates the data.
-    delete[] romBank0;
-    delete[] romBankn;
     delete[] vRAMBank1;
     delete[] vRAMBank2;
-    delete[] externalRAM;
     delete[] wRAM0;
     delete[] wRAM1;
     delete[] spriteAttributeTable;
@@ -108,17 +97,17 @@ void Memory::setInitalValues(){
     initializeVRAM();
 }
 void Memory::zeroAllBlocksOfMemory(){
-    for (int address = 0; address < ROMBANK0_END - ROMBANK0_START + 1; ++address)
-        romBank0[(word)address] = 0;
+    // Clear memory controllers.
+    memoryControllerWrite = NULL;
+    memoryControllerRead = NULL;
+    // Clear control vars.
+    dirtyTiles.clear();
 
-    for (int address = 0; address < ROMBANKN_END - ROMBANKN_START + 1; ++address)
-        romBankn[(word)address] = 0;
+    // Zero all blocks.
     for (int address = 0; address < VRAM_END - VRAM_START + 1; ++address){
         vRAMBank1[(word)address] = 0;
         vRAMBank2[(word)address] = 0;
     }
-    for (int address = 0; address < EXTERNALRAM_END - EXTERNALRAM_START + 1; ++address)
-        externalRAM[(word)address] = 0;
     for (int address = 0; address < WRAMBANK0_END - WRAMBANK0_START + 1; ++address)
         wRAM0[(word)address] = 0;
     for (int address = 0; address < WRAMBANK1_END - WRAMBANK1_START + 1; ++address)
@@ -187,34 +176,8 @@ void Memory::updateDirtyVRAM(word address, bool d_selectedVRAMBank){
 
     // Determine the effected tile by starting the tile map address at 0x0000 and shifting by 4 as each tile is 16 bytes (divide by 16).
     int effectedTile = ((address - TILE_DATA_START) >> 4) + TILES_PER_BANK * d_selectedVRAMBank;
-    if (ENABLE_DEBUG_PRINTS)
-        std::cout << "VRAM write effecting tile: " << effectedTile << "\nAddress: 0x" << std::hex << address << std::dec << "\n" << std::endl;
+    if (ENABLE_DEBUG_PRINTS) std::cout << "VRAM write effecting tile: " << effectedTile << "\nAddress: 0x" << std::hex << address << std::dec << "\n" << std::endl;
     dirtyTiles.insert(effectedTile);
-}
-
-void Memory::storeROMBank(int ROMBankNumber, std::ifstream *romFile)
-{
-    // Determine the amount of data to read and create a buffer.
-    const int BANK_SIZE = ROMBANK0_END - ROMBANK0_START + 1;
-    int bytesToRead = (BANK_SIZE) * sizeof(char);
-    char *cartridgeDataBuffer = new char[bytesToRead];
-
-    // Go to the start of the bank and perform the read.
-    int bankStartLocation = ROMBankNumber*BANK_SIZE*sizeof(char);
-    romFile->seekg(bankStartLocation);
-    romFile->read(cartridgeDataBuffer, bytesToRead);
-
-    byte *romBankPointer = (ROMBankNumber == 0) ? 
-        getBytePointer(ROMBANK0_START) : getBytePointer(ROMBANKN_START);
-
-    // Copy the data from the file stream into the correct address space.
-    for (word i = 0; i < BANK_SIZE; i++)
-    {
-        romBankPointer[i] = cartridgeDataBuffer[i];
-    }
-
-    // Free the data buffer.
-    delete[] cartridgeDataBuffer;
 }
 
 void Memory::write(word address, byte d_data)
@@ -222,12 +185,12 @@ void Memory::write(word address, byte d_data)
     // Memory Map.
     // 0000-3FFF   16KB ROM Bank 00     (in cartridge, fixed at bank 00).
     if (address >= ROMBANK0_START && address <= ROMBANK0_END){
-        // Read Only.
+        if(memoryControllerWrite) memoryControllerWrite(address, d_data);
     }
 
     // 4000-7FFF   16KB ROM Bank 01..NN (in cartridge, switchable bank number).
     else if (address >= ROMBANKN_START && address <= ROMBANKN_END){
-        // Read Only.
+        if(memoryControllerWrite) memoryControllerWrite(address, d_data);
     }
 
     // 8000-9FFF   8KB Video RAM (VRAM) (switchable bank 0-1 in CGB Mode).
@@ -241,7 +204,7 @@ void Memory::write(word address, byte d_data)
     // A000-BFFF   8KB External RAM     (in cartridge, switchable bank, if any).
     else if (address >= EXTERNALRAM_START && address <= EXTERNALRAM_END)
     {
-        externalRAM[address - EXTERNALRAM_START] = d_data;
+        if(memoryControllerWrite) memoryControllerWrite(address, d_data);
     }
 
     // C000 - CFFF   4KB Work RAM Bank 0 (WRAM).
@@ -301,13 +264,15 @@ const byte Memory::read(word address)
     // 0000-3FFF   16KB ROM Bank 00     (in cartridge, fixed at bank 00).
     if (address >= ROMBANK0_START && address <= ROMBANK0_END)
     {
-        return romBank0[address - ROMBANK0_START];
+        if(memoryControllerRead) return memoryControllerRead(address);
+        return HIGH_IMPEDANCE;
     }
 
     // 4000-7FFF   16KB ROM Bank 01..NN (in cartridge, switchable bank number).
     else if (address >= ROMBANKN_START && address <= ROMBANKN_END)
     {
-        return romBankn[address - ROMBANKN_START];
+        if(memoryControllerRead) return memoryControllerRead(address);
+        return HIGH_IMPEDANCE;
     }
 
     // 8000-9FFF   8KB Video RAM (VRAM) (switchable bank 0-1 in CGB Mode).
@@ -320,7 +285,8 @@ const byte Memory::read(word address)
     // A000-BFFF   8KB External RAM     (in cartridge, switchable bank, if any),
     else if (address >= EXTERNALRAM_START && address <= EXTERNALRAM_END)
     {
-        return externalRAM[address - EXTERNALRAM_START];
+        if(memoryControllerRead) return memoryControllerRead(address);
+        return 0xFF;
     }
 
     // C000 - CFFF   4KB Work RAM Bank 0 (WRAM).
@@ -351,7 +317,6 @@ const byte Memory::read(word address)
     // FEA0-FEFF   Not Usable.
     else if (address >= NOTUSABLE_START && address <= NOTUSABLE_END)
     {
-        // !!! maybe do an error check???
         return 0;
     }
 
@@ -372,6 +337,8 @@ const byte Memory::read(word address)
     {
         return interruptEnableRegister;
     }
+    
+    return HIGH_IMPEDANCE;
 }
 byte *Memory::getBytePointer(word address)
 {
@@ -380,13 +347,15 @@ byte *Memory::getBytePointer(word address)
     // 0000-3FFF   16KB ROM Bank 00     (in cartridge, fixed at bank 00).
     if (address >= ROMBANK0_START && address <= ROMBANK0_END)
     {
-        return romBank0 + address - ROMBANK0_START;
+        std::cout << "ERROR: Do not call get byte pointer on ROM!" << std::endl;
+        return nullptr;
     }
 
     // 4000-7FFF   16KB ROM Bank 01..NN (in cartridge, switchable bank number).
     else if (address >= ROMBANKN_START && address <= ROMBANKN_END)
     {
-        return romBankn + address - ROMBANKN_START;
+        std::cout << "ERROR: Do not call get byte pointer on ROM!" << std::endl;
+        return nullptr;
     }
 
     // 8000-9FFF   8KB Video RAM (VRAM) (switchable bank 0-1 in CGB Mode).
@@ -400,7 +369,8 @@ byte *Memory::getBytePointer(word address)
     // A000-BFFF   8KB External RAM     (in cartridge, switchable bank, if any).
     else if (address >= EXTERNALRAM_START && address <= EXTERNALRAM_END)
     {
-        return externalRAM + address - EXTERNALRAM_START;
+        std::cout << "ERROR: Do not call get byte pointer on external RAM!" << std::endl;
+        return nullptr;
     }
 
     // C000 - CFFF   4KB Work RAM Bank 0 (WRAM).
@@ -437,6 +407,7 @@ byte *Memory::getBytePointer(word address)
     // FF00-FF7F   I/O Ports.
     else if (address >= IOPORTS_START && address <= IOPORTS_END)
     {   
+        std::cout << "ERROR: Do not call get byte pointer on an I/O device!" << std::endl;
         return nullptr;
     }
 
@@ -451,4 +422,6 @@ byte *Memory::getBytePointer(word address)
     {
         return &interruptEnableRegister;
     }
+
+    return nullptr;
 }

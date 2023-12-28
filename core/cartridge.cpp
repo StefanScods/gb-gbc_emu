@@ -11,12 +11,14 @@ date: 2022-05-14
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <functional>
+
+
 
 LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 	// Clear previous load attempts.
-	if(headerDataBuffer) delete[] headerDataBuffer;
-	if(romFile.is_open()) romFile.close();
-	romLoaded = false;
+	close();
+	Memory* memory = core->getMemory();
 
 	// Read the ROM file.
 	romFile.open(filepath, std::ios::in | std::ios::binary);
@@ -47,6 +49,8 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 		romTitle[i] = headerDataBuffer[i + TITLE_START];
 	}
 	romTitle[TITLE_END - TITLE_START + 1] = '\0';
+	// Title is one char shorter on GBC carts.
+	if(CGB_flag) romTitle[TITLE_END - TITLE_START] = '\0';
 
 	// Extract the Manufacturer Code.
 	for (int i = 0; i < MANUFACTURERCODE_END - MANUFACTURERCODE_START + 1; i++) {
@@ -74,21 +78,34 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 	switch (cartridgeType) {
 	case(ROM_ONLY):
 		memoryControllerName = "ROM Only";
+		memory->setMemoryController(
+			std::bind(&Cartridge::noMemoryControllerWrite, this, std::placeholders::_1, std::placeholders::_2),
+			std::bind(&Cartridge::noMemoryControllerRead, this, std::placeholders::_1)
+		);
 		break;
 	case(MBC1):
 		memoryControllerName = "MBC1";
-		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
+		memory->setMemoryController(
+			std::bind(&Cartridge::controllerMCB1Write, this, std::placeholders::_1, std::placeholders::_2),
+			std::bind(&Cartridge::controllerMCB1Read, this, std::placeholders::_1)
+		);
 		break;
 	case(MBC1_RAM):
 		memoryControllerName = "MBC1 + RAM";
-		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
+		memory->setMemoryController(
+			std::bind(&Cartridge::controllerMCB1Write, this, std::placeholders::_1, std::placeholders::_2),
+			std::bind(&Cartridge::controllerMCB1Read, this, std::placeholders::_1)
+		);
 		break;
 	case(MBC1_RAM_BATTERY):
 		memoryControllerName = "MBC1 + RAM + Battery";
-		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
+		memory->setMemoryController(
+			std::bind(&Cartridge::controllerMCB1Write, this, std::placeholders::_1, std::placeholders::_2),
+			std::bind(&Cartridge::controllerMCB1Read, this, std::placeholders::_1)
+		);
 		break;
 	case(MBC2):
-		memoryControllerName = "MBC1";
+		memoryControllerName = "MBC2";
 		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
 		break;
 	case(MBC2_BATTERY):
@@ -96,11 +113,11 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
 		break;
 	case(ROM_RAM):
-		memoryControllerName = "MBC2 + RAM";
+		memoryControllerName = "ROM + RAM";
 		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
 		break;
 	case(ROM_RAM_BATTERY):
-		memoryControllerName = "MBC2 + RAM + Battery";
+		memoryControllerName = "ROM + RAM + Battery";
 		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
 		break;
 	case(MMM01):
@@ -116,11 +133,11 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
 		break;
 	case(MBC3_TIMER_BATTERY):
-		memoryControllerName = "MMM01 + Timer + Battery";
+		memoryControllerName = "MBC3 + Timer + Battery";
 		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
 		break;
 	case(MBC3_TIMER_RAM_BATTERY):
-		memoryControllerName = "MMM01 + Timer + RAM + Battery";
+		memoryControllerName = "MBC3 + Timer + RAM + Battery";
 		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
 		break;
 	case(MBC3):
@@ -197,37 +214,42 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 	switch (romSizeCode) {
 	case(0x00):
 		// No bank switching necessary. 
-		romSize = 32768;
+		romSize = ROM_BANK_SIZE*2;
+		mbc1Mask = 0b00000000;
 		break;
 	case(0x01):
-		romSize = 65536;
+		romSize = ROM_BANK_SIZE*4;
+		mbc1Mask = 0b00000011;
 		break;
 	case(0x02):
-		romSize = 131072;
+		romSize = ROM_BANK_SIZE*8;
+		mbc1Mask = 0b00000111;
 		break;
 	case(0x03):
-		romSize = 262144;
+		romSize = ROM_BANK_SIZE*16;
+		mbc1Mask = 0b00001111;
 		break;
 	case(0x04):
-		romSize = 524288;
+		romSize = ROM_BANK_SIZE*32;
 		break;
 	case(0x05):
-		romSize = 1048576;
+		romSize = ROM_BANK_SIZE*64;
 		break;
 	case(0x06):
-		romSize = 2097152;
+		romSize = ROM_BANK_SIZE*128;
 		break;
 	case(0x07):
-		romSize = 4194304;
+		romSize = ROM_BANK_SIZE*256;
 		break;
+	// These sizes are unofficial.
 	case(0x52):
-		romSize = 1179648;
+		romSize = ROM_BANK_SIZE*72;
 		break;
 	case(0x53):
-		romSize = 1310720;
+		romSize = ROM_BANK_SIZE*80;
 		break;
 	case(0x54):
-		romSize = 1572864;
+		romSize = ROM_BANK_SIZE*96;
 		break;
 	default:
 		romSize = 0;
@@ -241,26 +263,27 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 		ramSize = 0;
 		break;
 	case(0x01):
-		ramSize = 2048;
+		ramSize = (int)RAM_BANK_SIZE*0.25;
 		break;
 	case(0x02):
-		ramSize = 8192;
+		ramSize = RAM_BANK_SIZE;
 		break;
 	case(0x03):
-		ramSize = 32768;
+		ramSize = RAM_BANK_SIZE*4;
 		break;
 	default:
 		ramSize = 0;
 		return INVALID_RAM_SIZE;
 	}
+	if(ramSize) externalRAM = new byte[ramSize];
 
-	// Free the header buffer.
-	delete[] headerDataBuffer;
-	headerDataBuffer = nullptr;
-
-	// Store the first two banks of ROM into memory.
-	storeROMBankIntoMemory(0, core->getMemory());
-	storeROMBankIntoMemory(1, core->getMemory());
+	// Allocate the ROM.
+	romData = new byte[romSize];
+	// Read the ROM file into memory. For speed, load the entire ROM into memory -> Worst case 8Mb.
+	romFile.seekg(ROMBANK0_START);
+	romFile.read((char*) romData, romSize*sizeof(byte));
+	// ROMFile is no longer needed -> can close.
+	romFile.close();
 
 	// Raise the ROM loaded flag and print debug info.
 	romLoaded = true;
@@ -271,15 +294,35 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 	return SUCCESS;
 }
 
+
 void Cartridge::close() {
+	// Clear any dynamic data.
+	if(headerDataBuffer){
+		delete[] headerDataBuffer;
+		headerDataBuffer = nullptr;
+	}
+	if(externalRAM){
+		delete[] externalRAM;
+		externalRAM = nullptr;
+	}
+	if(romData){
+		delete[] romData;
+		romData = nullptr;
+	}
+	// Close the ROM file.
 	if (romLoaded) romFile.close();
+
+	// Clear control flags.
 	romLoaded = false;
 	CGB_flag = false;
-}
+	SGB_flag = false;
 
-void Cartridge::storeROMBankIntoMemory(int ROMBankNumber, Memory* memory){
-	if (!romFile.is_open()) return;
-	memory->storeROMBank(ROMBankNumber, &romFile);
+	// Reset all memory controller regs.
+	mbc1Mask = 0b00011111;
+	mbc1Mode = 0;
+	mbc1ROMBank = 0;
+	mbc1ROMSecondaryBank = 0;
+	mbc1RAMEnable = false;
 }
 
 std::string Cartridge::convertBytesToHumanReadable(uint32_t size){
@@ -308,4 +351,85 @@ void Cartridge::resolveLicensee(){
 	// According to https://gbdev.io/pandocs/The_Cartridge_Header.html#014b--old-licensee-code.
 	// todo!!! implement conversion chart.
 	licensee = "";
+}
+
+byte Cartridge::noMemoryControllerRead(word address){
+	if(address >= romSize) return HIGH_IMPEDANCE;
+	return romData[address-ROMBANK0_START];
+}
+void Cartridge::noMemoryControllerWrite(word address, byte data){
+	// No Op!
+}
+
+byte Cartridge::controllerMCB1Read(word address){
+	// ROM Bank X0 [read-only].
+	if(address >= ROMBANK0_START && address <= ROMBANK0_END){
+		// Return the first bank always in mode 0.
+		if(mbc1Mode == 0x0) return romData[address - ROMBANK0_START];
+		// Else use the secondary bank reg.
+		int bankToRead = ((mbc1ROMSecondaryBank << 5));
+		if((uint32_t)(bankToRead*ROM_BANK_SIZE) > romSize) bankToRead = 0;
+		uint32_t addressToRead =  bankToRead*ROM_BANK_SIZE + (address - ROMBANK0_START);
+		return romData[addressToRead];
+	// ROM Bank 01-7F [read-only].
+	} else if(address >= ROMBANKN_START && address <= ROMBANKN_END){
+		// Try reading using the secondary bank.
+		int bankToRead = ((mbc1ROMSecondaryBank << 5) + mbc1ROMBank);
+		// If its too large, just use the bottom bits.
+		if((uint32_t)(bankToRead*ROM_BANK_SIZE) > romSize) bankToRead = mbc1ROMBank;
+		//std::cout << "Read ROM Bank " << bankToRead << std::endl;
+		if(mbc1Mode == 0x1) std::cout << (int) mbc1ROMSecondaryBank << " " << (int) bankToRead << std::endl;
+		uint32_t addressToRead = bankToRead*ROM_BANK_SIZE + (address - ROMBANKN_START);
+		return romData[addressToRead];
+	// RAM Bank 00–03, if any.
+	} else if(address >= EXTERNALRAM_START && address <= EXTERNALRAM_END){
+		// If RAM is disabled or the read is too large return high impedance,
+		if(!mbc1RAMEnable ||  (uint32_t)(address - EXTERNALRAM_START) >= ramSize) return HIGH_IMPEDANCE;
+		// Determine which bank to read from.
+		int targetBank = 0;
+		if (mbc1Mode == 0x01) targetBank = mbc1ROMSecondaryBank;
+		// Calculate the read offset.
+		uint32_t addressToRead =  targetBank*RAM_BANK_SIZE + (address - EXTERNALRAM_START);
+		// Read the value of RAM;
+		return externalRAM[addressToRead];
+	}
+
+	return HIGH_IMPEDANCE;
+}
+
+void Cartridge::controllerMCB1Write(word address, byte data){
+	// std::cout << std::hex << (int) address << " " << (int) data << std::endl;
+	// RAM Enable (Write Only).
+	if(address >= 0x0000 && address <= 0x1FFF){
+		// Enable the external RAM partition iff the data is 0xA. Else disable.
+		if(data==0x0A) mbc1RAMEnable = true;
+		else mbc1RAMEnable = false;
+	// ROM Bank Number (Write Only).
+	} else if (address >= 0x2000 && address <= 0x3FFF){
+		// Apply a mask and ensure the selected bank does not go below 1.
+		if((data & 0b00011111) == 0x0) data = 0x01; 
+		// std::cout << (int) data << std::endl;
+		mbc1ROMBank = mbc1Mask & data; // Apply the mask second to emulate the bug found in hw.
+	// RAM Bank Number - or - Upper Bits of ROM Bank Number (Write Only)
+	} else if (address >= 0x4000 && address <= 0x5FFF){
+		mbc1ROMSecondaryBank = 0b00000011 & data;
+		// std::cout << "SECONDARY BANK " << (int) mbc1ROMSecondaryBank << std::endl;
+	// ROM/RAM Mode Select (Write Only)
+	} else if (address >= 0x6000 && address <= 0x7FFF){
+		mbc1Mode = 0b00000001 & data;
+		// std::cout << "MODE SWITCH" << (int) mbc1Mode << std::endl;
+		// exit(0);
+	// RAM Bank 00–03, if any.
+	} else if(address >= EXTERNALRAM_START && address <= EXTERNALRAM_END){
+		// If RAM is disabled or the address is too large do nothing.
+		if(!mbc1RAMEnable || (uint32_t)(address - EXTERNALRAM_START) >= ramSize) return;
+		// Determine which bank to write to.
+		int targetBank = 0;
+		if (mbc1Mode == 0x01) targetBank = mbc1ROMSecondaryBank;
+		// Calculate the write offset.
+		uint32_t addressToWrite = targetBank*RAM_BANK_SIZE + (address - EXTERNALRAM_START);
+		// Read the value of RAM;
+		externalRAM[addressToWrite] = data;
+	}
+	// If we write outside this address space -> simply ignore.
 }

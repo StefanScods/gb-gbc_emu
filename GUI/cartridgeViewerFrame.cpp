@@ -8,7 +8,7 @@
 #include "..\core\include\memory.h"
 
 // Enables debug cout statements for this file.
-#define ENABLE_DEBUG_PRINTS true
+#define ENABLE_DEBUG_PRINTS false
 
 CartridgeViewerFrame::CartridgeViewerFrame(App *d_appContextCore, Core *d_emuCore, EmulationThread *d_emuThread) : wxFrame(NULL, wxID_ANY,  CARTRIDGE_VIEWER_DISPLAY_TITLE, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~wxRESIZE_BORDER)
 {
@@ -119,7 +119,6 @@ void CartridgeViewerFrame::handleOnCartridgeLoadedEvent(wxCommandEvent& event){
 }
 
 void CartridgeViewerFrame::changeVisiblityOfSizer(wxSizer* sizer, bool hide){
-    std::cout << "1" << std::endl;
     for (int i = 0; i < sizer->GetItemCount(); ++i) {
         // Fetch the item.
         wxSizerItem* item = sizer->GetItem(i);

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <iostream>
 #include <wx/wxprec.h>
+#include <functional>
 
 // Data types.
 typedef int8_t signedByte;
@@ -73,6 +74,13 @@ enum ExecutionModes {
 	STEP_CPU // Fetch and execute at keypress for a single instuction.
 };
 
+// Used for memory controller functionality;
+
+// Callback function types.
+class Memory;
+typedef std::function<void(word, byte)> memoryControllerWriteFunctionTemplate;
+typedef std::function<byte(word)> memoryControllerReadFunctionTemplate;
+
 // CPU flags.
 #define FLAG_Z 7
 #define FLAG_N 6
@@ -88,6 +96,12 @@ enum ExecutionModes {
 #define SCREEN_HEIGHT 144
 const int INT8_PER_SCREEN = SCREEN_WIDTH*SCREEN_HEIGHT*sizeof(uint32_t)/sizeof(uint8_t);
 const int INT8_PER_SCANELINE = SCREEN_WIDTH*sizeof(uint32_t)/sizeof(uint8_t);
+
+#define ROM_BANK_SIZE 16384
+#define RAM_BANK_SIZE 8192
+
+// A random value for high impedance.  
+#define HIGH_IMPEDANCE 0xFF
 
 // Memory Map.
 #define ROMBANK0_START 0x0000
@@ -176,7 +190,7 @@ const int LCD_CYCLES_PER_FRAME = CYCLES_PER_SCANLINE * NUM_SCANLINES;
 #define CARTRIDGE_HEADER_SIZE 335
 
 #define TITLE_START 0x134
-#define TITLE_END  0x142
+#define TITLE_END  0x143
 
 #define MANUFACTURERCODE_START 0x13F
 #define MANUFACTURERCODE_END  0x142

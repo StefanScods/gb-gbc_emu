@@ -187,11 +187,9 @@ public:
      * map. This returns an array of size `INT8_PER_BG_MAP`. This will already
      * have the colour palette and transformations applied such that no additional 
      * processing is needed to render the background.
-     * 
-     * @param mapNumber The map to return. Can be either zero or one.
      */
-    uint8_t* getBackgroundMap(bool mapNumber){
-        if(!mapNumber) return backgroundMap0;
+    uint8_t* getBackgroundMap(){
+        return backgroundMap0;
     };
 
     uint8_t* getVideoBufferBG(){

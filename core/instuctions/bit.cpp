@@ -103,10 +103,10 @@ cycles Bit::prefix_cb(CPU* cpu){
     byte regNumber  = (opCode & 0x7); // extract the regs
     byte bitNumber = (opCode & 0x38)>>3; //extract the bit number
 
-    byte temp = 0;
-    reg8 regOperand = &temp;
+    byte memoryReg = 0;
+    reg8 regOperand;
     
-    bool modifyingIO = false;   
+    bool modifyingMem = false;   
     word address;
 
     switch(regNumber){
@@ -136,12 +136,9 @@ cycles Bit::prefix_cb(CPU* cpu){
 
         case 0x6:
             address = cpu->reg_HL.read();
-            if(address >= IOPORTS_START && address <= IOPORTS_END){
-                modifyingIO = true;
-                temp = cpu->memory->read(address);
-            } else {
-                regOperand = cpu->memory->getBytePointer(address);
-            }
+            memoryReg = cpu->memory->read(address);
+            regOperand = &memoryReg;
+            modifyingMem = true;
             usedCycles += mHL_CYCLES;
             break;
 
@@ -255,8 +252,8 @@ cycles Bit::prefix_cb(CPU* cpu){
         writeBit(*(regOperand), bitNumber, 1);
     }
 
-    // If operated on IO, ensure the appropriate handling is done.
-    if(modifyingIO){
+    // If operated on memory, ensure the appropriate handling is done.
+    if(modifyingMem){
         cpu->memory->write(address, *(regOperand));
     }
 

@@ -20,7 +20,7 @@ Core::Core(ExecutionModes mode) {
     executionMode = mode;
     ppu.init();
     ioController.init(&cpu, &ppu);
-    memory.init(&cpu, &ioController, &ppu);
+    memory.init(&cpu, &ioController, &ppu, &cartridge);
 
     cpu.bindMemory(&memory);
     ppu.bindMemory(&memory);
