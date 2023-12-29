@@ -23,17 +23,27 @@ BackgroundViewerFrame::BackgroundViewerFrame(App *d_appContext, Core *d_emuCore,
     SetBackgroundColour(wxColour(255,255,255));
 
     // Create a sizer to maintain the desired size of the main display.
-	wxBoxSizer* mainDisplaySizer  = new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* mainDisplaySizer  = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer* bgMapsSizer  = new wxBoxSizer(wxHORIZONTAL);
 
-    // Create the main display and add it to the sizer.
-    wxPanel* mainDisplayPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(BACKGROUND_MAP_WIDTH, BACKGROUND_MAP_HEIGHT));
-    mainDisplaySizer->Add(mainDisplayPanel, 0, wxEXPAND);
+    // Create the main displays and add it to the sizer.
+    wxPanel* mainDisplayPanel0 = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(BACKGROUND_MAP_WIDTH, BACKGROUND_MAP_HEIGHT));
+    bgMapsSizer->Add(mainDisplayPanel0, 0, wxEXPAND);
 
+    wxPanel* mainDisplayPanel1 = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(BACKGROUND_MAP_WIDTH, BACKGROUND_MAP_HEIGHT));
+    bgMapsSizer->Add(mainDisplayPanel1, 0, wxEXPAND);
+
+    selectedMapTextElement = new wxStaticText(this, wxID_ANY, "Current Map:", wxDefaultPosition, wxDefaultSize);
+    wxFont guiFont = wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false);
+    selectedMapTextElement->SetFont(guiFont);
+
+    mainDisplaySizer->Add(bgMapsSizer, 0, wxEXPAND);
+    mainDisplaySizer->Add(selectedMapTextElement, 0, wxEXPAND);
 	// Render the sizer.
 	SetSizerAndFit(mainDisplaySizer);
 
     // Perform some display initiation and early renders.
-    initializeSDL2(mainDisplayPanel);
+    initializeSDL2(mainDisplayPanel0, mainDisplayPanel1);
 }
 
 BackgroundViewerFrame::~BackgroundViewerFrame()
@@ -42,12 +52,18 @@ BackgroundViewerFrame::~BackgroundViewerFrame()
         std::cout << "Exiting: Background Map Viewer Frame" << std::endl;
 
     // Clean SDL2.
-    SDL_DestroyTexture(bgMapTexture);
-    bgMapTexture = nullptr;
-    SDL_DestroyRenderer(bgMapRenderer);
-    bgMapRenderer = nullptr;
-	SDL_DestroyWindow(bgMapWindow);
-	bgMapWindow = nullptr;
+    SDL_DestroyTexture(bgMapTexture0);
+    bgMapTexture0 = nullptr;
+    SDL_DestroyRenderer(bgMapRenderer0);
+    bgMapRenderer0 = nullptr;
+	SDL_DestroyWindow(bgMapWindow0);
+	bgMapWindow0 = nullptr;
+    SDL_DestroyTexture(bgMapTexture1);
+    bgMapTexture1 = nullptr;
+    SDL_DestroyRenderer(bgMapRenderer1);
+    bgMapRenderer1 = nullptr;
+	SDL_DestroyWindow(bgMapWindow1);
+	bgMapWindow1 = nullptr;
 }
 
 // Event Handlers.
@@ -63,22 +79,19 @@ void BackgroundViewerFrame::handleEmulatorCoreUpdateEvent(wxCommandEvent &event)
         return;
 }
 
-/**
- * @brief Sets up the SDL displays need for the event loop. 
- * 
- * @param mainDisplayPanel The wxWidget panel for the entire tile map. 
- */
-void BackgroundViewerFrame::initializeSDL2(wxPanel* mainDisplayPanel){
+void BackgroundViewerFrame::initializeSDL2(wxPanel* mainDisplayPanel0, wxPanel* mainDisplayPanel1){
     // Create SDL2 objects.
-    bgMapWindow = SDL_CreateWindowFrom((void*)mainDisplayPanel->GetHandle());
-	SDL_SetWindowSize(bgMapWindow, BACKGROUND_MAP_WIDTH, BACKGROUND_MAP_HEIGHT);
-    bgMapRenderer = SDL_CreateRenderer(bgMapWindow, -1, SDL_RENDERER_ACCELERATED);
-    bgMapTexture = SDL_CreateTexture(bgMapRenderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, BG_MAP_WIDTH_PIXELS, BG_MAP_WIDTH_PIXELS);
+    bgMapWindow0 = SDL_CreateWindowFrom((void*)mainDisplayPanel0->GetHandle());
+	SDL_SetWindowSize(bgMapWindow0, BACKGROUND_MAP_WIDTH, BACKGROUND_MAP_HEIGHT);
+    bgMapRenderer0 = SDL_CreateRenderer(bgMapWindow0, -1, SDL_RENDERER_ACCELERATED);
+    bgMapTexture0 = SDL_CreateTexture(bgMapRenderer0, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, BG_MAP_WIDTH_PIXELS, BG_MAP_WIDTH_PIXELS);
+
+    bgMapWindow1 = SDL_CreateWindowFrom((void*)mainDisplayPanel1->GetHandle());
+	SDL_SetWindowSize(bgMapWindow1, BACKGROUND_MAP_WIDTH, BACKGROUND_MAP_HEIGHT);
+    bgMapRenderer1 = SDL_CreateRenderer(bgMapWindow1, -1, SDL_RENDERER_ACCELERATED);
+    bgMapTexture1 = SDL_CreateTexture(bgMapRenderer1, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, BG_MAP_WIDTH_PIXELS, BG_MAP_WIDTH_PIXELS);
 }
 
-/**
- * @brief The main SDL render loop for this frame.
- */
 void BackgroundViewerFrame::updateSDLDisplays(){
     // Return early if not active.
     if (!appContext->getRunningEmulationState() || !IsShown())
@@ -88,19 +101,34 @@ void BackgroundViewerFrame::updateSDLDisplays(){
     emuCore->acquireMutexLock();
     PPU* ppu = emuCore->getPPU();
     // Render the entire background map.
-    ppu->updateBackgroundMap(emuCore->getCGBMode());
+    ppu->updateBackgroundMap(emuCore->getCGBMode(), 0);
+    ppu->updateBackgroundMap(emuCore->getCGBMode(), 1);
     // Copy the entire bg map into a texture.
     void* lockedPixels = nullptr;
     int pitch = NULL;
-    SDL_LockTexture(bgMapTexture, NULL, &lockedPixels, &pitch);
-    SDL_memcpy(lockedPixels, ppu->getBackgroundMap(), INT8_PER_BG_MAP);
-    SDL_UnlockTexture(bgMapTexture);
+    SDL_LockTexture(bgMapTexture0, NULL, &lockedPixels, &pitch);
+    SDL_memcpy(lockedPixels, ppu->getBackgroundMap(0), INT8_PER_BG_MAP);
+    SDL_UnlockTexture(bgMapTexture0);
+    SDL_LockTexture(bgMapTexture1, NULL, &lockedPixels, &pitch);
+    SDL_memcpy(lockedPixels, ppu->getBackgroundMap(1), INT8_PER_BG_MAP);
+    SDL_UnlockTexture(bgMapTexture1);
+
+    // Show the current map which is being rendered.
+    std::string mapName = readBit(emuCore->getMemory()->read(0xFF40), 3) ? "BGM 1" : "BGM 0";
+    mapName = "Current Map: " + mapName;
+    selectedMapTextElement->SetLabel(mapName);
 
     // Get the viewport offsets and compute the view regions.
     int offsetY = ppu->getSCY();
     int offsetX = ppu->getSCX();
     emuCore->releaseMutexLock();
 
+    // Draw rest of the display.
+    drawDisplay(bgMapRenderer0, bgMapTexture0, offsetX, offsetY);
+    drawDisplay(bgMapRenderer1, bgMapTexture1, offsetX, offsetY);
+}
+
+void BackgroundViewerFrame::drawDisplay(SDL_Renderer* bgMapRenderer, SDL_Texture* bgMapTexture, int offsetX, int offsetY){
     // Get display wrap-around amounts.
     int xOverFlow = (offsetX+SCREEN_WIDTH > BG_MAP_WIDTH_PIXELS) ? 
                         offsetX+SCREEN_WIDTH - BG_MAP_WIDTH_PIXELS : 0;

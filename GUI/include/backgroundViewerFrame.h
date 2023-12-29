@@ -38,14 +38,25 @@ public:
 	/**
 	 * @brief Sets up the SDL displays need for the event loop. 
 	 * 
-	 * @param mainDisplayPanel The wxWidget panel for the entire tile map. 
+	 * @param mainDisplayPanel0 The wxWidget panel for the entire tile map 0.
+	 * @param mainDisplayPanel0 The wxWidget panel for the entire tile map 1. 
 	 */
-    void initializeSDL2(wxPanel* mainDisplayPanel);
+    void initializeSDL2(wxPanel* mainDisplayPanel0, wxPanel* mainDisplayPanel1);
 
 	/**
 	 * @brief The main SDL render loop for this frame.
 	 */
     void updateSDLDisplays();
+
+	/**
+	 * @brief Helper function which draws on the SDL display.
+	 * 
+	 * @param bgMapRenderer The renderer to draw with.
+	 * @param bgMapTexture The texture to draw on.
+	 * @param offsetX The viewport's X offset. 
+	 * @param offsetY The viewport's Y offset. 
+	*/
+	void drawDisplay(SDL_Renderer* bgMapRenderer, SDL_Texture* bgMapTexture, int offsetX, int offsetY);
 
 private:
 	wxDECLARE_EVENT_TABLE();
@@ -54,9 +65,15 @@ private:
     Core *emuCore = nullptr;
 	EmulationThread* emuThread = nullptr;
 
-	SDL_Window *bgMapWindow = nullptr;
-	SDL_Texture *bgMapTexture = nullptr;
-    SDL_Renderer *bgMapRenderer = nullptr;
+	SDL_Window *bgMapWindow0 = nullptr;
+	SDL_Texture *bgMapTexture0 = nullptr;
+    SDL_Renderer *bgMapRenderer0 = nullptr;
+
+	SDL_Window *bgMapWindow1 = nullptr;
+	SDL_Texture *bgMapTexture1 = nullptr;
+    SDL_Renderer *bgMapRenderer1 = nullptr;
+
+	wxStaticText *selectedMapTextElement = nullptr;
 
 	// Window properties.
 	const int BACKGROUND_MAP_SCALE = 2;

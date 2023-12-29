@@ -72,6 +72,7 @@ private:
 
     // Pixel data for the entire background map - this is only used to visualize the entire map with the map viewer.
     uint8_t* backgroundMap0 = nullptr;
+    uint8_t* backgroundMap1 = nullptr;
     // Pixel data for each tile.
     uint8_t* tileMap = nullptr;
     // An intermediate array for fetching a single tile without a palette.
@@ -176,9 +177,10 @@ public:
      * should only be called when running the background map viewer. 
      * 
      * @param CGBMode - A boolean indicating whether to interpret VRAM in 
-     * GameBoy vs GameBoy Colour modes.  
+     * GameBoy vs GameBoy Colour modes. 
+     * @param mapNum The map number to update. Should be one or zero.
      */
-    void updateBackgroundMap(bool CGBMode);
+    void updateBackgroundMap(bool CGBMode, bool mapNum);
 
     // Accessors.
 
@@ -187,9 +189,11 @@ public:
      * map. This returns an array of size `INT8_PER_BG_MAP`. This will already
      * have the colour palette and transformations applied such that no additional 
      * processing is needed to render the background.
+     * 
+     * @param mapNum The map number to return. Should be one or zero.
      */
-    uint8_t* getBackgroundMap(){
-        return backgroundMap0;
+    uint8_t* getBackgroundMap(bool mapNum){
+        return mapNum ? backgroundMap1 : backgroundMap0;
     };
 
     uint8_t* getVideoBufferBG(){

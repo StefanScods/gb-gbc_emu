@@ -8,7 +8,6 @@ The class implementation for the emulator's PPU / LCD  display.
 #include <algorithm>
 
 // todo!!! handle GBC
-// todo!!! handle LCDC bit 2 = 1 -> 16x8 tiles
 // todo!!! handle BG-to-OBJ Priority
 // todo!!! handle window rendering
 
@@ -31,6 +30,9 @@ bool PPU::init(){
    // Create the background maps.
     backgroundMap0 = new uint8_t[INT8_PER_BG_MAP];
     if (backgroundMap0 == nullptr)
+        return false;
+    backgroundMap1 = new uint8_t[INT8_PER_BG_MAP];
+    if (backgroundMap1 == nullptr)
         return false;
     // Create the tile map.
     tileMap = new uint8_t[PIXELS_PER_TILE * TILES_PER_BANK * 2];
@@ -57,6 +59,11 @@ void PPU::zeroAllBlocksOfMemory(){
     std::fill(
         backgroundMap0, 
         backgroundMap0+INT8_PER_BG_MAP, 
+        0
+    );
+    std::fill(
+        backgroundMap1, 
+        backgroundMap1+INT8_PER_BG_MAP, 
         0
     );
     std::fill(
@@ -109,6 +116,7 @@ void PPU::reset(){
 void PPU::destroy(){
     // Deallocates the data.
     delete[] backgroundMap0;
+    delete[] backgroundMap1;
     delete[] tileMap;
     delete[] nonColouredTile;
     delete[] objectAttributeMemory;
@@ -280,13 +288,15 @@ void PPU::renderObjectsScanline(bool CGBMode){
     if(!objectEnable) return;
 
     int renderedObjects = 0;
+    int tileHeight = doubleObjectSize ? TILE_DIMENSION * 2 : TILE_DIMENSION;
+
     // Loop over all objects on this scanline.
     std::list<int>::iterator itr;
     for(itr = objectsToRender.begin(); itr != objectsToRender.end(); itr++){
         // Determine what part of this object we are drawing on this scanline.
         int yPosOfObject = scanline + SCANLINE_Y_OFFSET - objectAttributeMemory[(*itr)].yPos;
         // Apply vertical mirror.
-        if(objectAttributeMemory[(*itr)].yFlip) yPosOfObject = (TILE_DIMENSION-1) - yPosOfObject;
+        if(objectAttributeMemory[(*itr)].yFlip) yPosOfObject = (tileHeight-1) - yPosOfObject;
 
         byte* startOfPalette =  getPaletteColour(true, objectAttributeMemory[(*itr)].dmgPalette);
         // Draw the part of object on this scanline.
@@ -302,7 +312,7 @@ void PPU::renderObjectsScanline(bool CGBMode){
             if(objectAttributeMemory[(*itr)].xFlip) tileX = (TILE_DIMENSION-1) - i;
 
             // Determine which colour to use.
-            uint32_t pixelPositionInMap = objectAttributeMemory[(*itr)].tileIndex * PIXELS_PER_TILE + yPosOfObject*TILE_DIMENSION + tileX;
+            uint32_t pixelPositionInMap =  objectAttributeMemory[(*itr)].tileIndex * PIXELS_PER_TILE + yPosOfObject*TILE_DIMENSION + tileX;
             // Transparent pixel case.
             if(tileMap[pixelPositionInMap] == 0) continue;
             byte* startOfSwatch = startOfPalette + (4 * tileMap[pixelPositionInMap]);
@@ -406,17 +416,20 @@ void PPU::updatePalettes(bool CGBMode){
     std::cerr << "Error: GameBoy Colour Palettes are currently unsupported!" << std::endl;
 }
 
-void PPU::updateBackgroundMap(bool CGBMode){
+void PPU::updateBackgroundMap(bool CGBMode, bool mapNum){
     if(CGBMode){
         std::cerr << "Error: GameBoy Colour Mode is currently unsupported!" << std::endl;
         return;
     }
 
     // Handle the monochrome mode.
-    byte* startOfTileMapPointer = memory->getBytePointer(backgroundAreaStart);
+    byte* startOfTileMapPointer = memory->getBytePointer(mapNum ? BGM1_DATA_START : BGM0_DATA_START);
+    uint8_t* bgMap = mapNum ? backgroundMap1 : backgroundMap0;
     for(int mapIndex = 0; mapIndex < BGM0_DATA_END - BGM0_DATA_START + 1; mapIndex++){
         // Get which tile to draw.
-        byte tileIndex = *(startOfTileMapPointer + mapIndex);
+        int tileIndex = *(startOfTileMapPointer + mapIndex);
+        // Wacky offset case -> access the 3rd block of the bank -> https://gbdev.io/pandocs/Tile_Data.html#vram-tile-data.
+        if(tileAreaStart == TILE0_DATA_START && tileIndex < TILES_PER_BANK_THIRD) tileIndex += TILES_PER_BANK_THIRD*2;
         int mapX = mapIndex % BG_MAP_WIDTH_TILES;
         int mapY = mapIndex / BG_MAP_WIDTH_TILES;
         // Get the palette to apply -> always BGP0 on non-CGB mode.
@@ -429,10 +442,10 @@ void PPU::updateBackgroundMap(bool CGBMode){
                 byte* startOfSwatch = startOfPalette + (4 * tileMap[pixelPositionInMap]);
                 // Calculate where each pixel is on the master array.
                 uint32_t pixelPositionInBGM0 = pixelNumber * sizeof(uint32_t) + mapX * TILE_PITCH + lineNumber * BG_MAP_PITCH + mapY * BG_MAP_PITCH * TILE_DIMENSION;
-                backgroundMap0[pixelPositionInBGM0    ] = *(startOfSwatch + 2); // Blue.
-                backgroundMap0[pixelPositionInBGM0 + 1] = *(startOfSwatch + 1); // Green.
-                backgroundMap0[pixelPositionInBGM0 + 2] = *(startOfSwatch    ); // Red.
-                backgroundMap0[pixelPositionInBGM0 + 3] = *(startOfSwatch + 3); // Alpha.
+                bgMap[pixelPositionInBGM0    ] = *(startOfSwatch + 2); // Blue.
+                bgMap[pixelPositionInBGM0 + 1] = *(startOfSwatch + 1); // Green.
+                bgMap[pixelPositionInBGM0 + 2] = *(startOfSwatch    ); // Red.
+                bgMap[pixelPositionInBGM0 + 3] = *(startOfSwatch + 3); // Alpha.
             }
         }
     }
@@ -495,9 +508,10 @@ void PPU::updateOAM(){
 
 void PPU::determineObjectToRender(){
     objectsToRender.clear();
+    int tileHeight = doubleObjectSize ? TILE_DIMENSION*2 : TILE_DIMENSION;
     for(int i = 0; i < NUMBER_OF_OBJECTS; i++){
         // Check if object is on scanline.
-        if(objectAttributeMemory[i].yPos <= scanline + SCANLINE_Y_OFFSET && objectAttributeMemory[i].yPos + TILE_DIMENSION > scanline + SCANLINE_Y_OFFSET){
+        if(objectAttributeMemory[i].yPos <= scanline + SCANLINE_Y_OFFSET && objectAttributeMemory[i].yPos + tileHeight > scanline + SCANLINE_Y_OFFSET){
             // Add objects in render order.
             bool added = false;
             std::list<int>::iterator itr;
