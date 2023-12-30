@@ -51,6 +51,9 @@ bool PPU::init(){
     videoBufferObjectLayer = new uint8_t[INT8_PER_SCREEN];
     if (videoBufferObjectLayer == nullptr)
         return false;
+    videoBufferWindowLayer = new uint8_t[INT8_PER_SCREEN];
+    if (videoBufferWindowLayer == nullptr)
+        return false;
 
     // All alloc successful.
     return true;
@@ -87,6 +90,11 @@ void PPU::zeroAllBlocksOfMemory(){
         0
     );
     std::fill(
+        videoBufferWindowLayer, 
+        videoBufferWindowLayer+INT8_PER_SCREEN, 
+        0
+    );
+    std::fill(
         objectColours, 
         objectColours+4*SWATCHES_PER_PALETTE*NUMBER_OF_PALETTES, 
         0
@@ -106,8 +114,12 @@ void PPU::reset(){
 
     // Clear the buffers.
     zeroAllBlocksOfMemory();
+
+    // Clear all the PPU registers.
     SCY = 0;
     SCX = 0;
+    WY = 0;
+    WX = 0;
     LYC = 0;
     writeToSTAT(0);
     writeToLCDC(0);
@@ -123,6 +135,7 @@ void PPU::destroy(){
 
     delete[] videoBufferBackgroundLayer;
     delete[] videoBufferObjectLayer;
+    delete[] videoBufferWindowLayer;
 }
 
 void PPU::cycle(bool CGBMode){
@@ -239,6 +252,7 @@ void PPU::renderCurrentScanlineVRAM(bool CGBMode){
     }
 
     renderBGMapScanline(CGBMode);
+    renderWindowMapScanline(CGBMode);
     renderObjectsScanline(CGBMode);
 }
 
@@ -248,7 +262,7 @@ void PPU::renderBGMapScanline(bool CGBMode){
     // Get the palette to apply -> always BGP0 on non-CGB mode.
     byte* startOfPalette =  getPaletteColour(false, 0);
     // Determine the map data to render.
-    int currY = (SCY + scanline) % BG_MAP_WIDTH_PIXELS;
+    int currY = (scanline + SCY) % BG_MAP_WIDTH_PIXELS;
     int mapY = currY / TILE_DIMENSION;
     int pixelY = currY % TILE_DIMENSION;
     // Loop over all pixels of the scanline.
@@ -272,6 +286,52 @@ void PPU::renderBGMapScanline(bool CGBMode){
         videoBufferBackgroundLayer[pixelPositionToRender + 1] = *(startOfSwatch + 1); // Green.
         videoBufferBackgroundLayer[pixelPositionToRender + 2] = *(startOfSwatch    ); // Red.
         videoBufferBackgroundLayer[pixelPositionToRender + 3] = *(startOfSwatch + 3); // Alpha.
+    }
+}
+
+void PPU::renderWindowMapScanline(bool CGBMode){
+    // Clear scanline.
+    int currentIndexIntoVideoBuffer = scanline * INT8_PER_SCANELINE;
+    std::fill(
+        videoBufferWindowLayer + currentIndexIntoVideoBuffer, 
+        videoBufferWindowLayer + currentIndexIntoVideoBuffer+INT8_PER_SCANELINE, 
+        0
+    );
+
+    // Skip if disabling window.
+    if(!windowEnable) return;
+
+    // Get the window to render from.
+    byte* startOfTileWindowPointer = memory->getBytePointer(windowAreaStart);
+    // Get the palette to apply -> always BGP0 on non-CGB mode.
+    byte* startOfPalette =  getPaletteColour(false, 0);
+    // Determine the map data to render.
+    int currY = (WY + scanline);
+    if(currY > SCREEN_HEIGHT) return;
+    int mapY = currY / TILE_DIMENSION;
+    int pixelY = currY % TILE_DIMENSION;
+    // Loop over all pixels of the scanline.
+    for(int currX = (WX - 7); currX < SCREEN_WIDTH; currX++){
+        // Don't render of screen.
+        if(currX < 0) continue;
+        int mapX = currX / TILE_DIMENSION;
+        int pixelX = currX % TILE_DIMENSION;
+        int mapIndex = mapY * BG_MAP_WIDTH_TILES + mapX;
+        // Get which tile to draw.
+        int tileIndex = *(startOfTileWindowPointer + mapIndex);
+        // Wacky offset case -> access the 3rd block of the bank -> https://gbdev.io/pandocs/Tile_Data.html#vram-tile-data.
+        if(tileAreaStart == TILE0_DATA_START && tileIndex < TILES_PER_BANK_THIRD) tileIndex += TILES_PER_BANK_THIRD*2;
+            
+        // Determine which colour to use.
+        uint32_t pixelPositionInMap = tileIndex * PIXELS_PER_TILE + pixelY*TILE_DIMENSION + pixelX;
+        byte* startOfSwatch = startOfPalette + (4 * tileMap[pixelPositionInMap]);
+
+        // Calculate where each pixel is on the master array.
+        uint32_t pixelPositionToRender = scanline * INT8_PER_SCANELINE + currX * sizeof(uint32_t);
+        videoBufferWindowLayer[pixelPositionToRender    ] = *(startOfSwatch + 2); // Blue.
+        videoBufferWindowLayer[pixelPositionToRender + 1] = *(startOfSwatch + 1); // Green.
+        videoBufferWindowLayer[pixelPositionToRender + 2] = *(startOfSwatch    ); // Red.
+        videoBufferWindowLayer[pixelPositionToRender + 3] = *(startOfSwatch + 3); // Alpha.
     }
 }
 

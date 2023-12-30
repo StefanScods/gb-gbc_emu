@@ -25,6 +25,7 @@ BackgroundViewerFrame::BackgroundViewerFrame(App *d_appContext, Core *d_emuCore,
     // Create a sizer to maintain the desired size of the main display.
 	wxBoxSizer* mainDisplaySizer  = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer* bgMapsSizer  = new wxBoxSizer(wxHORIZONTAL);
+    statusbarSizer  = new wxBoxSizer(wxHORIZONTAL);
 
     // Create the main displays and add it to the sizer.
     wxPanel* mainDisplayPanel0 = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(BACKGROUND_MAP_WIDTH, BACKGROUND_MAP_HEIGHT));
@@ -33,12 +34,23 @@ BackgroundViewerFrame::BackgroundViewerFrame(App *d_appContext, Core *d_emuCore,
     wxPanel* mainDisplayPanel1 = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(BACKGROUND_MAP_WIDTH, BACKGROUND_MAP_HEIGHT));
     bgMapsSizer->Add(mainDisplayPanel1, 0, wxEXPAND);
 
-    selectedMapTextElement = new wxStaticText(this, wxID_ANY, "Current Map:", wxDefaultPosition, wxDefaultSize);
     wxFont guiFont = wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false);
+    // Add text elements.
+    selectedMapTextElement = new wxStaticText(this, wxID_ANY, "Current Background Map:", wxDefaultPosition, wxDefaultSize);
     selectedMapTextElement->SetFont(guiFont);
+    statusbarSizer->Add(selectedMapTextElement, 0, wxEXPAND | wxLEFT, 10);
+
+    selectedWindowTextElement = new wxStaticText(this, wxID_ANY, "Current Window Map:", wxDefaultPosition, wxDefaultSize);
+    selectedWindowTextElement->SetFont(guiFont);
+    statusbarSizer->Add(selectedWindowTextElement, 0, wxEXPAND | wxLEFT, 45);
+        
+    enableWindowTextElement = new wxStaticText(this, wxID_ANY, "Window Enabled:", wxDefaultPosition, wxDefaultSize);
+    enableWindowTextElement->SetFont(guiFont);
+    statusbarSizer->Add(enableWindowTextElement, 0, wxEXPAND | wxLEFT, 45);
 
     mainDisplaySizer->Add(bgMapsSizer, 0, wxEXPAND);
-    mainDisplaySizer->Add(selectedMapTextElement, 0, wxEXPAND);
+    mainDisplaySizer->Add(statusbarSizer, 0, wxEXPAND);
+  
 	// Render the sizer.
 	SetSizerAndFit(mainDisplaySizer);
 
@@ -115,8 +127,18 @@ void BackgroundViewerFrame::updateSDLDisplays(){
 
     // Show the current map which is being rendered.
     std::string mapName = readBit(emuCore->getMemory()->read(0xFF40), 3) ? "BGM 1" : "BGM 0";
-    mapName = "Current Map: " + mapName;
+    mapName = "Current Background Map: " + mapName;
     selectedMapTextElement->SetLabel(mapName);
+
+    mapName = readBit(emuCore->getMemory()->read(0xFF40), 6) ? "BGM 1" : "BGM 0";
+    mapName = "Current Window Map: " + mapName;
+    selectedWindowTextElement->SetLabel(mapName);
+
+    mapName = readBit(emuCore->getMemory()->read(0xFF40), 5) ? "True" : "False";
+    mapName = "Window Enabled: " + mapName;
+    enableWindowTextElement->SetLabel(mapName);
+
+    statusbarSizer->Layout();
 
     // Get the viewport offsets and compute the view regions.
     int offsetY = ppu->getSCY();

@@ -45,6 +45,10 @@ private:
     byte SCY = 0;
     byte SCX = 0;
 
+    // Window Viewport.
+    byte WY = 0;
+    byte WX = 0;
+
     byte LYC = 0;
     byte STAT = 0;
 
@@ -67,6 +71,8 @@ private:
 
     // Pixel data for the current background layer.
     uint8_t* videoBufferBackgroundLayer = nullptr;
+    // Pixel data for the current window layer.
+    uint8_t* videoBufferWindowLayer = nullptr;
     // Pixel data for the current Object layer.
     uint8_t* videoBufferObjectLayer = nullptr;
 
@@ -134,12 +140,20 @@ public:
     void renderCurrentScanlineVRAM(bool CGBMode);
 
     /**
-     * @brief Renders the current scanline of GB VRAM to the video buffer.
+     * @brief Renders the current scanline of BG VRAM to the video buffer.
      * 
      * @param CGBMode - A boolean indicating whether to interpret VRAM in
      * GameBoy vs GameBoy Colour modes. 
      */
     void renderBGMapScanline(bool CGBMode);
+
+    /**
+     * @brief Renders the current scanline of window VRAM to the video buffer.
+     * 
+     * @param CGBMode - A boolean indicating whether to interpret VRAM in
+     * GameBoy vs GameBoy Colour modes. 
+     */
+    void renderWindowMapScanline(bool CGBMode);
 
     /**
      * @brief Renders the current scanline of Object VRAM to the video buffer.
@@ -202,6 +216,9 @@ public:
     uint8_t* getVideoBufferObject(){
         return videoBufferObjectLayer;
     };
+    uint8_t* getVideoBufferWindow(){
+        return videoBufferWindowLayer;
+    };
 
     /**
      * @brief Get the Palette Colour at the passed index;
@@ -229,7 +246,6 @@ public:
      * @return `uint8_t*`
      */
     uint8_t* getTileDataWithoutPalette(int tileIndex, bool bankNumber);
-
 
     /**
      * @brief A helper function used to increase the scanline.

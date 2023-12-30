@@ -74,6 +74,9 @@ private:
     SDL_Renderer *bgMapRenderer1 = nullptr;
 
 	wxStaticText *selectedMapTextElement = nullptr;
+	wxStaticText *selectedWindowTextElement = nullptr;
+	wxStaticText *enableWindowTextElement = nullptr;
+	wxBoxSizer* statusbarSizer = nullptr;
 
 	// Window properties.
 	const int BACKGROUND_MAP_SCALE = 2;

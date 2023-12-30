@@ -55,6 +55,12 @@ bool EmulationThread::initializeEmulator(){
 		return false;
 	}
 
+	windowLayer = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+	if (windowLayer == NULL) {
+		std::cerr << "Failed to create SDL texture. Error: " << SDL_GetError() << std::endl;
+		return false;
+	}
+
 	objectLayer = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
 	if (objectLayer == NULL) {
 		std::cerr << "Failed to create SDL texture. Error: " << SDL_GetError() << std::endl;
@@ -63,6 +69,7 @@ bool EmulationThread::initializeEmulator(){
 
 	// Set alpha blend textures.
 	SDL_SetRenderDrawBlendMode(sdlRenderer, SDL_BLENDMODE_BLEND);
+	SDL_SetTextureBlendMode(windowLayer, SDL_BLENDMODE_BLEND);
 	SDL_SetTextureBlendMode(objectLayer, SDL_BLENDMODE_BLEND);
 
 	// Initialization was a success.
@@ -132,6 +139,10 @@ void* EmulationThread::Entry()
 		SDL_memcpy(lockedPixels, ppu->getVideoBufferBG(), INT8_PER_SCREEN);
 		SDL_UnlockTexture(backgroundLayer);
 
+		SDL_LockTexture(windowLayer, NULL, &lockedPixels, &pitch);
+		SDL_memcpy(lockedPixels, ppu->getVideoBufferWindow(), INT8_PER_SCREEN);
+		SDL_UnlockTexture(windowLayer);
+
 		SDL_LockTexture(objectLayer, NULL, &lockedPixels, &pitch);
 		SDL_memcpy(lockedPixels, ppu->getVideoBufferObject(), INT8_PER_SCREEN);
 		SDL_UnlockTexture(objectLayer);
@@ -142,6 +153,7 @@ void* EmulationThread::Entry()
 
 		// Render the PPU layer textures.
 		SDL_RenderCopy(sdlRenderer, backgroundLayer, NULL, NULL);
+		SDL_RenderCopy(sdlRenderer, windowLayer, NULL, NULL);
 		SDL_RenderCopy(sdlRenderer, objectLayer, NULL, NULL);
 
 		// Update screen.

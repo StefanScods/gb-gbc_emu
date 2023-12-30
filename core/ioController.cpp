@@ -102,6 +102,12 @@ byte IOController::read(word address){
         // OBP1 - Object Palette 1 Data (R/W) - Non CGB Mode Only.
         case 0xFF49:
             return OBP1;
+        // WY - Window Y position.
+        case 0xFF4A:
+            return ppu->WY;
+        // WX - X position plus 7.
+        case 0xFF4B:
+            return ppu->WX;
         //  KEY1 - Prepare speed switch - CGB Mode Only.
         case 0xFF4D:{
             byte result = 0b01111110;
@@ -204,6 +210,14 @@ void IOController::write(word address, byte data){
         // OBP1 - Object Palette 1 Data (R/W) - Non CGB Mode Only.
         case 0xFF49:
             OBP1 = data;
+            break;
+        // WY - Window Y position.
+        case 0xFF4A:
+            ppu->WY = data;
+            break;
+        // WX - X position plus 7.
+        case 0xFF4B:
+            ppu->WX = data;
             break;
         //  KEY1 - Prepare speed switch - CGB Mode Only.
         case 0xFF4D:
