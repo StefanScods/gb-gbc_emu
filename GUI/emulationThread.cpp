@@ -43,7 +43,7 @@ bool EmulationThread::initializeEmulator(){
 	}
 	SDL_SetWindowSize(sdlWindow, MAIN_WINDOW_WIDTH, MAIN_WINDOW_HEIGHT);
 	
-	sdlRenderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED);
+	sdlRenderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE | SDL_RENDERER_PRESENTVSYNC);
 	if (sdlRenderer == NULL) {
 		std::cerr << "Failed to create SDL renderer. Error: " << SDL_GetError() << std::endl;
 		return false;
@@ -91,7 +91,6 @@ void* EmulationThread::Entry()
 	emuCore->controller.bindKeyUp(SDL_SCANCODE_PAGEUP, std::bind(&Core::stepNextFrameButton, emuCore));
 	// Step next instuction binds to the key "PAGE DOWN"
 	emuCore->controller.bindKeyUp(SDL_SCANCODE_PAGEDOWN, std::bind(&Core::stepNextInstuctionButton, emuCore));
-
 
 	// Joypad Keys.
 	// Up.

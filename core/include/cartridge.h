@@ -28,6 +28,11 @@ private:
 	byte mbc1ROMSecondaryBank = 0;
 	bool mbc1RAMEnable = false;
 
+	bool mbc3RAMEnable = false;
+	byte mbc3ROMBank = 0;
+	byte mbc3RAMBank = 0;
+	byte mbc3Latch = 0;
+
 	uint32_t romSize = 0;
 	uint32_t ramSize = 0;
 
@@ -108,6 +113,9 @@ public:
 
 	byte controllerMCB1Read(word address);
 	void controllerMCB1Write(word address, byte data);
+
+	byte controllerMCB3Read(word address);
+	void controllerMCB3Write(word address, byte data);
 };
 
 

@@ -142,15 +142,24 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 		break;
 	case(MBC3):
 		memoryControllerName = "MBC3";
-		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
+		memory->setMemoryController(
+			std::bind(&Cartridge::controllerMCB3Write, this, std::placeholders::_1, std::placeholders::_2),
+			std::bind(&Cartridge::controllerMCB3Read, this, std::placeholders::_1)
+		);
 		break;
 	case(MBC3_RAM):
 		memoryControllerName = "MBC3 + RAM";
-		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
+		memory->setMemoryController(
+			std::bind(&Cartridge::controllerMCB3Write, this, std::placeholders::_1, std::placeholders::_2),
+			std::bind(&Cartridge::controllerMCB3Read, this, std::placeholders::_1)
+		);
 		break;
 	case(MBC3_RAM_BATTERY):
 		memoryControllerName = "MBC3 + RAM + Battery";
-		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
+		memory->setMemoryController(
+			std::bind(&Cartridge::controllerMCB3Write, this, std::placeholders::_1, std::placeholders::_2),
+			std::bind(&Cartridge::controllerMCB3Read, this, std::placeholders::_1)
+		);
 		break;
 	case(MBC4):
 		memoryControllerName = "MBC4";
@@ -258,7 +267,7 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 
 	// Get the on-cartridge RAM size.
 	byte ramSizeCode = headerDataBuffer[RAM_SIZE_ADDR];
-	switch (ramSize) {
+	switch (ramSizeCode) {
 	case(0x00):
 		ramSize = 0;
 		break;
@@ -323,6 +332,11 @@ void Cartridge::close() {
 	mbc1ROMBank = 0;
 	mbc1ROMSecondaryBank = 0;
 	mbc1RAMEnable = false;
+
+	mbc3RAMEnable = false;
+	mbc3ROMBank = 0;
+	mbc3RAMBank = 0;
+	mbc3Latch = 0;
 }
 
 std::string Cartridge::convertBytesToHumanReadable(uint32_t size){
@@ -362,7 +376,7 @@ void Cartridge::noMemoryControllerWrite(word address, byte data){
 }
 
 byte Cartridge::controllerMCB1Read(word address){
-	// ROM Bank X0 [read-only].
+	// ROM Bank X0.
 	if(address >= ROMBANK0_START && address <= ROMBANK0_END){
 		// Return the first bank always in mode 0.
 		if(mbc1Mode == 0x0) return romData[address - ROMBANK0_START];
@@ -371,7 +385,7 @@ byte Cartridge::controllerMCB1Read(word address){
 		if((uint32_t)(bankToRead*ROM_BANK_SIZE) > romSize) bankToRead = 0;
 		uint32_t addressToRead =  bankToRead*ROM_BANK_SIZE + (address - ROMBANK0_START);
 		return romData[addressToRead];
-	// ROM Bank 01-7F [read-only].
+	// ROM Bank 01-7F.
 	} else if(address >= ROMBANKN_START && address <= ROMBANKN_END){
 		// Try reading using the secondary bank.
 		int bankToRead = ((mbc1ROMSecondaryBank << 5) + mbc1ROMBank);
@@ -383,7 +397,7 @@ byte Cartridge::controllerMCB1Read(word address){
 		return romData[addressToRead];
 	// RAM Bank 00–03, if any.
 	} else if(address >= EXTERNALRAM_START && address <= EXTERNALRAM_END){
-		// If RAM is disabled or the read is too large return high impedance,
+		// If RAM is disabled or the read is too large return high impedance.
 		if(!mbc1RAMEnable ||  (uint32_t)(address - EXTERNALRAM_START) >= ramSize) return HIGH_IMPEDANCE;
 		// Determine which bank to read from.
 		int targetBank = 0;
@@ -399,22 +413,22 @@ byte Cartridge::controllerMCB1Read(word address){
 
 void Cartridge::controllerMCB1Write(word address, byte data){
 	// std::cout << std::hex << (int) address << " " << (int) data << std::endl;
-	// RAM Enable (Write Only).
+	// RAM Enable.
 	if(address >= 0x0000 && address <= 0x1FFF){
 		// Enable the external RAM partition iff the data is 0xA. Else disable.
 		if(data==0x0A) mbc1RAMEnable = true;
 		else mbc1RAMEnable = false;
-	// ROM Bank Number (Write Only).
+	// ROM Bank Number.
 	} else if (address >= 0x2000 && address <= 0x3FFF){
 		// Apply a mask and ensure the selected bank does not go below 1.
 		if((data & 0b00011111) == 0x0) data = 0x01; 
 		// std::cout << (int) data << std::endl;
 		mbc1ROMBank = mbc1Mask & data; // Apply the mask second to emulate the bug found in hw.
-	// RAM Bank Number - or - Upper Bits of ROM Bank Number (Write Only)
+	// RAM Bank Number - or - Upper Bits of ROM Bank Number.
 	} else if (address >= 0x4000 && address <= 0x5FFF){
 		mbc1ROMSecondaryBank = 0b00000011 & data;
 		// std::cout << "SECONDARY BANK " << (int) mbc1ROMSecondaryBank << std::endl;
-	// ROM/RAM Mode Select (Write Only)
+	// ROM/RAM Mode Select.
 	} else if (address >= 0x6000 && address <= 0x7FFF){
 		mbc1Mode = 0b00000001 & data;
 		// std::cout << "MODE SWITCH" << (int) mbc1Mode << std::endl;
@@ -428,8 +442,108 @@ void Cartridge::controllerMCB1Write(word address, byte data){
 		if (mbc1Mode == 0x01) targetBank = mbc1ROMSecondaryBank;
 		// Calculate the write offset.
 		uint32_t addressToWrite = targetBank*RAM_BANK_SIZE + (address - EXTERNALRAM_START);
-		// Read the value of RAM;
+		// Write the value of RAM.
 		externalRAM[addressToWrite] = data;
 	}
 	// If we write outside this address space -> simply ignore.
+}
+
+//todo!!! do all timer stuff.
+byte Cartridge::controllerMCB3Read(word address){
+	// ROM Bank 0.
+	if(address >= ROMBANK0_START && address <= ROMBANK0_END){
+		return romData[address - ROMBANK0_START];
+	// ROM Bank 01-7F.
+	} else if(address >= ROMBANKN_START && address <= ROMBANKN_END){
+		uint32_t addressToRead = mbc3ROMBank*ROM_BANK_SIZE + (address - ROMBANKN_START);
+		return romData[addressToRead];
+	// RAM Bank 00–03 or RTC Register 08-0C.
+	} else if(address >= EXTERNALRAM_START && address <= EXTERNALRAM_END){
+		// If RAM is disabled or the read is too large return high impedance.
+		if(!mbc3RAMEnable || (uint32_t)(address - EXTERNALRAM_START) >= ramSize) return HIGH_IMPEDANCE;
+		// Different behaviour depending on the current mbc3RAMBank value.
+		switch(mbc3RAMBank){
+			// RAM Bank 00-03.
+			case 0x0:
+			case 0x1:
+			case 0x2:
+			case 0x3:{
+				// Calculate the read offset.
+				uint32_t addressToWrite = mbc3RAMBank*RAM_BANK_SIZE + (address - EXTERNALRAM_START);
+				// Read the value of RAM.
+				return externalRAM[addressToWrite];
+			}
+			// RTC S - Seconds.
+			case 0x8:
+			// RTC M - Minutes.
+			case 0x9:
+			// RTC H - Hours.
+			case 0xA:
+			// RTC DL - Lower 8 bits of Day Counter.
+			case 0xB:
+			// RTC DH - Upper 1 bit of Day Counter, Carry Bit, Halt Flag.
+			case 0xC:
+			default:
+				return HIGH_IMPEDANCE;
+		}
+	}
+	return HIGH_IMPEDANCE;
+}
+void Cartridge::controllerMCB3Write(word address, byte data){
+	// RAM and Timer Enable.
+	if(address >= 0x0000 && address <= 0x1FFF){
+		// Enable the external RAM partition along with RTC regs iff the data is 0xA. Else disable.
+		if(data==0x0A) mbc3RAMEnable = true;
+		else mbc3RAMEnable = false;
+	// ROM Bank Number.
+	} else if (address >= 0x2000 && address <= 0x3FFF){
+		// Take 7 bits.
+		data = data & 0b01111111;
+		// Ensure the data does not equal zero.
+		if(data == 0x0) data = 0x01; 
+		mbc3ROMBank = data;
+	// RAM Bank Number - or - RTC Register Select.
+	} else if (address >= 0x4000 && address <= 0x5FFF){
+		// Take 3 bits.
+		mbc3RAMBank = 0b00001111 & data;
+	// Latch Clock Data.
+	} else if (address >= 0x6000 && address <= 0x7FFF){
+		// When changing the latch from 0 -> 1, latch current time.
+		if(mbc3Latch == 0x00 && data == 0x01){
+			// Save current time.
+		}
+		mbc3Latch = data;
+	// RAM Bank 00–03 or RTC Register 08-0C.
+	} else if(address >= EXTERNALRAM_START && address <= EXTERNALRAM_END){
+		// If RAM is disabled or the address is too large do nothing.
+		if(!mbc3RAMEnable || (uint32_t)(address - EXTERNALRAM_START) >= ramSize) return;
+
+		// Different behaviour depending on the current mbc3RAMBank value.
+		switch(mbc3RAMBank){
+			// RAM Bank 00-03.
+			case 0x0:
+			case 0x1:
+			case 0x2:
+			case 0x3:{
+				// Calculate the write offset.
+				uint32_t addressToWrite = mbc3RAMBank*RAM_BANK_SIZE + (address - EXTERNALRAM_START);
+				// Write the value of RAM.
+				externalRAM[addressToWrite] = data;
+				break;
+			}
+			// RTC S - Seconds.
+			case 0x8:
+			// RTC M - Minutes.
+			case 0x9:
+			// RTC H - Hours.
+			case 0xA:
+			// RTC DL - Lower 8 bits of Day Counter.
+			case 0xB:
+			// RTC DH - Upper 1 bit of Day Counter, Carry Bit, Halt Flag.
+			case 0xC:
+			default:
+				break;
+		}
+
+	}
 }
