@@ -23,52 +23,48 @@ MemoryViewerFrame::MemoryViewerFrame(Core *d_emuCore, EmulationThread *d_emuThre
     emuCore = d_emuCore;
     emuThread = d_emuThread;
 
-    const int BOTTOM_CONTROL_PANEL_HEIGHT = 30;
-    const int TOP_CONTROL_PANEL_HEIGHT = MEMORY_VIEWER_DISPLAY_HEIGHT/5-BOTTOM_CONTROL_PANEL_HEIGHT;
-
     // Font and style constants.
+    SetBackgroundColour(wxColour(255,255,255));
     wxFont guiFont = wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false);
     wxFont legendFont = wxFont(11, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false);
     wxFont valueFont = wxFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false);
 
     // Create the parent sizer object.
-    wxFlexGridSizer* parentSizer = new wxFlexGridSizer(3, 1, 0, 0);
+    wxBoxSizer* parentSizer = new wxBoxSizer(wxVERTICAL);
 
     // Create top level panels and add them to the sizer.
-    topControlPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(MEMORY_VIEWER_DISPLAY_WIDTH, TOP_CONTROL_PANEL_HEIGHT));
-    topControlPanel->SetBackgroundColour(wxColour(255,255,255));
-    parentSizer->Add(topControlPanel, 1, wxALIGN_CENTER);
-    memoryViewPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(MEMORY_VIEWER_DISPLAY_WIDTH, MEMORY_VIEWER_DISPLAY_HEIGHT/5*4));
-    memoryViewPanel->SetBackgroundColour(wxColour(255,255,255));
-    parentSizer->Add(memoryViewPanel, 1, wxEXPAND);
-    bottomControlPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(MEMORY_VIEWER_DISPLAY_WIDTH, BOTTOM_CONTROL_PANEL_HEIGHT));
-    bottomControlPanel->SetBackgroundColour(wxColour(255,255,255));
-    parentSizer->Add(bottomControlPanel, 1, wxEXPAND);
+    topControlPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+    parentSizer->Add(topControlPanel, 0, wxEXPAND | wxTOP | wxBOTTOM, 5);
+    memoryViewPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+    parentSizer->Add(memoryViewPanel, 0, wxEXPAND | wxTOP, 2);
+    bottomControlPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+    parentSizer->Add(bottomControlPanel, 0, wxEXPAND | wxTOP | wxBOTTOM, 5);
 
     // Create the top control panel.
     wxBoxSizer* topControlPanelSizer  = new wxBoxSizer(wxHORIZONTAL);
-    wxBoxSizer* searchPanelSizer  = new wxBoxSizer(wxVERTICAL);
-    wxBoxSizer* displayTypeSizer  = new wxBoxSizer(wxVERTICAL);
-    topControlPanelSizer->Add(searchPanelSizer, 1, wxALIGN_CENTER | wxLEFT, 10);
-    topControlPanelSizer->Add(displayTypeSizer, 1, wxALIGN_CENTER);
-    topControlPanel->SetSizer(topControlPanelSizer);
+    wxBoxSizer* searchPanelSizer  = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* displayTypeSizer  = new wxBoxSizer(wxHORIZONTAL);
 
     // Memory Search.
     wxStaticText* label = new wxStaticText(topControlPanel, wxID_ANY, "Search Memory Address:");
     label->SetFont(guiFont);
-    searchPanelSizer->Add(label, 0);
+    searchPanelSizer->Add(label, 0, wxEXPAND | wxTOP, 3);
     wxSearchCtrl* memorySearchBar = new wxSearchCtrl(topControlPanel, wxMenuIDs::MEMORY_MAP_SEARCHBAR, wxEmptyString, wxDefaultPosition, wxDefaultSize);
     memorySearchBar->SetFont(valueFont);
-    searchPanelSizer->Add(memorySearchBar, 0);
+    searchPanelSizer->Add(memorySearchBar, 0, wxEXPAND | wxLEFT, 5);
 
     // Display notation drop down.
     label = new wxStaticText(topControlPanel, wxID_ANY, "Selected Notation:");
     label->SetFont(guiFont);
-    displayTypeSizer->Add(label);
+    displayTypeSizer->Add(label, 0, wxEXPAND | wxTOP, 3);
     selectedNotationDropDown = new wxComboBox(topControlPanel, wxID_ANY, NOTATION_CHOICES[0], wxDefaultPosition, wxDefaultSize, 3, NOTATION_CHOICES);
     selectedNotationDropDown->SetFont(valueFont);
     selectedNotationDropDown->SelectNone();
-    displayTypeSizer->Add(selectedNotationDropDown, 0);
+    displayTypeSizer->Add(selectedNotationDropDown, 0, wxLEFT, 5);
+
+    topControlPanelSizer->Add(searchPanelSizer, 1, wxALIGN_CENTER | wxLEFT, 5);
+    topControlPanelSizer->Add(displayTypeSizer, 1, wxALIGN_CENTER | wxLEFT, 20);
+    topControlPanel->SetSizer(topControlPanelSizer);
 
     // Create the main memory viewer grid.
     memoryViewGrid = new wxGrid( memoryViewPanel,

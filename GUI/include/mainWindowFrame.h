@@ -38,6 +38,15 @@ public:
 	 */
 	void OnMenuOpenROMButton(wxCommandEvent& event);
 	/**
+	 * @brief The WxWidget menu's close ROM button event handler.
+	 */
+	void OnMenuCloseROMButton(wxCommandEvent& event);
+	/**
+	 * @brief The WxWidget menu's step reset GameBoy button event handler.
+	 */
+	void OnMenuResetGameBoyButton(wxCommandEvent& event);
+
+	/**
 	 * @brief The WxWidget menu's open CPU state view button event handler.
 	 */
 	void OnMenuOpenCPUStateViewButton(wxCommandEvent& event);
@@ -65,6 +74,26 @@ public:
 	 * @brief The WxWidget menu's open cartridge viewer view button event handler.
 	 */
 	void OnMenuOpenCartridgeViewerViewButton(wxCommandEvent& event);
+	/**
+	 * @brief The WxWidget menu's pause button event handler.
+	 */
+	void OnMenuPauseButton(wxCommandEvent& event);
+	/**
+	 * @brief The WxWidget menu's continue button event handler.
+	 */
+	void OnMenuContinueButton(wxCommandEvent& event);
+	/**
+	 * @brief The WxWidget menu's step frame button event handler.
+	 */
+	void OnMenuStepFrameButton(wxCommandEvent& event);
+	/**
+	 * @brief The WxWidget menu's step CPU button event handler.
+	 */
+	void OnMenuStepCPUButton(wxCommandEvent& event);
+	/**
+	 * @brief The WxWidget menu's open breakpoint manager button event handler.
+	 */
+	void OnMenuOpenBreakpointManagerViewButton(wxCommandEvent& event);
 
 	/**
 	 * @brief The event handler for the `EMULATOR_CORE_UPDATE_EVENT` wxWidget event.
@@ -112,6 +141,7 @@ private:
 	wxMenu* fileMenuLayout = nullptr;
 	wxMenu* toolsMenuLayout = nullptr;
 	wxMenu* displayMenuLayout = nullptr;
+	wxMenu* debugMenuLayout = nullptr;
 };
 
 #endif

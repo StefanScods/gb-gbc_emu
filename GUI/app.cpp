@@ -16,6 +16,7 @@
 #include "include\oamViewerFrame.h"
 #include "include\backgroundViewerFrame.h"
 #include "include\cartridgeViewerFrame.h"
+#include "include\breakpointManager.h"
 
 #include "include\emulationThread.h"
 
@@ -37,6 +38,8 @@ wxBEGIN_EVENT_TABLE(MainWindowFrame, wxFrame)
 
 	EVT_MENU(wxID_EXIT, MainWindowFrame::OnMenuQuitButton)
 	EVT_MENU(wxMenuIDs::OPEN_ROM, MainWindowFrame::OnMenuOpenROMButton)
+	EVT_MENU(wxMenuIDs::CLOSE_ROM, MainWindowFrame::OnMenuCloseROMButton)
+	EVT_MENU(wxMenuIDs::RESET_GAMEBOY, MainWindowFrame::OnMenuResetGameBoyButton)
 	
 	EVT_MENU(wxMenuIDs::OPEN_CPU_STATE_VIEW, MainWindowFrame::OnMenuOpenCPUStateViewButton)
 	EVT_MENU(wxMenuIDs::OPEN_MEMORY_VIEWER_VIEW, MainWindowFrame::OnMenuOpenMemoryViewerViewButton)
@@ -51,6 +54,12 @@ wxBEGIN_EVENT_TABLE(MainWindowFrame, wxFrame)
 	EVT_MENU(wxMenuIDs::DISPLAY_SIZE_3, MainWindowFrame::handleTimes3SizeEvent)
 	EVT_MENU(wxMenuIDs::DISPLAY_SIZE_4, MainWindowFrame::handleTimes4SizeEvent)
 	EVT_MENU(wxMenuIDs::DISPLAY_SIZE_5, MainWindowFrame::handleTimes5SizeEvent)
+
+	EVT_MENU(wxMenuIDs::PAUSE_EMULATION_MENU, MainWindowFrame::OnMenuPauseButton)
+	EVT_MENU(wxMenuIDs::CONTINUE_EMULATION_MENU, MainWindowFrame::OnMenuContinueButton)
+	EVT_MENU(wxMenuIDs::STEP_FRAME_MENU, MainWindowFrame::OnMenuStepFrameButton)
+	EVT_MENU(wxMenuIDs::STEP_CPU_MENU, MainWindowFrame::OnMenuStepCPUButton)
+	EVT_MENU(wxMenuIDs::OPEN_BREAKPOINT_MANAGER, MainWindowFrame::OnMenuOpenBreakpointManagerViewButton)
 wxEND_EVENT_TABLE()
 
 wxBEGIN_EVENT_TABLE(CPUStateFrame, wxFrame)
@@ -92,6 +101,11 @@ wxBEGIN_EVENT_TABLE(CartridgeViewerFrame, wxFrame)
 	EVT_COMMAND(wxID_ANY, ON_CARTRIDGE_LOADED_EVENT, CartridgeViewerFrame::handleOnCartridgeLoadedEvent)
 wxEND_EVENT_TABLE()
 
+wxBEGIN_EVENT_TABLE(BreakpointManagerFrame, wxFrame)
+	EVT_CLOSE(BreakpointManagerFrame::OnCloseWindow)
+	EVT_COMMAND(wxID_ANY, EMULATOR_CORE_UPDATE_EVENT, BreakpointManagerFrame::handleEmulatorCoreUpdateEvent)
+wxEND_EVENT_TABLE()
+
 void App::loadCartridge(std::string filepath){
 	if(emuCore == nullptr){
 		std::cerr << "Initialize the emulation core before opening a cartridge!" << std::endl;
@@ -114,6 +128,11 @@ void App::loadCartridge(std::string filepath){
 	// Send an event to the rest of the app to indicate a change of cartridge.
 	sendCartridgeLoadedEvent();
 	emuCore->releaseMutexLock();
+}
+
+void App::clearCurrentlyLoadedFilePath(){
+	currentlyLoadedFilePath = "";
+	sendCartridgeLoadedEvent();
 }
 
 bool App::OnInit()
@@ -174,6 +193,8 @@ bool App::OnInit()
 	backgroundViewerFrame->Hide();
 	cartridgeViewerFrame = new CartridgeViewerFrame(this, emuCore, emuThread);
 	cartridgeViewerFrame->Hide();
+	breakpointManagerFrame = new BreakpointManagerFrame(emuCore, emuThread);
+	breakpointManagerFrame->Hide();
 
 	// Add additional render events to the SDL render loop. 
 	emuThread->addAdditionalRenderEvent(
@@ -235,11 +256,13 @@ void App::closeAllSideFrames()
 		cartridgeViewerFrame->Destroy();
 		cartridgeViewerFrame = nullptr;
 	}
+	if (breakpointManagerFrame != nullptr){
+		breakpointManagerFrame->Destroy();
+		breakpointManagerFrame = nullptr;
+	}
 }
 
-bool App::initializeSDL2()
-{
-
+bool App::initializeSDL2(){
 	// Initialize the main SDL2 subsystem.
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 	{
@@ -251,8 +274,7 @@ bool App::initializeSDL2()
 	return true;
 }
 
-void App::sendEmulationCoreUpdateEvent()
-{
+void App::sendEmulationCoreUpdateEvent(){
 	if (!runningEmulator)
 		return;
 
@@ -278,6 +300,8 @@ void App::sendEmulationCoreUpdateEvent()
 		wxPostEvent(backgroundViewerFrame, event);
 	if (cartridgeViewerFrame != nullptr && cartridgeViewerFrame->IsShown())
 		wxPostEvent(cartridgeViewerFrame, event);
+	if (breakpointManagerFrame != nullptr && breakpointManagerFrame->IsShown())
+		wxPostEvent(breakpointManagerFrame, event);
 }
 
 void App::sendCartridgeLoadedEvent(){
@@ -329,4 +353,9 @@ void App::showCartridgeViewerFrame()
 {
 	if (cartridgeViewerFrame != nullptr)
 		cartridgeViewerFrame->Show(true);
+}
+void App::showBreakpointManagerFrame()
+{
+	if (breakpointManagerFrame != nullptr)
+		breakpointManagerFrame->Show(true);
 }

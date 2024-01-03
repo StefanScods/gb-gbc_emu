@@ -32,21 +32,29 @@ BackgroundViewerFrame::BackgroundViewerFrame(App *d_appContext, Core *d_emuCore,
     bgMapsSizer->Add(mainDisplayPanel0, 0, wxEXPAND);
 
     wxPanel* mainDisplayPanel1 = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(BACKGROUND_MAP_WIDTH, BACKGROUND_MAP_HEIGHT));
-    bgMapsSizer->Add(mainDisplayPanel1, 0, wxEXPAND);
+    bgMapsSizer->Add(mainDisplayPanel1, 0, wxEXPAND | wxLEFT, 3);
 
     wxFont guiFont = wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false);
     // Add text elements.
-    selectedMapTextElement = new wxStaticText(this, wxID_ANY, "Current Background Map:", wxDefaultPosition, wxDefaultSize);
-    selectedMapTextElement->SetFont(guiFont);
-    statusbarSizer->Add(selectedMapTextElement, 0, wxEXPAND | wxLEFT, 10);
+    selectedAddressTextElement = new wxStaticText(this, wxID_ANY, selectedAddressText, wxDefaultPosition, wxDefaultSize);
+    selectedAddressTextElement->SetFont(guiFont);
+    statusbarSizer->Add(selectedAddressTextElement, 0, wxEXPAND | wxLEFT, 10);
 
-    selectedWindowTextElement = new wxStaticText(this, wxID_ANY, "Current Window Map:", wxDefaultPosition, wxDefaultSize);
+    selectedMapTextElement = new wxStaticText(this, wxID_ANY, "Current Background Map: 00000", wxDefaultPosition, wxDefaultSize);
+    selectedMapTextElement->SetFont(guiFont);
+    statusbarSizer->Add(selectedMapTextElement, 0, wxEXPAND | wxLEFT, 25);
+
+    selectedWindowTextElement = new wxStaticText(this, wxID_ANY, "Current Window Map: 00000", wxDefaultPosition, wxDefaultSize);
     selectedWindowTextElement->SetFont(guiFont);
-    statusbarSizer->Add(selectedWindowTextElement, 0, wxEXPAND | wxLEFT, 45);
+    statusbarSizer->Add(selectedWindowTextElement, 0, wxEXPAND | wxLEFT, 25);
         
-    enableWindowTextElement = new wxStaticText(this, wxID_ANY, "Window Enabled:", wxDefaultPosition, wxDefaultSize);
+    enableWindowTextElement = new wxStaticText(this, wxID_ANY, "Window Enabled: 0000", wxDefaultPosition, wxDefaultSize);
     enableWindowTextElement->SetFont(guiFont);
-    statusbarSizer->Add(enableWindowTextElement, 0, wxEXPAND | wxLEFT, 45);
+    statusbarSizer->Add(enableWindowTextElement, 0, wxEXPAND | wxLEFT, 25);
+
+    selectedTileDataTextElement = new wxStaticText(this, wxID_ANY, "Current Tile Data: ", wxDefaultPosition, wxDefaultSize);
+    selectedTileDataTextElement->SetFont(guiFont);
+    statusbarSizer->Add(selectedTileDataTextElement, 0, wxEXPAND | wxLEFT, 25);
 
     mainDisplaySizer->Add(bgMapsSizer, 0, wxEXPAND);
     mainDisplaySizer->Add(statusbarSizer, 0, wxEXPAND);
@@ -109,7 +117,6 @@ void BackgroundViewerFrame::updateSDLDisplays(){
     if (!appContext->getRunningEmulationState() || !IsShown())
         return;
 
-   
     emuCore->acquireMutexLock();
     PPU* ppu = emuCore->getPPU();
     // Render the entire background map.
@@ -138,12 +145,44 @@ void BackgroundViewerFrame::updateSDLDisplays(){
     mapName = "Window Enabled: " + mapName;
     enableWindowTextElement->SetLabel(mapName);
 
-    statusbarSizer->Layout();
-
+    mapName = readBit(emuCore->getMemory()->read(0xFF40), 4) ? "Tile Set 1" : "Tile Set 0";
+    mapName = "Current Tile Data: " + mapName;
+    selectedTileDataTextElement->SetLabel(mapName);
+    
     // Get the viewport offsets and compute the view regions.
     int offsetY = ppu->getSCY();
     int offsetX = ppu->getSCX();
     emuCore->releaseMutexLock();
+
+    // Generate the mouse position relative to the top of the context of this frame.
+    const wxPoint mouseLocation = ScreenToClient(::wxGetMousePosition());
+    int selectedTile = -1;
+    int selectedBank = 0;
+
+    // Check if the mouse is-bounds.
+    if(mouseLocation.x >= 0 && mouseLocation.x < GetSize().GetWidth() && mouseLocation.y >= 0 && mouseLocation.y < GetSize().GetHeight() ){
+        int offset = mouseLocation.x >= BACKGROUND_MAP_WIDTH + 1 ? -3 : 0;
+        const int TILE_DIMS = (BG_MAP_WIDTH_PIXELS / TILE_DIMENSION);
+        // Convert the mouse into a tile index.
+        int tileX = (mouseLocation.x + offset) / (TILE_DIMENSION*BACKGROUND_MAP_SCALE);
+        int tileY = (mouseLocation.y) / (TILE_DIMENSION*BACKGROUND_MAP_SCALE);
+
+        // Handle the second map.
+        if(tileX >= TILE_DIMS){
+            selectedBank = 1;
+            tileX = tileX % TILE_DIMS;
+        }
+
+        // Calculate the hovered tile.
+        if(tileY < TILE_DIMS) selectedTile = tileY * TILE_DIMS + tileX;
+    }
+
+    // Update the selected address display.
+    if(selectedTile != -1){
+        word address = (selectedBank ? BGM1_DATA_START : BGM0_DATA_START) + selectedTile;
+        convertWordToHexNotation(address, selectedAddressText+9);
+        selectedAddressTextElement->SetLabelText(selectedAddressText);
+    }
 
     // Draw rest of the display.
     drawDisplay(bgMapRenderer0, bgMapTexture0, offsetX, offsetY);

@@ -99,6 +99,9 @@
     <ClCompile Include="GUI\cartridgeViewerFrame.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GUI\breakpointManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core\instuctions\include\misc_control.h">
@@ -456,6 +459,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GUI\include\cartridgeViewerFrame.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GUI\include\breakpointManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

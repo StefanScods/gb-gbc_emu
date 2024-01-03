@@ -29,7 +29,9 @@ MainWindowFrame::MainWindowFrame(Core *d_emuCore, App* d_appContext ) : wxFrame(
 	menuBar = new wxMenuBar();
 	// File Menu
 	fileMenuLayout = new wxMenu();
-	fileMenuLayout->Append(wxMenuIDs::OPEN_ROM, _T("&Open ROM"));
+	fileMenuLayout->Append(wxMenuIDs::OPEN_ROM, _T("&Open ROM\tCtrl+O"));
+	fileMenuLayout->Append(wxMenuIDs::CLOSE_ROM, _T("&Close ROM"));
+	fileMenuLayout->Append(wxMenuIDs::RESET_GAMEBOY, _T("&Reset\tCtrl+R"));
 	fileMenuLayout->AppendSeparator();
 	fileMenuLayout->Append(wxID_EXIT, _T("&Quit"));
 	menuBar->Append(fileMenuLayout, _T("&File"));
@@ -59,8 +61,17 @@ MainWindowFrame::MainWindowFrame(Core *d_emuCore, App* d_appContext ) : wxFrame(
 			")";
 		displayMenuLayout->Append(wxMenuIDs::DISPLAY_SIZE_1 - 1 + i, label.c_str());
 	}
-
 	menuBar->Append(displayMenuLayout, _T("&Display"));
+
+	// Debug Menu.
+	debugMenuLayout = new wxMenu();
+	debugMenuLayout->Append(wxMenuIDs::CONTINUE_EMULATION_MENU, _T("&Continue\tF9"));
+	debugMenuLayout->Append(wxMenuIDs::PAUSE_EMULATION_MENU, _T("&Pause\tF10"));
+	debugMenuLayout->Append(wxMenuIDs::STEP_FRAME_MENU, _T("&Step Frame\tF8"));
+	debugMenuLayout->Append(wxMenuIDs::STEP_CPU_MENU, _T("&Step CPU\tF7"));
+	debugMenuLayout->AppendSeparator();
+	debugMenuLayout->Append(wxMenuIDs::OPEN_BREAKPOINT_MANAGER, _T("&Breakpoints\tCtrl+B"));
+	menuBar->Append(debugMenuLayout, _T("&Debug"));
 
 	// Render the top menu bar.
 	SetMenuBar(menuBar);
@@ -134,6 +145,16 @@ void MainWindowFrame::OnMenuOpenROMButton(wxCommandEvent& event){
 	std::string filePath(openFileDialog.GetPath().c_str());
 	appContext->loadCartridge(filePath);
 }
+void MainWindowFrame::OnMenuCloseROMButton(wxCommandEvent& event){
+	emuCore->acquireMutexLock();
+	emuCore->pauseEmulatorExecution();
+	appContext->clearCurrentlyLoadedFilePath();
+	emuCore->resetCore();
+	emuCore->releaseMutexLock();
+}
+void MainWindowFrame::OnMenuResetGameBoyButton(wxCommandEvent& event){
+	appContext->loadCartridge(appContext->getCurrentlyLoadedFilePath());
+}
 
 void MainWindowFrame::OnMenuOpenCPUStateViewButton(wxCommandEvent& event){
 	appContext->showCPUStateFrame();
@@ -155,4 +176,19 @@ void MainWindowFrame::OnMenuOpenBackgroundViewerViewButton(wxCommandEvent& event
 }
 void MainWindowFrame::OnMenuOpenCartridgeViewerViewButton(wxCommandEvent& event){
 	appContext->showCartridgeViewerFrame();
+}
+void MainWindowFrame::OnMenuOpenBreakpointManagerViewButton(wxCommandEvent& event){
+	appContext->showBreakpointManagerFrame();
+}
+void MainWindowFrame::OnMenuPauseButton(wxCommandEvent& event){
+	emuCore->pauseEmulatorExecution();
+}
+void MainWindowFrame::OnMenuContinueButton(wxCommandEvent& event){
+	emuCore->continueEmulatorExecution();
+}
+void MainWindowFrame::OnMenuStepFrameButton(wxCommandEvent& event){
+	emuCore->stepNextFrameButton();
+}
+void MainWindowFrame::OnMenuStepCPUButton(wxCommandEvent& event){
+	emuCore->stepNextInstuctionButton();
 }

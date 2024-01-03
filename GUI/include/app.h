@@ -24,6 +24,7 @@ class TileViewerFrame;
 class OAMViewerFrame;
 class BackgroundViewerFrame;
 class CartridgeViewerFrame;
+class BreakpointManagerFrame;
 
 // An Enum defining the wxIDs used for each of the custom menu bar actions.
 enum wxMenuIDs {
@@ -35,12 +36,19 @@ enum wxMenuIDs {
 	OPEN_BACKGROUND_VIEWER_VIEW,
 	OPEN_CARTRIDGE_VIEWER_VIEW,
 	MEMORY_MAP_SEARCHBAR,
+	PAUSE_EMULATION_MENU,
+	CONTINUE_EMULATION_MENU,
+	STEP_FRAME_MENU,
+	STEP_CPU_MENU,
+	OPEN_BREAKPOINT_MANAGER,
 	DISPLAY_SIZE_1,
 	DISPLAY_SIZE_2,
 	DISPLAY_SIZE_3,
 	DISPLAY_SIZE_4,
 	DISPLAY_SIZE_5,
-	OPEN_ROM
+	OPEN_ROM,
+	CLOSE_ROM,
+	RESET_GAMEBOY
 };
 
 const char APP_TITLE[] = "RedPandaEmu";
@@ -61,6 +69,8 @@ const char TILE_VIEWER_DISPLAY_TITLE[] = "Tile Viewer";
 const char OAM_VIEWER_DISPLAY_TITLE[] = "Object Attribute Memory Viewer";
 const char BACKGROUND_VIEWER_DISPLAY_TITLE[] = "Background Map Viewer";
 const char CARTRIDGE_VIEWER_DISPLAY_TITLE[] = "Cartridge Info";
+
+const char BREAKPOINT_MANAGER_TITLE[] = "Breakpoints";
 
 // The parent WxWidget application.
 class App : public wxApp
@@ -141,9 +151,19 @@ public:
 	void showCartridgeViewerFrame();
 
 	/**
+	 * @brief Reveals the breakpoint manager frame.
+	 */
+	void showBreakpointManagerFrame();
+
+	/**
 	 * @brief Returns the currently loaded ROM file.
 	 */
 	std::string getCurrentlyLoadedFilePath(){ return currentlyLoadedFilePath;}
+
+	/**
+	 * @brief Clears the currently loaded ROM file.
+	 */
+	void clearCurrentlyLoadedFilePath();
 
 	/**
 	 * @brief Sends an 'EMULATOR_CORE_UPDATE_EVENT' to the rest of the application. This 
@@ -174,6 +194,7 @@ private:
 	OAMViewerFrame *oamViewerFrame = nullptr;
 	BackgroundViewerFrame *backgroundViewerFrame = nullptr;
 	CartridgeViewerFrame *cartridgeViewerFrame = nullptr;
+	BreakpointManagerFrame *breakpointManagerFrame = nullptr;
 
 	Core *emuCore = nullptr;
 };

@@ -73,10 +73,15 @@ private:
 	SDL_Texture *bgMapTexture1 = nullptr;
     SDL_Renderer *bgMapRenderer1 = nullptr;
 
+	char selectedAddressText[16] = "Address: 0x0000";
+	wxStaticText* selectedAddressTextElement = nullptr; 
 	wxStaticText *selectedMapTextElement = nullptr;
 	wxStaticText *selectedWindowTextElement = nullptr;
 	wxStaticText *enableWindowTextElement = nullptr;
+	wxStaticText *selectedTileDataTextElement = nullptr;
 	wxBoxSizer* statusbarSizer = nullptr;
+
+
 
 	// Window properties.
 	const int BACKGROUND_MAP_SCALE = 2;

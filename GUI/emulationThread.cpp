@@ -85,13 +85,7 @@ void* EmulationThread::Entry()
 
 	// Bind important keys.
 	emuCore->controller.bindKeyUp(SDL_SCANCODE_HOME, std::bind(&Core::printCurrentState, emuCore));
-	emuCore->controller.bindKeyUp(SDL_SCANCODE_PAUSE, std::bind(&Core::toggleEmulatorExecution, emuCore));
-
-	// Step next frame binds to the key "PAGE UP"
-	emuCore->controller.bindKeyUp(SDL_SCANCODE_PAGEUP, std::bind(&Core::stepNextFrameButton, emuCore));
-	// Step next instuction binds to the key "PAGE DOWN"
-	emuCore->controller.bindKeyUp(SDL_SCANCODE_PAGEDOWN, std::bind(&Core::stepNextInstuctionButton, emuCore));
-
+	
 	// Joypad Keys.
 	// Up.
 	emuCore->controller.bindKeyUp(SDL_SCANCODE_W, std::bind(&Joypad::releaseUp, emuCore->getJoypad()));
