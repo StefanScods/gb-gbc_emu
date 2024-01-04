@@ -11,10 +11,6 @@ The header implementation for the main emulator core.
 #include <wx/wxprec.h>
 #include <algorithm>
 
-// An array holding all current breakpoints. Simply add the desired value of PC to this register to pause execution.
-std::vector<word> CPUBreakpoints = {
-};
-
 Core::Core(ExecutionModes mode) {
     executionMode = mode;
     ppu.init();
@@ -119,7 +115,7 @@ void Core::runForFrame(bool breakOnCPU) {
         ioController.cycle(cpu.getDoubleSpeedMode());
         handleInterrupts();
 
-        if(std::find(CPUBreakpoints.begin(),CPUBreakpoints.end(), cpu.getPC()) != CPUBreakpoints.end()){
+        if(std::find(enabledCPUBreakpoints.begin(),enabledCPUBreakpoints.end(), cpu.getPC()) != enabledCPUBreakpoints.end()){
             breakOnCPU = true;
             pauseEmulatorExecution();
         }

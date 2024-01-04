@@ -33,6 +33,13 @@ private:
     ExecutionModes executionMode = PAUSE;
 
     std::mutex mtx;
+
+    // Controls when to break CPU execution. Values are of requested PC values to break on.
+    std::vector<word> CPUBreakpoints;
+    std::vector<word> enabledCPUBreakpoints = {
+        // add inital breakpoints here!
+    };
+
 public:
     // Make the core's controller public so that the rest of the codebase can modify bindings without needing wrapper functions.
     SDLController controller;
@@ -196,6 +203,15 @@ public:
      * @brief Releases the mutex lock which protects the memory sub-system.
      */
     void releaseMutexLock(){ mtx.unlock();}
+
+    /**
+     * @brief Returns the list of all CPU breakpoints by reference.
+     */
+    std::vector<word>* getCPUBreakpoints(){return &CPUBreakpoints;}
+    /**
+     * @brief Returns the list of all enabled CPU breakpoints by reference.
+     */
+    std::vector<word>* getEnabledCPUBreakpoints(){ return &enabledCPUBreakpoints;}
 };
 
 #endif
