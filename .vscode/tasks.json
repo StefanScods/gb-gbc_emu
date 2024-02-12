@@ -32,12 +32,25 @@
             }
         },
         {
+            "label": "copy dependencies (release)",
+            "type": "shell",
+            "command": "./dlls/copyDLLs.bat ",
+            "args": [
+                "Release"
+            ],
+            "dependsOn":  ["build (release)"],
+            "group": "build",
+            "presentation": {
+                "reveal": "always"
+            }
+        },
+        {
             "label": "run (release)",
             "type": "shell",
             "command": ".\\x64\\Release\\gb-gbc_emu.exe",
             "args": [],
             "group": "none",
-            "dependsOn": "build (release)",
+            "dependsOn":  ["build (release)",  "copy dependencies (release)"],
             "presentation": {
                 "reveal": "always"
             },
@@ -72,12 +85,25 @@
             }
         },
         {
+            "label": "copy dependencies (debug)",
+            "type": "shell",
+            "command": "./dlls/copyDLLs.bat ",
+            "args": [
+                "Debug"
+            ],
+            "group": "build",
+            "dependsOn":  ["build (debug)"],
+            "presentation": {
+                "reveal": "always"
+            }
+        },
+        {
             "label": "run (debug)",
             "type": "shell",
             "command": ".\\x64\\Debug\\gb-gbc_emu.exe",
             "args": [],
             "group": "none",
-            "dependsOn": "build (debug)",
+            "dependsOn": ["build (debug)",  "copy dependencies (debug)"],
             "presentation": {
                 "reveal": "always"
             }
