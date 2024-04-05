@@ -26,6 +26,28 @@ void OAMEntry::update(byte* bytes){
     colourPalette = bytes[3] & 0b0111;
 }
 
+void OAMEntry::saveToState(byte*& writeBuffer){
+    std::memcpy(writeBuffer, &yPos, sizeof(byte)); writeBuffer+=sizeof(byte);
+    std::memcpy(writeBuffer, &xPos, sizeof(byte)); writeBuffer+=sizeof(byte);
+    std::memcpy(writeBuffer, &tileIndex, sizeof(byte)); writeBuffer+=sizeof(byte);
+    std::memcpy(writeBuffer, &priority, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &yFlip, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &xFlip, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &dmgPalette, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &colourPalette, sizeof(byte)); writeBuffer+=sizeof(byte);
+}
+
+void OAMEntry::loadFromState(byte*& readBuffer){
+    std::memcpy(&yPos, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+    std::memcpy(&xPos, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+    std::memcpy(&tileIndex, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+    std::memcpy(&priority, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&yFlip, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&xFlip, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&dmgPalette, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&colourPalette, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+}
+
 bool PPU::init(){
    // Create the background maps.
     backgroundMap0 = new uint8_t[INT8_PER_BG_MAP];
@@ -587,4 +609,125 @@ void PPU::determineObjectToRender(){
             if(!added) objectsToRender.push_back(i);
         }  
     }
+}
+
+void PPU::saveToState(std::ofstream & stateFile){
+    int palletteCopySize = sizeof(byte)*4*SWATCHES_PER_PALETTE*NUMBER_OF_PALETTES;
+    int displayLayerSize = sizeof(uint8_t)*INT8_PER_SCREEN;
+    int bgMapSize = sizeof(uint8_t)*INT8_PER_BG_MAP;
+    int tileMapSize = sizeof(uint8_t)*PIXELS_PER_TILE*TILES_PER_BANK*2;
+    int tileSize = sizeof(uint8_t)*INT8_PER_TILE;
+
+    int bytesToWrite = sizeof(byte)*9 + sizeof(bool)*5 + sizeof(word)*3 + sizeof(cycles);
+    bytesToWrite += palletteCopySize*2;
+    bytesToWrite += displayLayerSize*3;
+    bytesToWrite += bgMapSize*2;
+    bytesToWrite += tileMapSize;
+    bytesToWrite += tileSize;
+    bytesToWrite += (sizeof(byte)*4 + sizeof(bool)*4)*NUMBER_OF_OBJECTS; // OEM objects.
+
+    byte* writeBuffer = new byte[
+        bytesToWrite
+    ];
+    byte* writeBufferStart = writeBuffer;
+
+    std::memcpy(writeBuffer, &mode, sizeof(byte)); writeBuffer+=sizeof(byte);
+    std::memcpy(writeBuffer, &SCY, sizeof(byte)); writeBuffer+=sizeof(byte);
+    std::memcpy(writeBuffer, &SCX, sizeof(byte)); writeBuffer+=sizeof(byte);
+    std::memcpy(writeBuffer, &WY, sizeof(byte)); writeBuffer+=sizeof(byte);
+    std::memcpy(writeBuffer, &WX, sizeof(byte)); writeBuffer+=sizeof(byte);
+    std::memcpy(writeBuffer, &LYC, sizeof(byte)); writeBuffer+=sizeof(byte);
+    std::memcpy(writeBuffer, &STAT, sizeof(byte)); writeBuffer+=sizeof(byte);
+
+    std::memcpy(writeBuffer, &LCDC, sizeof(byte)); writeBuffer+=sizeof(byte);
+    std::memcpy(writeBuffer, &ppuEnable, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &windowAreaStart, sizeof(word)); writeBuffer+=sizeof(word);
+    std::memcpy(writeBuffer, &windowEnable, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &tileAreaStart, sizeof(word)); writeBuffer+=sizeof(word);
+    std::memcpy(writeBuffer, &backgroundAreaStart, sizeof(word)); writeBuffer+=sizeof(word);
+    std::memcpy(writeBuffer, &doubleObjectSize, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &objectEnable, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &backgroundEnablePriority, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &scanline, sizeof(byte)); writeBuffer+=sizeof(byte);
+
+    std::memcpy(writeBuffer, &cyclesCounter, sizeof(cycles)); writeBuffer+=sizeof(cycles);
+
+    std::memcpy(writeBuffer, objectColours, palletteCopySize); writeBuffer+=palletteCopySize;
+    std::memcpy(writeBuffer, backgroundColours, palletteCopySize); writeBuffer+=palletteCopySize;
+
+    std::memcpy(writeBuffer, videoBufferBackgroundLayer, displayLayerSize); writeBuffer+=displayLayerSize;
+    std::memcpy(writeBuffer, videoBufferWindowLayer, displayLayerSize); writeBuffer+=displayLayerSize;
+    std::memcpy(writeBuffer, videoBufferObjectLayer, displayLayerSize); writeBuffer+=displayLayerSize;
+
+    std::memcpy(writeBuffer, backgroundMap0, displayLayerSize); writeBuffer+=displayLayerSize;
+    std::memcpy(writeBuffer, backgroundMap1, displayLayerSize); writeBuffer+=displayLayerSize;
+
+    std::memcpy(writeBuffer, tileMap, tileMapSize); writeBuffer+=tileMapSize;
+    std::memcpy(writeBuffer, nonColouredTile, tileSize); writeBuffer+=tileSize;
+
+    for (int i = 0; i<NUMBER_OF_OBJECTS; i++) objectAttributeMemory[i].saveToState(writeBuffer);
+
+    // Write out the data.
+    stateFile.write((char*)writeBufferStart, bytesToWrite);
+    delete[] writeBufferStart;
+}
+
+void PPU::loadFromState(std::ifstream & stateFile){
+    int palletteCopySize = sizeof(byte)*4*SWATCHES_PER_PALETTE*NUMBER_OF_PALETTES;
+    int displayLayerSize = sizeof(uint8_t)*INT8_PER_SCREEN;
+    int bgMapSize = sizeof(uint8_t)*INT8_PER_BG_MAP;
+    int tileMapSize = sizeof(uint8_t)*PIXELS_PER_TILE*TILES_PER_BANK*2;
+    int tileSize = sizeof(uint8_t)*INT8_PER_TILE;
+
+    int bytesToRead = sizeof(byte)*9 + sizeof(bool)*5 + sizeof(word)*3 + sizeof(cycles);
+    bytesToRead += palletteCopySize*2;
+    bytesToRead += displayLayerSize*3;
+    bytesToRead += bgMapSize*2;
+    bytesToRead += tileMapSize;
+    bytesToRead += tileSize;
+    bytesToRead += (sizeof(byte)*4 + sizeof(bool)*4)*NUMBER_OF_OBJECTS; // OEM objects.
+
+    byte* readBuffer = new byte[
+        bytesToRead
+    ];
+    byte* readBufferStart = readBuffer;
+    stateFile.read((char*)readBufferStart, bytesToRead);
+
+    std::memcpy(&mode, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+    std::memcpy(&SCY, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+    std::memcpy(&SCX, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+    std::memcpy(&WY, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+    std::memcpy(&WX, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+    std::memcpy(&LYC, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+    std::memcpy(&STAT, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+
+    std::memcpy(&LCDC, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+    std::memcpy(&ppuEnable, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&windowAreaStart, readBuffer, sizeof(word)); readBuffer+=sizeof(word);
+    std::memcpy(&windowEnable, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&tileAreaStart, readBuffer, sizeof(word)); readBuffer+=sizeof(word);
+    std::memcpy(&backgroundAreaStart, readBuffer, sizeof(word)); readBuffer+=sizeof(word);
+    std::memcpy(&doubleObjectSize, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&objectEnable, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&backgroundEnablePriority, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&scanline, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+
+    std::memcpy(&cyclesCounter, readBuffer, sizeof(cycles)); readBuffer+=sizeof(cycles);
+
+    std::memcpy(objectColours, readBuffer, palletteCopySize); readBuffer+=palletteCopySize;
+    std::memcpy(backgroundColours, readBuffer, palletteCopySize); readBuffer+=palletteCopySize;
+
+    std::memcpy(videoBufferBackgroundLayer, readBuffer, displayLayerSize); readBuffer+=displayLayerSize;
+    std::memcpy(videoBufferWindowLayer, readBuffer, displayLayerSize); readBuffer+=displayLayerSize;
+    std::memcpy(videoBufferObjectLayer, readBuffer, displayLayerSize); readBuffer+=displayLayerSize;
+
+    std::memcpy(backgroundMap0, readBuffer, displayLayerSize); readBuffer+=displayLayerSize;
+    std::memcpy(backgroundMap1, readBuffer, displayLayerSize); readBuffer+=displayLayerSize;
+
+    std::memcpy(tileMap, readBuffer, tileMapSize); readBuffer+=tileMapSize;
+    std::memcpy(nonColouredTile, readBuffer, tileSize); readBuffer+=tileSize;
+
+    for (int i = 0; i<NUMBER_OF_OBJECTS; i++) objectAttributeMemory[i].loadFromState(readBuffer);
+
+    delete[] readBufferStart;
 }

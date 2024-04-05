@@ -8,6 +8,7 @@ date: 2022-05-14
 #include "defines.h"
 #include <fstream>
 #include <string>
+#include <filesystem> 
 
 class Memory;
 class Core;
@@ -49,6 +50,7 @@ private:
 
 	bool romLoaded = false;
 
+	std::string cartridgeName = "";
 public:
 	
 	//!!!todo handle checksums when loading cartridge.
@@ -94,7 +96,7 @@ public:
 	std::string getGameBoyOnlyText(){ return CGB_flag ? "True" : "False";}
 	std::string getManufacturerCode(){ return std::string((char*) manufacturerCode);}
 	std::string getLicenseeCode(){ return oldLicenseCode == 0x33 ? std::string((char*) newLicenseCode) : std::to_string((int) oldLicenseCode);}
-
+	std::string getCartridgeName(){ return cartridgeName;}
 	/**
 	 * @brief Helper function to convert large number into human readable forms.
 	 * EX 32768 -> 32KB.
@@ -110,12 +112,18 @@ public:
 	// Memory Controllers.
 	byte noMemoryControllerRead(word address);
 	void noMemoryControllerWrite(word address, byte data);
+	void noMemoryControllerSaveToState(std::ofstream & stateFile);
+	void noMemoryControllerLoadFromState(std::ifstream & stateFile);
 
 	byte controllerMCB1Read(word address);
 	void controllerMCB1Write(word address, byte data);
+	void controllerMCB1SaveToState(std::ofstream & stateFile);
+	void controllerMCB1LoadFromState(std::ifstream & stateFile);
 
 	byte controllerMCB3Read(word address);
 	void controllerMCB3Write(word address, byte data);
+	void controllerMCB3SaveToState(std::ofstream & stateFile);
+	void controllerMCB3LoadFromState(std::ifstream & stateFile);
 };
 
 

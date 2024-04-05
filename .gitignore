@@ -11,7 +11,8 @@
 *.sln.docstates
 
 dependencies/
-testroms/ 
+testroms/
+saveStates/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

@@ -8,8 +8,10 @@ The header implementation for the main emulator core.
 #include "include\cartridge.h"
 
 #include <iostream>
+#include <fstream>
 #include <wx/wxprec.h>
 #include <algorithm>
+#include <sstream>
 
 Core::Core(ExecutionModes mode) {
     executionMode = mode;
@@ -197,4 +199,73 @@ void Core::handleInterrupts(){
         // Force the CPU to invoke its handler.
         return cpu.setActiveInterruptHandler(0x0060);
     }
+}
+
+void Core::loadState(int stateNum){
+    if(!cartridge.isROMLoaded()){
+        std::cout << "No ROM is currently loaded. Nothing to load..." << std::endl;
+        return;
+    }
+
+    // Determine the filepath to load from.
+    std::string fileName = std::string(SAVE_SUB_DIR)
+        .append("\\")
+        .append(cartridge.getCartridgeName())
+        .append(".s")
+        .append(std::to_string(stateNum));
+    std::ifstream saveFile(fileName, std::ios::binary | std::ios::in);
+
+    // Check to see if the file exists.
+	if (!saveFile.is_open()){
+        std::cout << "Save file \"" << fileName << "\" does not exist!" << std::endl;
+        return;
+    } 
+
+    acquireMutexLock();
+
+    // Load from state.
+    cpu.loadFromState(saveFile);
+    memory.loadFromState(saveFile);
+    ppu.loadFromState(saveFile);
+    ioController.loadFromState(saveFile);\
+
+    releaseMutexLock();
+
+    // Close the file and exit.
+    saveFile.close();
+    std::cout << "Successfully loaded state from \"" << fileName << "\"!" << std::endl;
+}
+
+void Core::saveState(int stateNum){
+    if(!cartridge.isROMLoaded()){
+        std::cout << "No ROM is currently loaded. Nothing to save..." << std::endl;
+        return;
+    }
+
+    // Create a save state directory.
+    if (!std::filesystem::is_directory(SAVE_SUB_DIR) || !std::filesystem::exists(SAVE_SUB_DIR)) {
+        std::filesystem::create_directory(SAVE_SUB_DIR);
+    }
+
+    // Determine the filepath to write to.
+    std::string fileName = std::string(SAVE_SUB_DIR)
+        .append("\\")
+        .append(cartridge.getCartridgeName())
+        .append(".s")
+        .append(std::to_string(stateNum));
+    std::ofstream saveFile(fileName, std::ios::binary | std::ios::out);
+
+    acquireMutexLock();
+    
+    // Save state.
+    cpu.saveToState(saveFile);
+    memory.saveToState(saveFile);
+    ppu.saveToState(saveFile);
+    ioController.saveToState(saveFile);
+
+    releaseMutexLock();
+
+    // Close the file and exit.
+    saveFile.close();
+    std::cout << "Successfully saved state to \"" << fileName << "\"!" << std::endl;
 }

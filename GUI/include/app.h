@@ -48,7 +48,9 @@ enum wxMenuIDs {
 	DISPLAY_SIZE_5,
 	OPEN_ROM,
 	CLOSE_ROM,
-	RESET_GAMEBOY
+	RESET_GAMEBOY,
+	SAVE_STATE_1,
+	LOAD_STATE_1
 };
 
 const char APP_TITLE[] = "RedPandaEmu";

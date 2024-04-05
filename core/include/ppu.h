@@ -28,6 +28,19 @@ public:
      * @brief Reads 4 bytes and updates the entry.
      */
     void update(byte* bytes);
+    
+    /**
+     * @brief Writes the current state to a state file.
+     *
+     * @param writeBuffer The buffer to write to.
+    */
+    void saveToState(byte*& writeBuffer);
+    /**
+     * @brief Load the current state from a state file.
+     *
+     * @param readBuffer The buffer to read from.
+    */
+    void loadFromState(byte*& readBuffer);
 };
 
 class PPU{
@@ -39,7 +52,7 @@ private:
     Memory* memory = nullptr;
 
     // The current mode of the PPU. This controls what the PPU is doing per cycle. 
-    int mode = 2;
+    byte mode = 2;
 
     // Viewport.
     byte SCY = 0;
@@ -63,7 +76,7 @@ private:
     bool backgroundEnablePriority = false;
 
     // The current scanline being drawn.
-    int scanline = 0;
+    byte scanline = 0;
 
     // Arrays for holding colour data.
     byte objectColours[4*SWATCHES_PER_PALETTE*NUMBER_OF_PALETTES];
@@ -275,6 +288,19 @@ public:
      * @brief Scan the OAM to determine which element to render this scanline.
     */
     void determineObjectToRender();
+
+    /**
+     * @brief Writes the current state to a state file.
+     *
+     * @param stateFile The file to write to.
+    */
+    void saveToState(std::ofstream & stateFile);
+    /**
+     * @brief Load the current state from a state file.
+     *
+     * @param stateFile The file to load from.
+    */
+    void loadFromState(std::ifstream & stateFile);
 };
 
 #endif;

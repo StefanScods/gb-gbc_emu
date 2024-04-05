@@ -36,6 +36,13 @@ MainWindowFrame::MainWindowFrame(Core *d_emuCore, App* d_appContext ) : wxFrame(
 	fileMenuLayout->Append(wxID_EXIT, _T("&Quit"));
 	menuBar->Append(fileMenuLayout, _T("&File"));
 
+	// Save States Menu.
+	saveStateMenuLayout = new wxMenu();
+	saveStateMenuLayout->Append(wxMenuIDs::SAVE_STATE_1, _T("&Save State 1\tShift+F1"));
+	saveStateMenuLayout->AppendSeparator();
+	saveStateMenuLayout->Append(wxMenuIDs::LOAD_STATE_1, _T("&Load State 1\tF1"));
+	menuBar->Append(saveStateMenuLayout, _T("&Save State"));
+
 	// Tool Menu.
 	toolsMenuLayout = new wxMenu();
 	toolsMenuLayout->Append(wxMenuIDs::OPEN_CARTRIDGE_VIEWER_VIEW, _T("&Open Cartridge Info"));
@@ -192,3 +199,5 @@ void MainWindowFrame::OnMenuStepFrameButton(wxCommandEvent& event){
 void MainWindowFrame::OnMenuStepCPUButton(wxCommandEvent& event){
 	emuCore->stepNextInstuctionButton();
 }
+void MainWindowFrame::loadState1Event(wxCommandEvent& event){emuCore->loadState(1);}
+void MainWindowFrame::saveState1Event(wxCommandEvent& event){emuCore->saveState(1);}

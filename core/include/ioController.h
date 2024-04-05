@@ -57,6 +57,19 @@ public:
     void TIMATimerOverflowLogic();
     byte read(word address);
     void write(word address, byte data );
+
+    /**
+     * @brief Writes the current state to a state file.
+     *
+     * @param stateFile The file to write to.
+    */
+    void saveToState(std::ofstream & stateFile);
+    /**
+     * @brief Load the current state from a state file.
+     *
+     * @param stateFile The file to load from.
+    */
+    void loadFromState(std::ifstream & stateFile);
 };
 
 

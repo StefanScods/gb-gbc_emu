@@ -8,6 +8,7 @@
 #include "register.h"
 #include "instructionSet.h"
 #include <vector>
+#include <fstream>
 
 /**
  * @brief  A generic function used to implement the pop instructions. 
@@ -222,6 +223,19 @@ public:
      * to jump to this address during cycle().
     */
     void setActiveInterruptHandler(word interruptVectorAddress);
+
+    /**
+     * @brief Writes the current state to a state file.
+     *
+     * @param stateFile The file to write to.
+    */
+    void saveToState(std::ofstream & stateFile);
+    /**
+     * @brief Load the current state from a state file.
+     *
+     * @param stateFile The file to load from.
+    */
+    void loadFromState(std::ifstream & stateFile);
 };
 
 #endif

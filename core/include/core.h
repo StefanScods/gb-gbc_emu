@@ -20,7 +20,7 @@ The header declaration for the main emulator core.
 #include "cartridge.h"
 #include "sdlController.h"
 #include "../../GUI/include/app.h"
-
+#include <filesystem> 
 
 class Core{
 private:
@@ -212,6 +212,19 @@ public:
      * @brief Returns the list of all enabled CPU breakpoints by reference.
      */
     std::vector<word>* getEnabledCPUBreakpoints(){ return &enabledCPUBreakpoints;}
+
+    /**
+     * @brief Loads the emulator state from a file for the current game.
+     * 
+     * @param stateNum The file num to load. 
+     */
+    void loadState(int stateNum);
+    /**
+     * @brief Dumps the emulator state to a file for the current game.
+     * 
+     * @param stateNum The file num to save to. 
+     */
+    void saveState(int stateNum);
 };
 
 #endif

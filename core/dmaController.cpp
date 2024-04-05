@@ -37,3 +37,15 @@ bool DMAController::startTransfer(word startingAddress){
     transferActive = true;
     return true;
 }
+
+void DMAController::saveToState(byte*& writeBuffer){
+    std::memcpy(writeBuffer, &transferActive, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &cyclesPassed, sizeof(cycles)); writeBuffer+=sizeof(cycles);
+    std::memcpy(writeBuffer, &targetAddress, sizeof(word)); writeBuffer+=sizeof(word);
+}
+
+void DMAController::loadFromState(byte*& readBuffer){
+    std::memcpy(&transferActive, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&cyclesPassed, readBuffer, sizeof(cycles)); readBuffer+=sizeof(cycles);
+    std::memcpy(&targetAddress, readBuffer, sizeof(word)); readBuffer+=sizeof(word);
+}

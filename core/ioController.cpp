@@ -228,3 +228,71 @@ void IOController::write(word address, byte data){
             break;
     }
 }
+
+void IOController::saveToState(std::ofstream & stateFile){
+    int bytesToWrite = sizeof(byte)*6 + sizeof(bool);
+    bytesToWrite += sizeof(bool) + sizeof(cycles) + sizeof(word); // DMA size.
+    bytesToWrite += (sizeof(bool) + sizeof(cycles)*2 + sizeof(byte))*2; // Timer size.
+    byte* writeBuffer = new byte[
+        bytesToWrite
+    ];
+    byte* writeBufferStart = writeBuffer;
+
+    // Do not save the joypad state.
+
+    // DMA.
+    dmaController.saveToState(writeBuffer);
+
+    // Timers.
+    std::memcpy(writeBuffer, &TMA, sizeof(byte)); writeBuffer+=sizeof(byte);
+    std::memcpy(writeBuffer, &TAC, sizeof(byte)); writeBuffer+=sizeof(byte);
+    DIVTimer.saveToState(writeBuffer);
+    TIMATimer.saveToState(writeBuffer);
+
+    // Palettes.
+    std::memcpy(writeBuffer, &BGP, sizeof(byte)); writeBuffer+=sizeof(byte);
+    std::memcpy(writeBuffer, &OBP0, sizeof(byte)); writeBuffer+=sizeof(byte);
+    std::memcpy(writeBuffer, &OBP1, sizeof(byte)); writeBuffer+=sizeof(byte);
+
+    // Other.
+    std::memcpy(writeBuffer, &IF, sizeof(byte)); writeBuffer+=sizeof(byte);
+    std::memcpy(writeBuffer, &KEY1SwitchArmed, sizeof(bool)); writeBuffer+=sizeof(bool);
+
+    // Write out the data.
+    stateFile.write((char*)writeBufferStart, bytesToWrite);
+    delete[] writeBufferStart;
+}
+
+void IOController::loadFromState(std::ifstream & stateFile){
+    int bytesToRead = sizeof(byte)*6 + sizeof(bool);
+    bytesToRead += sizeof(bool) + sizeof(cycles) + sizeof(word); // DMA size.
+    bytesToRead += (sizeof(bool) + sizeof(cycles)*2 + sizeof(byte))*2; // Timer size.
+    byte* readBuffer = new byte[
+        bytesToRead
+    ];
+    byte* readBufferStart = readBuffer;
+    stateFile.read((char*)readBufferStart, bytesToRead);
+
+    // Reset control joypad on load.
+    joypad.reset();
+
+    // DMA.
+    dmaController.loadFromState(readBuffer);
+
+    // Timers.
+    std::memcpy(&TMA, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+    std::memcpy(&TAC, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+    DIVTimer.loadFromState(readBuffer);
+    TIMATimer.loadFromState(readBuffer);
+
+    // Palettes.
+    std::memcpy(&BGP, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+    std::memcpy(&OBP0, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+    std::memcpy(&OBP1, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+
+    // Other.
+    std::memcpy(&IF, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+    std::memcpy(&KEY1SwitchArmed, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+
+    delete[] readBufferStart;
+}

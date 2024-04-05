@@ -213,3 +213,62 @@ void CPU::setActiveInterruptHandler(word interruptVectorAddress) {
     // Clear the cashed cycles.
     cyclesSinceLastInstuction = 0;
 }
+
+void CPU::saveToState(std::ofstream & stateFile){
+    int bytesToWrite = sizeof(word)*8 + sizeof(bool)*4 + sizeof(cycles)*1;
+    byte* writeBuffer = new byte[
+        bytesToWrite
+    ];
+    byte* writeBufferStart = writeBuffer;
+    word temp;
+
+    // CPU Regs.
+    temp = reg_AF.read(); std::memcpy(writeBuffer, &temp, sizeof(word)); writeBuffer+=sizeof(word);
+    temp = reg_BC.read(); std::memcpy(writeBuffer, &temp, sizeof(word)); writeBuffer+=sizeof(word);
+    temp = reg_DE.read(); std::memcpy(writeBuffer, &temp, sizeof(word)); writeBuffer+=sizeof(word);
+    temp = reg_HL.read(); std::memcpy(writeBuffer, &temp, sizeof(word)); writeBuffer+=sizeof(word);
+    temp =     PC.read(); std::memcpy(writeBuffer, &temp, sizeof(word)); writeBuffer+=sizeof(word);
+    temp =     SP.read(); std::memcpy(writeBuffer, &temp, sizeof(word)); writeBuffer+=sizeof(word);
+
+    // Other control vars.
+    std::memcpy(writeBuffer, &parsedData, sizeof(word)); writeBuffer+=sizeof(word);
+    std::memcpy(writeBuffer, &lowPowerMode, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &doubleReadBug, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &doubleSpeedMode, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &masterInterruptEnableFlag, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &activeInterruptVector, sizeof(word)); writeBuffer+=sizeof(word);
+    std::memcpy(writeBuffer, &cyclesSinceLastInstuction, sizeof(cycles)); writeBuffer+=sizeof(cycles);
+
+    // Write out the data.
+    stateFile.write((char*)writeBufferStart, bytesToWrite);
+    delete[] writeBufferStart;
+}
+
+void CPU::loadFromState(std::ifstream & stateFile){
+    int bytesToRead = sizeof(word)*8 + sizeof(bool)*4 + sizeof(cycles)*1;
+    byte* readBuffer = new byte[
+        bytesToRead
+    ];
+    byte* readBufferStart = readBuffer;
+    stateFile.read((char*)readBufferStart, bytesToRead);
+    word temp;
+
+    // CPU Regs.
+    std::memcpy(&temp, readBuffer, sizeof(word)); reg_AF = temp; readBuffer+=sizeof(word);
+    std::memcpy(&temp, readBuffer, sizeof(word)); reg_BC = temp; readBuffer+=sizeof(word);
+    std::memcpy(&temp, readBuffer, sizeof(word)); reg_DE = temp; readBuffer+=sizeof(word);
+    std::memcpy(&temp, readBuffer, sizeof(word)); reg_HL = temp; readBuffer+=sizeof(word);
+    std::memcpy(&temp, readBuffer, sizeof(word));     PC = temp; readBuffer+=sizeof(word);
+    std::memcpy(&temp, readBuffer, sizeof(word));     SP = temp; readBuffer+=sizeof(word);
+
+    // Other control vars.
+    std::memcpy(&parsedData, readBuffer, sizeof(word)); readBuffer+=sizeof(word);
+    std::memcpy(&lowPowerMode, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&doubleReadBug, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&doubleSpeedMode, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&masterInterruptEnableFlag, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&activeInterruptVector, readBuffer, sizeof(word)); readBuffer+=sizeof(word);
+    std::memcpy(&cyclesSinceLastInstuction, readBuffer, sizeof(cycles)); readBuffer+=sizeof(cycles);    
+
+    delete[] readBufferStart;
+}

@@ -23,6 +23,8 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 	// Read the ROM file.
 	romFile.open(filepath, std::ios::in | std::ios::binary);
 	if (!romFile.is_open()) return CANNOT_READ_FILE; // Cannot read the ROM file.
+	std::filesystem::path cartridgePath(filepath); 
+	cartridgeName = cartridgePath.stem().generic_string();
 
 	// Determine the size of the cartridge header.
 	int bytesToRead = CARTRIDGE_HEADER_SIZE * sizeof(byte);
@@ -80,28 +82,36 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 		memoryControllerName = "ROM Only";
 		memory->setMemoryController(
 			std::bind(&Cartridge::noMemoryControllerWrite, this, std::placeholders::_1, std::placeholders::_2),
-			std::bind(&Cartridge::noMemoryControllerRead, this, std::placeholders::_1)
+			std::bind(&Cartridge::noMemoryControllerRead, this, std::placeholders::_1),
+			std::bind(&Cartridge::noMemoryControllerSaveToState, this, std::placeholders::_1),
+			std::bind(&Cartridge::noMemoryControllerLoadFromState, this, std::placeholders::_1)
 		);
 		break;
 	case(MBC1):
 		memoryControllerName = "MBC1";
 		memory->setMemoryController(
 			std::bind(&Cartridge::controllerMCB1Write, this, std::placeholders::_1, std::placeholders::_2),
-			std::bind(&Cartridge::controllerMCB1Read, this, std::placeholders::_1)
+			std::bind(&Cartridge::controllerMCB1Read, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB1SaveToState, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB1LoadFromState, this, std::placeholders::_1)
 		);
 		break;
 	case(MBC1_RAM):
 		memoryControllerName = "MBC1 + RAM";
 		memory->setMemoryController(
 			std::bind(&Cartridge::controllerMCB1Write, this, std::placeholders::_1, std::placeholders::_2),
-			std::bind(&Cartridge::controllerMCB1Read, this, std::placeholders::_1)
+			std::bind(&Cartridge::controllerMCB1Read, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB1SaveToState, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB1LoadFromState, this, std::placeholders::_1)
 		);
 		break;
 	case(MBC1_RAM_BATTERY):
 		memoryControllerName = "MBC1 + RAM + Battery";
 		memory->setMemoryController(
 			std::bind(&Cartridge::controllerMCB1Write, this, std::placeholders::_1, std::placeholders::_2),
-			std::bind(&Cartridge::controllerMCB1Read, this, std::placeholders::_1)
+			std::bind(&Cartridge::controllerMCB1Read, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB1SaveToState, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB1LoadFromState, this, std::placeholders::_1)
 		);
 		break;
 	case(MBC2):
@@ -144,21 +154,27 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 		memoryControllerName = "MBC3";
 		memory->setMemoryController(
 			std::bind(&Cartridge::controllerMCB3Write, this, std::placeholders::_1, std::placeholders::_2),
-			std::bind(&Cartridge::controllerMCB3Read, this, std::placeholders::_1)
+			std::bind(&Cartridge::controllerMCB3Read, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB3SaveToState, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB3LoadFromState, this, std::placeholders::_1)
 		);
 		break;
 	case(MBC3_RAM):
 		memoryControllerName = "MBC3 + RAM";
 		memory->setMemoryController(
 			std::bind(&Cartridge::controllerMCB3Write, this, std::placeholders::_1, std::placeholders::_2),
-			std::bind(&Cartridge::controllerMCB3Read, this, std::placeholders::_1)
+			std::bind(&Cartridge::controllerMCB3Read, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB3SaveToState, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB3LoadFromState, this, std::placeholders::_1)
 		);
 		break;
 	case(MBC3_RAM_BATTERY):
 		memoryControllerName = "MBC3 + RAM + Battery";
 		memory->setMemoryController(
 			std::bind(&Cartridge::controllerMCB3Write, this, std::placeholders::_1, std::placeholders::_2),
-			std::bind(&Cartridge::controllerMCB3Read, this, std::placeholders::_1)
+			std::bind(&Cartridge::controllerMCB3Read, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB3SaveToState, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB3LoadFromState, this, std::placeholders::_1)
 		);
 		break;
 	case(MBC4):
@@ -367,6 +383,10 @@ void Cartridge::resolveLicensee(){
 	licensee = "";
 }
 
+/*======================================================================*
+ *  						No Controller								*
+ *======================================================================*/
+
 byte Cartridge::noMemoryControllerRead(word address){
 	if(address >= romSize) return HIGH_IMPEDANCE;
 	return romData[address-ROMBANK0_START];
@@ -374,6 +394,16 @@ byte Cartridge::noMemoryControllerRead(word address){
 void Cartridge::noMemoryControllerWrite(word address, byte data){
 	// No Op!
 }
+void Cartridge::noMemoryControllerSaveToState(std::ofstream & stateFile){
+	// No Op!
+}
+void Cartridge::noMemoryControllerLoadFromState(std::ifstream & stateFile){
+	// No Op!
+}
+
+/*======================================================================*
+ *  							    MCB1								*
+ *======================================================================*/
 
 byte Cartridge::controllerMCB1Read(word address){
 	// ROM Bank X0.
@@ -447,6 +477,49 @@ void Cartridge::controllerMCB1Write(word address, byte data){
 	}
 	// If we write outside this address space -> simply ignore.
 }
+void Cartridge::controllerMCB1SaveToState(std::ofstream & stateFile){
+	int ramCopySize = sizeof(byte)*ramSize;
+    int bytesToWrite = sizeof(byte)*4 + sizeof(bool)*1 + ramCopySize;
+    byte* writeBuffer = new byte[
+        bytesToWrite
+    ];
+    byte* writeBufferStart = writeBuffer;
+
+	std::memcpy(writeBuffer, &mbc1Mask, sizeof(byte)); writeBuffer+=sizeof(byte);
+	std::memcpy(writeBuffer, &mbc1Mode, sizeof(byte)); writeBuffer+=sizeof(byte);
+	std::memcpy(writeBuffer, &mbc1ROMBank, sizeof(byte)); writeBuffer+=sizeof(byte);
+	std::memcpy(writeBuffer, &mbc1ROMSecondaryBank, sizeof(byte)); writeBuffer+=sizeof(byte);
+	std::memcpy(writeBuffer, &mbc1RAMEnable, sizeof(bool)); writeBuffer+=sizeof(bool);
+
+	std::memcpy(writeBuffer, externalRAM, ramCopySize); writeBuffer+=ramCopySize;
+
+	// Write out the data.
+    stateFile.write((char*)writeBufferStart, bytesToWrite);
+    delete[] writeBufferStart;
+}
+void Cartridge::controllerMCB1LoadFromState(std::ifstream & stateFile){
+	int ramCopySize = sizeof(byte)*ramSize;
+    int bytesToRead = sizeof(byte)*4 + sizeof(bool)*1 + ramCopySize;
+    byte* readBuffer = new byte[
+        bytesToRead
+    ];
+    byte* readBufferStart = readBuffer;
+    stateFile.read((char*)readBufferStart, bytesToRead);
+
+	std::memcpy(&mbc1Mask, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+	std::memcpy(&mbc1Mode, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+	std::memcpy(&mbc1ROMBank, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+	std::memcpy(&mbc1ROMSecondaryBank, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+	std::memcpy(&mbc1RAMEnable, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+
+	std::memcpy(externalRAM, readBuffer, ramCopySize); readBuffer+=ramCopySize;
+
+	delete[] readBufferStart;
+}
+
+/*======================================================================*
+ *  							    MCB3								*
+ *======================================================================*/
 
 //todo!!! do all timer stuff.
 byte Cartridge::controllerMCB3Read(word address){
@@ -546,4 +619,41 @@ void Cartridge::controllerMCB3Write(word address, byte data){
 		}
 
 	}
+}
+void Cartridge::controllerMCB3SaveToState(std::ofstream & stateFile){
+	int ramCopySize = sizeof(byte)*ramSize;
+    int bytesToWrite = sizeof(byte)*3 + sizeof(bool)*1 + ramCopySize;
+    byte* writeBuffer = new byte[
+        bytesToWrite
+    ];
+    byte* writeBufferStart = writeBuffer;
+
+	std::memcpy(writeBuffer, &mbc3ROMBank, sizeof(byte)); writeBuffer+=sizeof(byte);
+	std::memcpy(writeBuffer, &mbc3RAMBank, sizeof(byte)); writeBuffer+=sizeof(byte);
+	std::memcpy(writeBuffer, &mbc3Latch, sizeof(byte)); writeBuffer+=sizeof(byte);
+	std::memcpy(writeBuffer, &mbc3RAMEnable, sizeof(bool)); writeBuffer+=sizeof(bool);
+
+	std::memcpy(writeBuffer, externalRAM, ramCopySize); writeBuffer+=ramCopySize;
+
+	// Write out the data.
+    stateFile.write((char*)writeBufferStart, bytesToWrite);
+    delete[] writeBufferStart;
+}
+void Cartridge::controllerMCB3LoadFromState(std::ifstream & stateFile){
+	int ramCopySize = sizeof(byte)*ramSize;
+    int bytesToRead = sizeof(byte)*3 + sizeof(bool)*1 + ramCopySize;
+    byte* readBuffer = new byte[
+        bytesToRead
+    ];
+    byte* readBufferStart = readBuffer;
+    stateFile.read((char*)readBufferStart, bytesToRead);
+
+	std::memcpy(&mbc3ROMBank, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+	std::memcpy(&mbc3RAMBank, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+	std::memcpy(&mbc3Latch, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+	std::memcpy(&mbc3RAMEnable, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+
+	std::memcpy(externalRAM, readBuffer, ramCopySize); readBuffer+=ramCopySize;
+
+	delete[] readBufferStart;
 }

@@ -42,6 +42,19 @@ public:
      * @brief Reset the DMA Controller to its starting state.
      */
     void reset();
+
+    /**
+     * @brief Writes the current state to a state file.
+     *
+     * @param writeBuffer The buffer to write to.
+    */
+    void saveToState(byte*& writeBuffer);
+    /**
+     * @brief Load the current state from a state file.
+     *
+     * @param readBuffer The buffer to read from.
+    */
+    void loadFromState(byte*& readBuffer);
 };
 
 

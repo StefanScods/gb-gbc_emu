@@ -49,6 +49,9 @@ wxBEGIN_EVENT_TABLE(MainWindowFrame, wxFrame)
 	EVT_MENU(wxMenuIDs::OPEN_BACKGROUND_VIEWER_VIEW, MainWindowFrame::OnMenuOpenBackgroundViewerViewButton)
 	EVT_MENU(wxMenuIDs::OPEN_CARTRIDGE_VIEWER_VIEW, MainWindowFrame::OnMenuOpenCartridgeViewerViewButton)
 	
+	EVT_MENU(wxMenuIDs::SAVE_STATE_1, MainWindowFrame::saveState1Event)
+	EVT_MENU(wxMenuIDs::LOAD_STATE_1, MainWindowFrame::loadState1Event)
+
 	EVT_MENU(wxMenuIDs::DISPLAY_SIZE_1, MainWindowFrame::handleTimes1SizeEvent)
 	EVT_MENU(wxMenuIDs::DISPLAY_SIZE_2, MainWindowFrame::handleTimes2SizeEvent)
 	EVT_MENU(wxMenuIDs::DISPLAY_SIZE_3, MainWindowFrame::handleTimes3SizeEvent)

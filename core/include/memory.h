@@ -22,6 +22,8 @@ private:
 
     memoryControllerWriteFunctionTemplate memoryControllerWrite = NULL;
     memoryControllerReadFunctionTemplate memoryControllerRead = NULL;
+    memoryControllerSaveToStateFunctionTemplate memoryControllerSaveToState = NULL;
+    memoryControllerLoadFromStateFunctionTemplate memoryControllerLoadFromState = NULL;
 
     CPU* cpu = nullptr;
     IOController* ioController = nullptr;
@@ -97,14 +99,34 @@ public:
      * 
      * @param writeFunction The memory controller found on the cartridge which handles writes.
      * @param readFunction The memory controller found on the cartridge which handles reads.
+     * @param saveStateFunction Helper function to handle saving to states.
+     * @param loadStateFunction Helper function to handle loading from states.
     */
     void setMemoryController(
         memoryControllerWriteFunctionTemplate writeFunction, 
-        memoryControllerReadFunctionTemplate readFunction
+        memoryControllerReadFunctionTemplate readFunction,
+        memoryControllerSaveToStateFunctionTemplate saveStateFunction,
+        memoryControllerLoadFromStateFunctionTemplate loadStateFunction
+
     ){
         memoryControllerWrite = writeFunction;
         memoryControllerRead = readFunction;
+        memoryControllerSaveToState = saveStateFunction;
+        memoryControllerLoadFromState = loadStateFunction;
     }
+
+    /**
+     * @brief Writes the current state to a state file.
+     *
+     * @param stateFile The file to write to.
+    */
+    void saveToState(std::ofstream & stateFile);
+    /**
+     * @brief Load the current state from a state file.
+     *
+     * @param stateFile The file to load from.
+    */
+    void loadFromState(std::ifstream & stateFile);
 };
 
 #endif

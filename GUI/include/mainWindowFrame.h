@@ -113,6 +113,10 @@ public:
 	void handleTimes4SizeEvent(wxCommandEvent& event){pixelPerfectResizer(4);}
 	void handleTimes5SizeEvent(wxCommandEvent& event){pixelPerfectResizer(5);}
 
+	// Save and load state event callback functions.
+	void loadState1Event(wxCommandEvent& event);
+	void saveState1Event(wxCommandEvent& event);
+
 	/**
 	 * @brief Gets the pointer to the displayPanel object.
 	 * 
@@ -139,6 +143,7 @@ private:
 	// Menu bar elements.
 	wxMenuBar* menuBar = nullptr;
 	wxMenu* fileMenuLayout = nullptr;
+	wxMenu* saveStateMenuLayout = nullptr;
 	wxMenu* toolsMenuLayout = nullptr;
 	wxMenu* displayMenuLayout = nullptr;
 	wxMenu* debugMenuLayout = nullptr;

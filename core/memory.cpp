@@ -100,6 +100,8 @@ void Memory::zeroAllBlocksOfMemory(){
     // Clear memory controllers.
     memoryControllerWrite = NULL;
     memoryControllerRead = NULL;
+    memoryControllerSaveToState = NULL;
+    memoryControllerLoadFromState = NULL;
     // Clear control vars.
     dirtyTiles.clear();
 
@@ -424,4 +426,84 @@ byte *Memory::getBytePointer(word address)
     }
 
     return nullptr;
+}
+
+void Memory::saveToState(std::ofstream & stateFile){
+    int vbankSize = sizeof(byte)*(VRAM_END - VRAM_START + 1);
+    int wRAM0Size = sizeof(byte)*(WRAMBANK0_END - WRAMBANK0_START + 1);
+    int wRAM1Size = sizeof(byte)*(WRAMBANK1_END - WRAMBANK1_START + 1);
+    int OEMSize = sizeof(byte)*(OAM_END - OAM_START + 1);
+    int hRamSize = sizeof(byte)*(HRAM_END - HRAM_START + 1);
+
+    int bytesToWrite = sizeof(bool) + sizeof(byte);    
+    bytesToWrite += vbankSize*2;
+    bytesToWrite += wRAM0Size + wRAM1Size;
+    bytesToWrite += OEMSize;
+    bytesToWrite += hRamSize;
+
+    byte* writeBuffer = new byte[
+        bytesToWrite
+    ];
+    byte* writeBufferStart = writeBuffer;
+
+    std::memcpy(writeBuffer, &selectedVRAMBank, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &interruptEnableRegister, sizeof(byte)); writeBuffer+=sizeof(byte);
+
+    std::memcpy(writeBuffer, vRAMBank1, vbankSize); writeBuffer+=vbankSize;
+    std::memcpy(writeBuffer, vRAMBank2, vbankSize); writeBuffer+=vbankSize;
+
+    std::memcpy(writeBuffer, wRAM0, wRAM0Size); writeBuffer+=wRAM0Size;
+    std::memcpy(writeBuffer, wRAM1, wRAM1Size); writeBuffer+=wRAM1Size;
+
+    std::memcpy(writeBuffer, spriteAttributeTable, OEMSize); writeBuffer+=OEMSize;
+    std::memcpy(writeBuffer, hRAM, hRamSize); writeBuffer+=hRamSize;
+
+    // Write out the data.
+    stateFile.write((char*)writeBufferStart, bytesToWrite);
+    delete[] writeBufferStart;
+
+    // Handle on cartridge state.
+    if(memoryControllerSaveToState) memoryControllerSaveToState(stateFile);
+}
+
+void Memory::loadFromState(std::ifstream & stateFile){
+    int vbankSize = sizeof(byte)*(VRAM_END - VRAM_START + 1);
+    int wRAM0Size = sizeof(byte)*(WRAMBANK0_END - WRAMBANK0_START + 1);
+    int wRAM1Size = sizeof(byte)*(WRAMBANK1_END - WRAMBANK1_START + 1);
+    int OEMSize = sizeof(byte)*(OAM_END - OAM_START + 1);
+    int hRamSize = sizeof(byte)*(HRAM_END - HRAM_START + 1);
+
+    int bytesToRead = sizeof(bool) + sizeof(byte);    
+    bytesToRead += vbankSize*2;
+    bytesToRead += wRAM0Size + wRAM1Size;
+    bytesToRead += OEMSize;
+    bytesToRead += hRamSize;
+
+    byte* readBuffer = new byte[
+        bytesToRead
+    ];
+    byte* readBufferStart = readBuffer;
+    stateFile.read((char*)readBufferStart, bytesToRead);
+
+    // Mark all tiles as dirty.
+    for(int i = 0; i <2*TILES_PER_BANK; i++){
+        dirtyTiles.insert(i);
+    }
+
+    std::memcpy(&selectedVRAMBank, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&interruptEnableRegister, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+
+    std::memcpy(vRAMBank1, readBuffer, vbankSize); readBuffer+=vbankSize;
+    std::memcpy(vRAMBank2, readBuffer, vbankSize); readBuffer+=vbankSize;
+
+    std::memcpy(wRAM0, readBuffer, wRAM0Size); readBuffer+=wRAM0Size;
+    std::memcpy(wRAM1, readBuffer, wRAM1Size); readBuffer+=wRAM1Size;
+
+    std::memcpy(spriteAttributeTable, readBuffer, OEMSize); readBuffer+=OEMSize;
+    std::memcpy(hRAM, readBuffer, hRamSize); readBuffer+=hRamSize;
+
+    delete[] readBufferStart;
+
+    // Handle On cartridge state.
+    if(memoryControllerLoadFromState) memoryControllerLoadFromState(stateFile);
 }

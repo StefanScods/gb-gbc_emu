@@ -7,6 +7,7 @@
 #include <iostream>
 #include <wx/wxprec.h>
 #include <functional>
+#include <fstream>
 
 // Data types.
 typedef int8_t signedByte;
@@ -80,6 +81,8 @@ enum ExecutionModes {
 class Memory;
 typedef std::function<void(word, byte)> memoryControllerWriteFunctionTemplate;
 typedef std::function<byte(word)> memoryControllerReadFunctionTemplate;
+typedef std::function<void(std::ofstream &)> memoryControllerSaveToStateFunctionTemplate;
+typedef std::function<void(std::ifstream &)> memoryControllerLoadFromStateFunctionTemplate;
 
 // CPU flags.
 #define FLAG_Z 7
@@ -1345,5 +1348,6 @@ const int AMOUNT_BG_TO_UPDATE_PER_CYCLE = (BGM0_DATA_END - BGM0_DATA_START + 1) 
 #define RES 16
 #define SET 24
 
+const char SAVE_SUB_DIR[] = "saveStates";
 
 #endif
