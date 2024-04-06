@@ -186,6 +186,12 @@ void PPU::cycle(bool CGBMode){
         case 0:
             // Start of Mode 0.
             if(cyclesCounter == 1){
+                // Check to see if we should throw an LCD interrupt (mode 0 condition).
+                if(readBit(STAT, 3)){
+                    byte interruptFlags = memory->read(INTERRUPT_FLAG_REGISTER_ADDR);
+                    writeBit(interruptFlags, 1, true);
+                    memory->write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
+                }
             // End of Mode 0.
             } else if (cyclesCounter == MODE0_LEN){
                 // Loop the cycles counter at a mode transition.
@@ -196,6 +202,12 @@ void PPU::cycle(bool CGBMode){
         case 1:
             // Start of Mode 1.
             if(cyclesCounter == 1){
+                // Check to see if we should throw an LCD interrupt (mode 1 condition).
+                if(readBit(STAT, 4)){
+                    byte interruptFlags = memory->read(INTERRUPT_FLAG_REGISTER_ADDR);
+                    writeBit(interruptFlags, 1, true);
+                    memory->write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
+                }
             // End of Mode 1.
             } else if (cyclesCounter == MODE1_LEN){
                 // Loop the cycles counter at a mode transition.
@@ -208,12 +220,20 @@ void PPU::cycle(bool CGBMode){
             if(cyclesCounter == 1){
                 updateOAM();
                 determineObjectToRender();
+                // Check to see if we should throw an LCD interrupt (mode 2 condition).
+                if(readBit(STAT, 5)){
+                    byte interruptFlags = memory->read(INTERRUPT_FLAG_REGISTER_ADDR);
+                    writeBit(interruptFlags, 1, true);
+                    memory->write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
+                }
             // End of Mode 2.
             } else if (cyclesCounter == MODE2_LEN){
                 // Loop the cycles counter at a mode transition.
                 cyclesCounter = 0;
                 // Move to mode 3.
                 mode = 3;
+                writeBit(STAT, 0, 1);
+                writeBit(STAT, 1, 1);
             }
             break;
          case 3:
@@ -228,6 +248,8 @@ void PPU::cycle(bool CGBMode){
                 cyclesCounter = 0;
                 // Move to mode 0.
                 mode = 0;
+                writeBit(STAT, 0, 0);
+                writeBit(STAT, 1, 0);
             }
             break;
         default:
@@ -242,6 +264,8 @@ void PPU::increaseScanline(){
     // V-BLANK.
     if(scanline > LAST_VISIBLE_SCANLINE){
         mode = 1;
+        writeBit(STAT, 0, 1);
+        writeBit(STAT, 1, 0);
 
         // Raise the VBlank Interrupt flag.
         if(scanline == LAST_VISIBLE_SCANLINE + 1){
@@ -254,15 +278,25 @@ void PPU::increaseScanline(){
         if(scanline == NUM_SCANLINES){
             scanline = 0;
             mode = 2;
+            writeBit(STAT, 0, 0);
+            writeBit(STAT, 1, 1);
         }
     }
     // Visible scanline.
     else{
         mode = 2;
+        writeBit(STAT, 0, 0);
+        writeBit(STAT, 1, 1);
     }
 
     // Update the LYC=LY Flag.
     writeBit(STAT, 2, scanline == LYC);
+    // Check to see if we should throw an LCD interrupt (LYC=LY condition). 
+    if(scanline == LYC && readBit(STAT, 6)){
+        byte interruptFlags = memory->read(INTERRUPT_FLAG_REGISTER_ADDR);
+        writeBit(interruptFlags, 1, true);
+        memory->write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
+    }
 }
 
 void PPU::renderCurrentScanlineVRAM(bool CGBMode){
