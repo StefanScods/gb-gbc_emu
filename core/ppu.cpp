@@ -8,7 +8,6 @@ The class implementation for the emulator's PPU / LCD  display.
 #include <algorithm>
 
 // todo!!! handle GBC
-// todo!!! handle BG-to-OBJ Priority
 // todo!!! handle window rendering
 
 // Enables debug cout statements for this file.
@@ -67,16 +66,22 @@ bool PPU::init(){
     if (objectAttributeMemory == nullptr)
         return false;
 
-    videoBufferBackgroundLayer = new uint8_t[INT8_PER_SCREEN];
-    if (videoBufferBackgroundLayer == nullptr)
+    // Video buffer and scanline helpers.
+    videoBuffer = new uint8_t[INT8_PER_SCREEN];
+    if (videoBuffer == nullptr)
         return false;
-    videoBufferObjectLayer = new uint8_t[INT8_PER_SCREEN];
-    if (videoBufferObjectLayer == nullptr)
+    backgroundScanlinePixels = new uint8_t[SCREEN_WIDTH*2];
+    if (backgroundScanlinePixels == nullptr)
         return false;
-    videoBufferWindowLayer = new uint8_t[INT8_PER_SCREEN];
-    if (videoBufferWindowLayer == nullptr)
+    windowScanlinePixels = new uint8_t[SCREEN_WIDTH*2];
+    if (windowScanlinePixels == nullptr)
         return false;
-
+    lowPriorityObjectPixels = new uint8_t[SCREEN_WIDTH*2];
+    if (lowPriorityObjectPixels == nullptr)
+        return false;
+    highPriorityObjectPixels = new uint8_t[SCREEN_WIDTH*2];
+    if (highPriorityObjectPixels == nullptr)
+        return false;
     // All alloc successful.
     return true;
 }
@@ -102,18 +107,28 @@ void PPU::zeroAllBlocksOfMemory(){
         0
     );
     std::fill(
-        videoBufferObjectLayer, 
-        videoBufferObjectLayer+INT8_PER_SCREEN, 
+        videoBuffer, 
+        videoBuffer+INT8_PER_SCREEN, 
         0
     );
     std::fill(
-        videoBufferBackgroundLayer, 
-        videoBufferBackgroundLayer+INT8_PER_SCREEN, 
+        windowScanlinePixels, 
+        windowScanlinePixels+SCREEN_WIDTH*2, 
         0
     );
     std::fill(
-        videoBufferWindowLayer, 
-        videoBufferWindowLayer+INT8_PER_SCREEN, 
+        backgroundScanlinePixels, 
+        backgroundScanlinePixels+SCREEN_WIDTH*2, 
+        0
+    );
+    std::fill(
+        lowPriorityObjectPixels, 
+        lowPriorityObjectPixels+SCREEN_WIDTH*2, 
+        0
+    );
+    std::fill(
+        highPriorityObjectPixels, 
+        highPriorityObjectPixels+SCREEN_WIDTH*2, 
         0
     );
     std::fill(
@@ -155,9 +170,11 @@ void PPU::destroy(){
     delete[] nonColouredTile;
     delete[] objectAttributeMemory;
 
-    delete[] videoBufferBackgroundLayer;
-    delete[] videoBufferObjectLayer;
-    delete[] videoBufferWindowLayer;
+    delete[] videoBuffer;
+    delete[] windowScanlinePixels;
+    delete[] backgroundScanlinePixels;
+    delete[] lowPriorityObjectPixels;
+    delete[] highPriorityObjectPixels;
 }
 
 void PPU::cycle(bool CGBMode){
@@ -307,16 +324,48 @@ void PPU::renderCurrentScanlineVRAM(bool CGBMode){
         return;
     }
 
+    // Render all layers on their own scanline.
     renderBGMapScanline(CGBMode);
     renderWindowMapScanline(CGBMode);
     renderObjectsScanline(CGBMode);
+
+    int currentIndexIntoVideoBuffer = scanline * INT8_PER_SCANELINE;
+    // Loop over all pixels of the scanline.
+    for(int i = 0; i < SCREEN_WIDTH; i++){
+        // Of the different layers, determine the actual colour to render here.
+        byte* startOfSwatch = nullptr;
+        // High priority objects.
+        if(objectEnable && highPriorityObjectPixels[i*2] != HIGH_IMPEDANCE){
+            startOfSwatch = getPaletteColour(true, highPriorityObjectPixels[i*2]) + (4 * highPriorityObjectPixels[i*2+1]);
+        }
+        // Low priority objects. Render only if both window and map are using the zeroth colour of the palette.
+        else if(
+            objectEnable && lowPriorityObjectPixels[i*2] != HIGH_IMPEDANCE &&
+            backgroundScanlinePixels[i*2+1] == 0 &&
+            (windowScanlinePixels[i*2] == HIGH_IMPEDANCE || windowScanlinePixels[i*2+1] == 0)
+        ){
+            startOfSwatch = getPaletteColour(true, lowPriorityObjectPixels[i*2]) + (4 * lowPriorityObjectPixels[i*2+1]);
+        }
+        // Draw the window on top of the map.
+        else if(windowEnable && windowScanlinePixels[i*2] != HIGH_IMPEDANCE){
+            startOfSwatch = getPaletteColour(false, windowScanlinePixels[i*2]) + (4 * windowScanlinePixels[i*2+1]);
+        } 
+        // Draw the background map.
+        else startOfSwatch = getPaletteColour(false, backgroundScanlinePixels[i*2]) + (4 * backgroundScanlinePixels[i*2+1]);
+
+        // Calculate where each pixel is on the master array.
+        uint32_t pixelPositionToRender = currentIndexIntoVideoBuffer + i * sizeof(uint32_t);
+        videoBuffer[pixelPositionToRender    ] = *(startOfSwatch + 2); // Blue.
+        videoBuffer[pixelPositionToRender + 1] = *(startOfSwatch + 1); // Green.
+        videoBuffer[pixelPositionToRender + 2] = *(startOfSwatch    ); // Red.
+        videoBuffer[pixelPositionToRender + 3] = *(startOfSwatch + 3); // Alpha.
+    }
 }
 
 void PPU::renderBGMapScanline(bool CGBMode){
+    uint8_t* backgroundScanlinePtr = backgroundScanlinePixels;
     // Get the map to render from.
     byte* startOfTileMapPointer = memory->getBytePointer(backgroundAreaStart);
-    // Get the palette to apply -> always BGP0 on non-CGB mode.
-    byte* startOfPalette =  getPaletteColour(false, 0);
     // Determine the map data to render.
     int currY = (scanline + SCY) % BG_MAP_WIDTH_PIXELS;
     int mapY = currY / TILE_DIMENSION;
@@ -334,33 +383,29 @@ void PPU::renderBGMapScanline(bool CGBMode){
             
         // Determine which colour to use.
         uint32_t pixelPositionInMap = tileIndex * PIXELS_PER_TILE + pixelY*TILE_DIMENSION + pixelX;
-        byte* startOfSwatch = startOfPalette + (4 * tileMap[pixelPositionInMap]);
-
-        // Calculate where each pixel is on the master array.
-        uint32_t pixelPositionToRender = scanline * INT8_PER_SCANELINE + i * sizeof(uint32_t);
-        videoBufferBackgroundLayer[pixelPositionToRender    ] = *(startOfSwatch + 2); // Blue.
-        videoBufferBackgroundLayer[pixelPositionToRender + 1] = *(startOfSwatch + 1); // Green.
-        videoBufferBackgroundLayer[pixelPositionToRender + 2] = *(startOfSwatch    ); // Red.
-        videoBufferBackgroundLayer[pixelPositionToRender + 3] = *(startOfSwatch + 3); // Alpha.
+        
+        // Get the palette to apply -> always BGP0 on non-CGB mode.
+        backgroundScanlinePtr[0] = 0;
+        // Save the colour to render.
+        backgroundScanlinePtr[1] = tileMap[pixelPositionInMap];
+        backgroundScanlinePtr+=2;
     }
 }
 
 void PPU::renderWindowMapScanline(bool CGBMode){
     // Clear scanline.
-    int currentIndexIntoVideoBuffer = scanline * INT8_PER_SCANELINE;
     std::fill(
-        videoBufferWindowLayer + currentIndexIntoVideoBuffer, 
-        videoBufferWindowLayer + currentIndexIntoVideoBuffer+INT8_PER_SCANELINE, 
-        0
+        windowScanlinePixels,  
+        windowScanlinePixels + SCREEN_WIDTH*2, 
+        HIGH_IMPEDANCE
     );
 
     // Skip if disabling window.
     if(!windowEnable) return;
+    uint8_t* windowScanlinePtr = windowScanlinePixels;
 
     // Get the window to render from.
     byte* startOfTileWindowPointer = memory->getBytePointer(windowAreaStart);
-    // Get the palette to apply -> always BGP0 on non-CGB mode.
-    byte* startOfPalette =  getPaletteColour(false, 0);
     // Determine the map data to render.
     int currY = (WY + scanline);
     if(currY > SCREEN_HEIGHT) return;
@@ -380,26 +425,27 @@ void PPU::renderWindowMapScanline(bool CGBMode){
             
         // Determine which colour to use.
         uint32_t pixelPositionInMap = tileIndex * PIXELS_PER_TILE + pixelY*TILE_DIMENSION + pixelX;
-        byte* startOfSwatch = startOfPalette + (4 * tileMap[pixelPositionInMap]);
 
-        // Calculate where each pixel is on the master array.
-        uint32_t pixelPositionToRender = scanline * INT8_PER_SCANELINE + currX * sizeof(uint32_t);
-        videoBufferWindowLayer[pixelPositionToRender    ] = *(startOfSwatch + 2); // Blue.
-        videoBufferWindowLayer[pixelPositionToRender + 1] = *(startOfSwatch + 1); // Green.
-        videoBufferWindowLayer[pixelPositionToRender + 2] = *(startOfSwatch    ); // Red.
-        videoBufferWindowLayer[pixelPositionToRender + 3] = *(startOfSwatch + 3); // Alpha.
+        // Get the palette to apply -> always BGP0 on non-CGB mode.
+        windowScanlinePtr[0] = 0;
+        // Save the colour to render.
+        windowScanlinePtr[1] = tileMap[pixelPositionInMap];
+        windowScanlinePtr+=2;
     }
 }
 
 void PPU::renderObjectsScanline(bool CGBMode){
     // Clear scanline.
-    int currentIndexIntoVideoBuffer = scanline * INT8_PER_SCANELINE;
     std::fill(
-        videoBufferObjectLayer + currentIndexIntoVideoBuffer, 
-        videoBufferObjectLayer+currentIndexIntoVideoBuffer+INT8_PER_SCANELINE, 
-        0
+        lowPriorityObjectPixels, 
+        lowPriorityObjectPixels+SCREEN_WIDTH*2, 
+        HIGH_IMPEDANCE
     );
-
+        std::fill(
+        highPriorityObjectPixels, 
+        highPriorityObjectPixels+SCREEN_WIDTH*2, 
+        HIGH_IMPEDANCE
+    );
     // Skip if disabling objects.
     if(!objectEnable) return;
 
@@ -414,7 +460,6 @@ void PPU::renderObjectsScanline(bool CGBMode){
         // Apply vertical mirror.
         if(objectAttributeMemory[(*itr)].yFlip) yPosOfObject = (tileHeight-1) - yPosOfObject;
 
-        byte* startOfPalette =  getPaletteColour(true, objectAttributeMemory[(*itr)].dmgPalette);
         // Draw the part of object on this scanline.
         for(int i = 0; i < TILE_DIMENSION; i++){
 
@@ -429,21 +474,20 @@ void PPU::renderObjectsScanline(bool CGBMode){
 
             // Determine which colour to use.
             uint32_t pixelPositionInMap =  objectAttributeMemory[(*itr)].tileIndex * PIXELS_PER_TILE + yPosOfObject*TILE_DIMENSION + tileX;
-            // Transparent pixel case.
+            
+            // Transparent pixel case - do not render anything here.
             if(tileMap[pixelPositionInMap] == 0) continue;
-            byte* startOfSwatch = startOfPalette + (4 * tileMap[pixelPositionInMap]);
 
-            // Calculate where each pixel is on the master array.
-            uint32_t pixelPositionToRender = currentIndexIntoVideoBuffer + (xPosOnScreen) * sizeof(uint32_t);
-
-            // Skip over pixels which are already drawn.
-            if(videoBufferObjectLayer[pixelPositionToRender+3]!=0) continue;
-
-            // Draw pixel.
-            videoBufferObjectLayer[pixelPositionToRender    ] = *(startOfSwatch + 2); // Blue.
-            videoBufferObjectLayer[pixelPositionToRender + 1] = *(startOfSwatch + 1); // Green.
-            videoBufferObjectLayer[pixelPositionToRender + 2] = *(startOfSwatch    ); // Red.
-            videoBufferObjectLayer[pixelPositionToRender + 3] = *(startOfSwatch + 3); // Alpha.
+            // Determine which pixel to render to.
+            uint8_t* oamScanlinePtr = nullptr;
+            if(objectAttributeMemory[(*itr)].priority) oamScanlinePtr = lowPriorityObjectPixels + xPosOnScreen*2;
+            else oamScanlinePtr = highPriorityObjectPixels + xPosOnScreen*2;
+            
+            // Something else already drew here, skip.
+            if(oamScanlinePtr[0] != HIGH_IMPEDANCE)  continue;
+            // Save the palette and colour.
+            oamScanlinePtr[0] = objectAttributeMemory[(*itr)].dmgPalette;
+            oamScanlinePtr[1] = tileMap[pixelPositionInMap];
         }
 
         // Put a cap on the number of objects rendered on a single scanline.
@@ -689,9 +733,7 @@ void PPU::saveToState(std::ofstream & stateFile){
     std::memcpy(writeBuffer, objectColours, palletteCopySize); writeBuffer+=palletteCopySize;
     std::memcpy(writeBuffer, backgroundColours, palletteCopySize); writeBuffer+=palletteCopySize;
 
-    std::memcpy(writeBuffer, videoBufferBackgroundLayer, displayLayerSize); writeBuffer+=displayLayerSize;
-    std::memcpy(writeBuffer, videoBufferWindowLayer, displayLayerSize); writeBuffer+=displayLayerSize;
-    std::memcpy(writeBuffer, videoBufferObjectLayer, displayLayerSize); writeBuffer+=displayLayerSize;
+    std::memcpy(writeBuffer, videoBuffer, displayLayerSize); writeBuffer+=displayLayerSize;
 
     std::memcpy(writeBuffer, backgroundMap0, displayLayerSize); writeBuffer+=displayLayerSize;
     std::memcpy(writeBuffer, backgroundMap1, displayLayerSize); writeBuffer+=displayLayerSize;
@@ -751,9 +793,7 @@ void PPU::loadFromState(std::ifstream & stateFile){
     std::memcpy(objectColours, readBuffer, palletteCopySize); readBuffer+=palletteCopySize;
     std::memcpy(backgroundColours, readBuffer, palletteCopySize); readBuffer+=palletteCopySize;
 
-    std::memcpy(videoBufferBackgroundLayer, readBuffer, displayLayerSize); readBuffer+=displayLayerSize;
-    std::memcpy(videoBufferWindowLayer, readBuffer, displayLayerSize); readBuffer+=displayLayerSize;
-    std::memcpy(videoBufferObjectLayer, readBuffer, displayLayerSize); readBuffer+=displayLayerSize;
+    std::memcpy(videoBuffer, readBuffer, displayLayerSize); readBuffer+=displayLayerSize;
 
     std::memcpy(backgroundMap0, readBuffer, displayLayerSize); readBuffer+=displayLayerSize;
     std::memcpy(backgroundMap1, readBuffer, displayLayerSize); readBuffer+=displayLayerSize;

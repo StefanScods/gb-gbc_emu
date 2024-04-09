@@ -49,28 +49,15 @@ bool EmulationThread::initializeEmulator(){
 		return false;
 	}
 
-	backgroundLayer = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
-	if (backgroundLayer == NULL) {
+	lcdDisplay = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+	if (lcdDisplay == NULL) {
 		std::cerr << "Failed to create SDL texture. Error: " << SDL_GetError() << std::endl;
 		return false;
 	}
 
-	windowLayer = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
-	if (windowLayer == NULL) {
-		std::cerr << "Failed to create SDL texture. Error: " << SDL_GetError() << std::endl;
-		return false;
-	}
-
-	objectLayer = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
-	if (objectLayer == NULL) {
-		std::cerr << "Failed to create SDL texture. Error: " << SDL_GetError() << std::endl;
-		return false;
-	}
-
-	// Set alpha blend textures.
-	SDL_SetRenderDrawBlendMode(sdlRenderer, SDL_BLENDMODE_BLEND);
-	SDL_SetTextureBlendMode(windowLayer, SDL_BLENDMODE_BLEND);
-	SDL_SetTextureBlendMode(objectLayer, SDL_BLENDMODE_BLEND);
+	// // Set alpha blend textures.
+	// SDL_SetRenderDrawBlendMode(sdlRenderer, SDL_BLENDMODE_BLEND);
+	// SDL_SetTextureBlendMode(lcdDisplay, SDL_BLENDMODE_BLEND);
 
 	// Initialization was a success.
 	return true;
@@ -128,26 +115,16 @@ void* EmulationThread::Entry()
 		// Copy the entire background layer into a texture.
 		void* lockedPixels = nullptr;
 		int pitch = NULL;
-		SDL_LockTexture(backgroundLayer, NULL, &lockedPixels, &pitch);
-		SDL_memcpy(lockedPixels, ppu->getVideoBufferBG(), INT8_PER_SCREEN);
-		SDL_UnlockTexture(backgroundLayer);
-
-		SDL_LockTexture(windowLayer, NULL, &lockedPixels, &pitch);
-		SDL_memcpy(lockedPixels, ppu->getVideoBufferWindow(), INT8_PER_SCREEN);
-		SDL_UnlockTexture(windowLayer);
-
-		SDL_LockTexture(objectLayer, NULL, &lockedPixels, &pitch);
-		SDL_memcpy(lockedPixels, ppu->getVideoBufferObject(), INT8_PER_SCREEN);
-		SDL_UnlockTexture(objectLayer);
+		SDL_LockTexture(lcdDisplay, NULL, &lockedPixels, &pitch);
+		SDL_memcpy(lockedPixels, ppu->getVideoBuffer(), INT8_PER_SCREEN);
+		SDL_UnlockTexture(lcdDisplay);
 
 		// Clear Screen.
 		SDL_SetRenderDrawColor(sdlRenderer, 0xFF, 0x00, 0xFF, 0xFF);
 		SDL_RenderClear(sdlRenderer);
 
 		// Render the PPU layer textures.
-		SDL_RenderCopy(sdlRenderer, backgroundLayer, NULL, NULL);
-		SDL_RenderCopy(sdlRenderer, windowLayer, NULL, NULL);
-		SDL_RenderCopy(sdlRenderer, objectLayer, NULL, NULL);
+		SDL_RenderCopy(sdlRenderer, lcdDisplay, NULL, NULL);
 
 		// Update screen.
 		SDL_RenderPresent(sdlRenderer);

@@ -82,12 +82,14 @@ private:
     byte objectColours[4*SWATCHES_PER_PALETTE*NUMBER_OF_PALETTES];
     byte backgroundColours[4*SWATCHES_PER_PALETTE*NUMBER_OF_PALETTES];
 
-    // Pixel data for the current background layer.
-    uint8_t* videoBufferBackgroundLayer = nullptr;
-    // Pixel data for the current window layer.
-    uint8_t* videoBufferWindowLayer = nullptr;
-    // Pixel data for the current Object layer.
-    uint8_t* videoBufferObjectLayer = nullptr;
+    // The current state of the LCD video buffer.
+    uint8_t* videoBuffer = nullptr;
+
+    // Contains a pair for each pixel on the scanline indicating palette and colour for that pixel.
+    uint8_t* windowScanlinePixels = nullptr;
+    uint8_t* backgroundScanlinePixels = nullptr;
+    uint8_t* lowPriorityObjectPixels = nullptr;
+    uint8_t* highPriorityObjectPixels = nullptr;
 
     // Pixel data for the entire background map - this is only used to visualize the entire map with the map viewer.
     uint8_t* backgroundMap0 = nullptr;
@@ -223,14 +225,8 @@ public:
         return mapNum ? backgroundMap1 : backgroundMap0;
     };
 
-    uint8_t* getVideoBufferBG(){
-        return videoBufferBackgroundLayer;
-    };
-    uint8_t* getVideoBufferObject(){
-        return videoBufferObjectLayer;
-    };
-    uint8_t* getVideoBufferWindow(){
-        return videoBufferWindowLayer;
+    uint8_t* getVideoBuffer(){
+        return videoBuffer;
     };
 
     /**
