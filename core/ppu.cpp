@@ -8,7 +8,7 @@ The class implementation for the emulator's PPU / LCD  display.
 #include <algorithm>
 
 // todo!!! handle GBC
-// todo!!! handle window rendering
+// todo!!! ppu enable 
 
 // Enables debug cout statements for this file.
 #define ENABLE_DEBUG_PRINTS false
@@ -179,7 +179,7 @@ void PPU::destroy(){
 
 void PPU::cycle(bool CGBMode){
     // Pause execution if the PPU is disabled.
-    if(!ppuEnable) return;
+    // if(!ppuEnable) return;
 
     /**
      * The PPU renders to the LCD in rows called scan lines. There are 154 scanlines in the display, 
@@ -281,8 +281,8 @@ void PPU::increaseScanline(){
     // V-BLANK.
     if(scanline > LAST_VISIBLE_SCANLINE){
         mode = 1;
-        writeBit(STAT, 0, 1);
-        writeBit(STAT, 1, 0);
+        writeBit(STAT, 0, 0);
+        writeBit(STAT, 1, 1);
 
         // Raise the VBlank Interrupt flag.
         if(scanline == LAST_VISIBLE_SCANLINE + 1){
@@ -295,15 +295,15 @@ void PPU::increaseScanline(){
         if(scanline == NUM_SCANLINES){
             scanline = 0;
             mode = 2;
-            writeBit(STAT, 0, 0);
-            writeBit(STAT, 1, 1);
+            writeBit(STAT, 0, 1);
+            writeBit(STAT, 1, 0);
         }
     }
     // Visible scanline.
     else{
         mode = 2;
-        writeBit(STAT, 0, 0);
-        writeBit(STAT, 1, 1);
+        writeBit(STAT, 0, 1);
+        writeBit(STAT, 1, 0);
     }
 
     // Update the LYC=LY Flag.
@@ -364,6 +364,17 @@ void PPU::renderCurrentScanlineVRAM(bool CGBMode){
 
 void PPU::renderBGMapScanline(bool CGBMode){
     uint8_t* backgroundScanlinePtr = backgroundScanlinePixels;
+
+    // Show a blank background if bit 0 of the LCDC is set to 0.
+    if(!backgroundEnablePriority){
+        std::fill(
+            backgroundScanlinePtr,  
+            backgroundScanlinePtr + SCREEN_WIDTH*2, 
+            0 // Clear background.
+        );
+        return;
+    }
+
     // Get the map to render from.
     byte* startOfTileMapPointer = memory->getBytePointer(backgroundAreaStart);
     // Determine the map data to render.
@@ -401,14 +412,18 @@ void PPU::renderWindowMapScanline(bool CGBMode){
     );
 
     // Skip if disabling window.
-    if(!windowEnable) return;
+    if(!windowEnable || !backgroundEnablePriority) return;
+    // Get the scanline pixels to write to.
     uint8_t* windowScanlinePtr = windowScanlinePixels;
+    if((WX - 7) > 0){
+        windowScanlinePtr = windowScanlinePtr + (WX - 7)*2;
+    }
 
     // Get the window to render from.
     byte* startOfTileWindowPointer = memory->getBytePointer(windowAreaStart);
     // Determine the map data to render.
-    int currY = (WY + scanline);
-    if(currY > SCREEN_HEIGHT) return;
+    int currY = (scanline - WY);
+    if(currY > SCREEN_HEIGHT || currY < 0) return;
     int mapY = currY / TILE_DIMENSION;
     int pixelY = currY % TILE_DIMENSION;
     // Loop over all pixels of the scanline.
