@@ -44,6 +44,9 @@ private:
 	bool SGB_flag = false;
 
 	std::ifstream romFile;
+
+	std::fstream ramFile;
+
 	byte* headerDataBuffer = nullptr;
 	byte* romData = nullptr;
 	byte* externalRAM = nullptr;
@@ -108,6 +111,12 @@ public:
 	 * to resolve the name of the licensee.
 	*/
 	void resolveLicensee();
+
+	/**
+	 * @brief Opens, and creates if necessary, the battery back RAM file the emulator
+	 * will use to maintain RAM state after "power off".
+	*/
+	void setUpRAMBatteryFile();
 
 	// Memory Controllers.
 	byte noMemoryControllerRead(word address);

@@ -302,6 +302,9 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 	}
 	if(ramSize) externalRAM = new byte[ramSize];
 
+	// Set up battery backed memory.
+	if(ramSize >0) setUpRAMBatteryFile();
+
 	// Allocate the ROM.
 	romData = new byte[romSize];
 	// Read the ROM file into memory. For speed, load the entire ROM into memory -> Worst case 8Mb.
@@ -318,7 +321,6 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 	if(SGB_flag) std::cout << "Super GameBoy is currently not fully emulated :(!" << std::endl;
 	return SUCCESS;
 }
-
 
 void Cartridge::close() {
 	// Clear any dynamic data.
@@ -337,6 +339,9 @@ void Cartridge::close() {
 	// Close the ROM file.
 	if (romLoaded) romFile.close();
 
+	// Close the RAM file.
+	if(ramSize) ramFile.close();
+		
 	// Clear control flags.
 	romLoaded = false;
 	CGB_flag = false;
@@ -381,6 +386,32 @@ void Cartridge::resolveLicensee(){
 	// According to https://gbdev.io/pandocs/The_Cartridge_Header.html#014b--old-licensee-code.
 	// todo!!! implement conversion chart.
 	licensee = "";
+}
+
+void Cartridge::setUpRAMBatteryFile(){
+	std::string batSaveFilePath = std::string(BAT_SAVE_SUB_DIR)
+		.append("\\")
+		.append(cartridgeName)
+		.append(".sav");
+
+	// Try an open the battery save.
+	ramFile.open(batSaveFilePath, std::ios::in | std::ios::out | std::ios::binary);
+
+	// Save file does not exist. Make a new one.
+	if (!ramFile.is_open()){
+		ramFile.close();
+		// Create a battery save directory if one does not exist.
+		if (!std::filesystem::is_directory(BAT_SAVE_SUB_DIR) || !std::filesystem::exists(BAT_SAVE_SUB_DIR)) {
+			std::filesystem::create_directory(BAT_SAVE_SUB_DIR);
+		}
+
+		// Create a new file. 
+		ramFile.open(batSaveFilePath, std::ios::out | std::ios::binary);
+		ramFile.write((char*)externalRAM, ramSize);
+	} else {
+		// Load the buffer with the save files contents.
+		ramFile.read((char*)externalRAM, ramSize);
+	}
 }
 
 /*======================================================================*
@@ -474,6 +505,10 @@ void Cartridge::controllerMCB1Write(word address, byte data){
 		uint32_t addressToWrite = targetBank*RAM_BANK_SIZE + (address - EXTERNALRAM_START);
 		// Write the value of RAM.
 		externalRAM[addressToWrite] = data;
+
+		// Write to the "battery backed" file. !!!TODO do this on another thread and maybe group writes for efficiency.
+		ramFile.seekp(addressToWrite);
+		ramFile.write((char*) &data, 1);
 	}
 	// If we write outside this address space -> simply ignore.
 }
@@ -602,6 +637,10 @@ void Cartridge::controllerMCB3Write(word address, byte data){
 				uint32_t addressToWrite = mbc3RAMBank*RAM_BANK_SIZE + (address - EXTERNALRAM_START);
 				// Write the value of RAM.
 				externalRAM[addressToWrite] = data;
+
+				// Write to the "battery backed" file. !!!TODO do this on another thread and maybe group writes for efficiency.
+				ramFile.seekp(addressToWrite);
+				ramFile.write((char*) &data, 1);
 				break;
 			}
 			// RTC S - Seconds.

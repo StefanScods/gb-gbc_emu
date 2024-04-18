@@ -1349,5 +1349,6 @@ const int AMOUNT_BG_TO_UPDATE_PER_CYCLE = (BGM0_DATA_END - BGM0_DATA_START + 1) 
 #define SET 24
 
 const char SAVE_SUB_DIR[] = "saveStates";
+const char BAT_SAVE_SUB_DIR[] = "batterySaves";
 
 #endif
