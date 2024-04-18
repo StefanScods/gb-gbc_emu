@@ -13,7 +13,210 @@ date: 2022-05-14
 #include <iomanip>
 #include <functional>
 
+void RTC::syncToCartridge(std::string cartridgeName){
+	std::string timerSaveFilePath = std::string(BAT_SAVE_SUB_DIR)
+		.append("\\")
+		.append(cartridgeName)
+		.append(".rtc");
 
+	// Try an open the RTC save.
+	clockFile.open(timerSaveFilePath, std::ios::in | std::ios::out | std::ios::binary);
+
+	// RTC file does not exist. Make a new one.
+	if (!clockFile.is_open()){
+		clockFile.close();
+		// Create a battery save directory if one does not exist.
+		if (!std::filesystem::is_directory(BAT_SAVE_SUB_DIR) || !std::filesystem::exists(BAT_SAVE_SUB_DIR)) {
+			std::filesystem::create_directory(BAT_SAVE_SUB_DIR);
+		}
+
+		// Create a new file. 
+		clockFile.open(timerSaveFilePath, std::ios::out | std::ios::binary);
+		saveClockToFile();
+	} else {
+		// Load the buffer with the save files contents.
+		loadClockFromFile();
+	}
+}
+
+void RTC::latchClock(){
+	// Get current number of seconds. 
+	long long currTime = std::chrono::duration_cast<std::chrono::seconds>(
+		std::chrono::steady_clock::now().time_since_epoch()
+	).count();
+	// Figure out what value to latch.
+	long long timeToLatch = valueSaved;
+	if(halt == 0) timeToLatch += (currTime - lastSaved);
+
+	sec = (timeToLatch % 60) & 0XFF;
+	timeToLatch /= 60; 
+	min = (timeToLatch % 60) & 0XFF;
+	timeToLatch /= 60; 
+	hour = (timeToLatch % 24) & 0XFF;
+	timeToLatch /= 24; 
+
+	dayL = timeToLatch & 0XFF;
+	timeToLatch = timeToLatch >> 8;
+	dayH = timeToLatch & 0b1;
+	timeToLatch = timeToLatch >> 1;
+
+	// Check to see if the clock has overflowed.
+	if (timeToLatch > 0) carry = 1;
+}
+
+byte RTC::readLatchedData(int targetReg){
+	byte value = 0;
+	switch(targetReg){
+		// RTC S - Seconds.
+		case 0x8:
+			return sec;
+		// RTC M - Minutes.
+		case 0x9:
+			return min;
+		// RTC H - Hours.
+		case 0xA:
+			return hour;
+		// RTC DL - Lower 8 bits of Day Counter.
+		case 0xB:
+			return dayL;
+		// RTC DH - Upper 1 bit of Day Counter, Carry Bit, Halt Flag.
+		case 0xC:
+			writeBit(value, 7, carry);
+			writeBit(value, 6, halt);
+			writeBit(value, 0, dayH);
+			return value;
+		default:
+			break;
+	}
+	return HIGH_IMPEDANCE;
+}
+
+void RTC::writeToClock(int targetReg, byte data){
+	// Get current number of seconds. 
+	long long currTime = std::chrono::duration_cast<std::chrono::seconds>(
+		std::chrono::steady_clock::now().time_since_epoch()
+	).count();
+	// Figure out what value to latch.
+	long long timeToLatch = valueSaved;
+	if(halt == 0) timeToLatch += (currTime - lastSaved);
+	
+	switch(targetReg){
+		// RTC S - Seconds.
+		case 0x8:
+			sec = data;
+			// Replace the sec value.
+			valueSaved -= timeToLatch % 60;
+			timeToLatch += sec;
+			break;
+		// RTC M - Minutes.
+		case 0x9:
+			min = data;
+			// Replace the min value.
+			timeToLatch -= ((timeToLatch / 60) % 60) * 60;
+			timeToLatch += min * 60;
+			break;
+		// RTC H - Hours.
+		case 0xA:
+			hour = data;
+			// Replace the hour value.
+			timeToLatch -= ((timeToLatch / 3600) % 24) * 3600;
+			timeToLatch += hour * 3600;
+			break;
+		// RTC DL - Lower 8 bits of Day Counter.
+		case 0xB:
+			dayL = data;
+			// Replace the day value.
+			timeToLatch -= ((timeToLatch / 86400) % 0xFF) * 86400;
+			timeToLatch += dayL * 86400;
+			break;
+		// RTC DH - Upper 1 bit of Day Counter, Carry Bit, Halt Flag.
+		case 0xC:
+			dayH = readBit(data, 0);
+			halt =  readBit(data, 6);
+			carry = readBit(data, 7);
+			// Replace the day value.
+			timeToLatch -= ((timeToLatch / 22032000)) * 22032000;
+			timeToLatch += dayH * 22032000;
+			break;
+		default:
+			break;
+	}
+
+	valueSaved = timeToLatch;
+	lastSaved = currTime;
+	saveClockToFile(true);
+}
+
+void RTC::reset(){
+	sec = 0;
+	min = 0;
+	hour = 0;
+	dayL = 0;
+	dayH = 0;
+	halt = 0;
+	carry = 0;
+	lastSaved = 0;
+	valueSaved = 0;
+	clockFile.close();
+}
+
+void RTC::saveClockToFile(bool partial){
+	int bytesToWrite = sizeof(long long)*2;
+	int offset = sizeof(byte)*4 + sizeof(bool)*3;
+	if (!partial){
+		bytesToWrite += offset;
+		offset = 0;
+	}
+    
+    byte* writeBuffer = new byte[
+        bytesToWrite
+    ];
+    byte* writeBufferStart = writeBuffer;
+
+	// Only write out the entire state if partial is turned off.
+	if(!partial){
+		std::memcpy(writeBuffer, &sec, sizeof(byte)); writeBuffer+=sizeof(byte);
+		std::memcpy(writeBuffer, &min, sizeof(byte)); writeBuffer+=sizeof(byte);
+		std::memcpy(writeBuffer, &hour, sizeof(byte)); writeBuffer+=sizeof(byte);
+		std::memcpy(writeBuffer, &dayL, sizeof(byte)); writeBuffer+=sizeof(byte);
+		
+		std::memcpy(writeBuffer, &dayH, sizeof(bool)); writeBuffer+=sizeof(bool);
+		std::memcpy(writeBuffer, &halt, sizeof(bool)); writeBuffer+=sizeof(bool);
+		std::memcpy(writeBuffer, &carry, sizeof(bool)); writeBuffer+=sizeof(bool);
+	}
+
+	std::memcpy(writeBuffer, &lastSaved, sizeof(long long)); writeBuffer+=sizeof(long long);
+	std::memcpy(writeBuffer, &valueSaved, sizeof(long long)); writeBuffer+=sizeof(long long);
+
+	// Write out the data.
+	clockFile.seekp(offset);
+    clockFile.write((char*)writeBufferStart, bytesToWrite);
+    delete[] writeBufferStart;
+}
+
+void RTC::loadClockFromFile(){
+	int bytesToRead = sizeof(byte)*4 + sizeof(bool)*3 + sizeof(long long)*2;
+    byte* readBuffer = new byte[
+        bytesToRead
+    ];
+    byte* readBufferStart = readBuffer;
+	clockFile.seekg(0);
+    clockFile.read((char*)readBufferStart, bytesToRead);
+	
+	std::memcpy(&sec, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+	std::memcpy(&min, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+	std::memcpy(&hour, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+	std::memcpy(&dayL, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+	
+	std::memcpy(&dayH, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+	std::memcpy(&halt, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+	std::memcpy(&carry, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+
+	std::memcpy(&lastSaved, readBuffer, sizeof(long long)); readBuffer+=sizeof(long long);
+	std::memcpy(&valueSaved, readBuffer, sizeof(long long)); readBuffer+=sizeof(long long);
+
+	delete[] readBufferStart;
+}
 
 LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 	// Clear previous load attempts.
@@ -77,6 +280,8 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 
 	// Extract the cartridge type and performs some cartridge specific initialization.
 	cartridgeType = headerDataBuffer[CARTRIDGE_TYPE_ADDR];
+	usingBattery = false;
+	usingRTC = false;
 	switch (cartridgeType) {
 	case(ROM_ONLY):
 		memoryControllerName = "ROM Only";
@@ -113,6 +318,7 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 			std::bind(&Cartridge::controllerMCB1SaveToState, this, std::placeholders::_1),
 			std::bind(&Cartridge::controllerMCB1LoadFromState, this, std::placeholders::_1)
 		);
+		usingBattery = true;
 		break;
 	case(MBC2):
 		memoryControllerName = "MBC2";
@@ -144,11 +350,25 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 		break;
 	case(MBC3_TIMER_BATTERY):
 		memoryControllerName = "MBC3 + Timer + Battery";
-		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
+		memory->setMemoryController(
+			std::bind(&Cartridge::controllerMCB3Write, this, std::placeholders::_1, std::placeholders::_2),
+			std::bind(&Cartridge::controllerMCB3Read, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB3SaveToState, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB3LoadFromState, this, std::placeholders::_1)
+		);
+		usingBattery = true;
+		usingRTC = true;
 		break;
 	case(MBC3_TIMER_RAM_BATTERY):
 		memoryControllerName = "MBC3 + Timer + RAM + Battery";
-		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
+		memory->setMemoryController(
+			std::bind(&Cartridge::controllerMCB3Write, this, std::placeholders::_1, std::placeholders::_2),
+			std::bind(&Cartridge::controllerMCB3Read, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB3SaveToState, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB3LoadFromState, this, std::placeholders::_1)
+		);
+		usingBattery = true;
+		usingRTC = true;
 		break;
 	case(MBC3):
 		memoryControllerName = "MBC3";
@@ -176,6 +396,7 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 			std::bind(&Cartridge::controllerMCB3SaveToState, this, std::placeholders::_1),
 			std::bind(&Cartridge::controllerMCB3LoadFromState, this, std::placeholders::_1)
 		);
+		usingBattery = true;
 		break;
 	case(MBC4):
 		memoryControllerName = "MBC4";
@@ -286,6 +507,7 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 	switch (ramSizeCode) {
 	case(0x00):
 		ramSize = 0;
+		usingBattery = false;
 		break;
 	case(0x01):
 		ramSize = (int)RAM_BANK_SIZE*0.25;
@@ -298,12 +520,16 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 		break;
 	default:
 		ramSize = 0;
+		usingBattery = false;
 		return INVALID_RAM_SIZE;
 	}
 	if(ramSize) externalRAM = new byte[ramSize];
 
 	// Set up battery backed memory.
-	if(ramSize >0) setUpRAMBatteryFile();
+	if(usingBattery) setUpRAMBatteryFile();
+
+	// Set up timer.
+	if(usingRTC) realTimeClock.syncToCartridge(cartridgeName);
 
 	// Allocate the ROM.
 	romData = new byte[romSize];
@@ -340,12 +566,16 @@ void Cartridge::close() {
 	if (romLoaded) romFile.close();
 
 	// Close the RAM file.
-	if(ramSize) ramFile.close();
+	if(usingBattery) ramFile.close();
+
+	if(usingRTC) realTimeClock.reset();
 		
 	// Clear control flags.
 	romLoaded = false;
 	CGB_flag = false;
 	SGB_flag = false;
+	usingBattery = false;
+	usingRTC = false;
 
 	// Reset all memory controller regs.
 	mbc1Mask = 0b00011111;
@@ -507,8 +737,10 @@ void Cartridge::controllerMCB1Write(word address, byte data){
 		externalRAM[addressToWrite] = data;
 
 		// Write to the "battery backed" file. !!!TODO do this on another thread and maybe group writes for efficiency.
-		ramFile.seekp(addressToWrite);
-		ramFile.write((char*) &data, 1);
+		if(usingBattery){
+			ramFile.seekp(addressToWrite);
+			ramFile.write((char*) &data, 1);
+		}
 	}
 	// If we write outside this address space -> simply ignore.
 }
@@ -555,8 +787,6 @@ void Cartridge::controllerMCB1LoadFromState(std::ifstream & stateFile){
 /*======================================================================*
  *  							    MCB3								*
  *======================================================================*/
-
-//todo!!! do all timer stuff.
 byte Cartridge::controllerMCB3Read(word address){
 	// ROM Bank 0.
 	if(address >= ROMBANK0_START && address <= ROMBANK0_END){
@@ -581,16 +811,13 @@ byte Cartridge::controllerMCB3Read(word address){
 				// Read the value of RAM.
 				return externalRAM[addressToWrite];
 			}
-			// RTC S - Seconds.
+			// RTC.
 			case 0x8:
-			// RTC M - Minutes.
 			case 0x9:
-			// RTC H - Hours.
 			case 0xA:
-			// RTC DL - Lower 8 bits of Day Counter.
 			case 0xB:
-			// RTC DH - Upper 1 bit of Day Counter, Carry Bit, Halt Flag.
 			case 0xC:
+				if(usingRTC) return realTimeClock.readLatchedData(mbc3RAMBank);
 			default:
 				return HIGH_IMPEDANCE;
 		}
@@ -619,6 +846,7 @@ void Cartridge::controllerMCB3Write(word address, byte data){
 		// When changing the latch from 0 -> 1, latch current time.
 		if(mbc3Latch == 0x00 && data == 0x01){
 			// Save current time.
+			if(usingRTC) realTimeClock.latchClock();
 		}
 		mbc3Latch = data;
 	// RAM Bank 00–03 or RTC Register 08-0C.
@@ -639,20 +867,19 @@ void Cartridge::controllerMCB3Write(word address, byte data){
 				externalRAM[addressToWrite] = data;
 
 				// Write to the "battery backed" file. !!!TODO do this on another thread and maybe group writes for efficiency.
-				ramFile.seekp(addressToWrite);
-				ramFile.write((char*) &data, 1);
+				if(usingBattery){
+					ramFile.seekp(addressToWrite);
+					ramFile.write((char*) &data, 1);
+				}
 				break;
 			}
-			// RTC S - Seconds.
+			// RTC.
 			case 0x8:
-			// RTC M - Minutes.
 			case 0x9:
-			// RTC H - Hours.
 			case 0xA:
-			// RTC DL - Lower 8 bits of Day Counter.
 			case 0xB:
-			// RTC DH - Upper 1 bit of Day Counter, Carry Bit, Halt Flag.
 			case 0xC:
+				if(usingRTC) realTimeClock.writeToClock(mbc3RAMBank, data);
 			default:
 				break;
 		}
@@ -677,6 +904,9 @@ void Cartridge::controllerMCB3SaveToState(std::ofstream & stateFile){
 	// Write out the data.
     stateFile.write((char*)writeBufferStart, bytesToWrite);
     delete[] writeBufferStart;
+
+	// Save the clock.
+	if(usingRTC) realTimeClock.saveClockToFile();
 }
 void Cartridge::controllerMCB3LoadFromState(std::ifstream & stateFile){
 	int ramCopySize = sizeof(byte)*ramSize;
@@ -695,4 +925,13 @@ void Cartridge::controllerMCB3LoadFromState(std::ifstream & stateFile){
 	std::memcpy(externalRAM, readBuffer, ramCopySize); readBuffer+=ramCopySize;
 
 	delete[] readBufferStart;
+
+	// Sync the bat file.
+	if(usingBattery){
+		ramFile.seekp(0);
+		ramFile.write((char*) externalRAM, ramCopySize);
+	}
+
+	// Load the clock.
+	if(usingRTC) realTimeClock.loadClockFromFile();
 }

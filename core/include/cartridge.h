@@ -9,9 +9,43 @@ date: 2022-05-14
 #include <fstream>
 #include <string>
 #include <filesystem> 
+#include <chrono>
 
 class Memory;
 class Core;
+
+class RTC {
+	private:
+		// The value currently held in the clock;
+		byte sec = 0;
+		byte min = 0;
+		byte hour = 0;
+		byte dayL = 0;
+		bool dayH = 0;
+
+		bool halt = 0;
+		bool carry = 0;
+
+		// The unix timestamp of when the clock value was last saved.
+		long long lastSaved = 0;
+		long long valueSaved = 0;
+
+		std::string targetClockName;
+
+		std::fstream clockFile;
+
+	public:
+		void syncToCartridge(std::string cartridgeName);
+		void latchClock();
+
+		void reset();
+
+		byte readLatchedData(int targetReg);
+		void writeToClock(int targetReg, byte data);
+
+		void saveClockToFile(bool partial = false);
+		void loadClockFromFile();
+};
 
 class Cartridge {
 private:
@@ -33,6 +67,7 @@ private:
 	byte mbc3ROMBank = 0;
 	byte mbc3RAMBank = 0;
 	byte mbc3Latch = 0;
+	RTC realTimeClock;
 
 	uint32_t romSize = 0;
 	uint32_t ramSize = 0;
@@ -52,6 +87,8 @@ private:
 	byte* externalRAM = nullptr;
 
 	bool romLoaded = false;
+	bool usingBattery = false;
+	bool usingRTC = false;
 
 	std::string cartridgeName = "";
 public:
