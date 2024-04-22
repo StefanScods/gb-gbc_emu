@@ -69,6 +69,10 @@ private:
 	byte mbc3Latch = 0;
 	RTC realTimeClock;
 
+	bool mbc5RAMEnable = false;
+	word mbc5ROMBank = 0;
+	byte mbc5RAMBank = 0;
+
 	uint32_t romSize = 0;
 	uint32_t ramSize = 0;
 
@@ -170,6 +174,11 @@ public:
 	void controllerMCB3Write(word address, byte data);
 	void controllerMCB3SaveToState(std::ofstream & stateFile);
 	void controllerMCB3LoadFromState(std::ifstream & stateFile);
+
+	byte controllerMCB5Read(word address);
+	void controllerMCB5Write(word address, byte data);
+	void controllerMCB5SaveToState(std::ofstream & stateFile);
+	void controllerMCB5LoadFromState(std::ifstream & stateFile);
 };
 
 

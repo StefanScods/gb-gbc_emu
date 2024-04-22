@@ -412,15 +412,31 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 		break;
 	case(MBC5):
 		memoryControllerName = "MBC5";
-		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
+		memory->setMemoryController(
+			std::bind(&Cartridge::controllerMCB5Write, this, std::placeholders::_1, std::placeholders::_2),
+			std::bind(&Cartridge::controllerMCB5Read, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB5SaveToState, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB5LoadFromState, this, std::placeholders::_1)
+		);
 		break;
 	case(MBC5_RAM):
 		memoryControllerName = "MBC5 + RAM";
-		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
+		memory->setMemoryController(
+			std::bind(&Cartridge::controllerMCB5Write, this, std::placeholders::_1, std::placeholders::_2),
+			std::bind(&Cartridge::controllerMCB5Read, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB5SaveToState, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB5LoadFromState, this, std::placeholders::_1)
+		);
 		break;
 	case(MBC5_RAM_BATTERY):
 		memoryControllerName = "MBC5 + RAM + Battery";
-		return INVALID_MEMORY_CONTROLLER; // !!!todo support this mc.
+		memory->setMemoryController(
+			std::bind(&Cartridge::controllerMCB5Write, this, std::placeholders::_1, std::placeholders::_2),
+			std::bind(&Cartridge::controllerMCB5Read, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB5SaveToState, this, std::placeholders::_1),
+			std::bind(&Cartridge::controllerMCB5LoadFromState, this, std::placeholders::_1)
+		);
+		usingBattery = true;
 		break;
 	case(MBC5_RUMBLE):
 		memoryControllerName = "MBC5 + Rumble";
@@ -542,9 +558,6 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 	// Raise the ROM loaded flag and print debug info.
 	romLoaded = true;
 
-	// !!!todo Remove this print once PPU has been updated.
-	if(CGB_flag) std::cout << "GameBoy Colour is currently not fully emulated :(!" << std::endl;
-	if(SGB_flag) std::cout << "Super GameBoy is currently not fully emulated :(!" << std::endl;
 	return SUCCESS;
 }
 
@@ -588,6 +601,10 @@ void Cartridge::close() {
 	mbc3ROMBank = 0;
 	mbc3RAMBank = 0;
 	mbc3Latch = 0;
+
+	mbc5RAMEnable = false;
+	mbc5ROMBank = 0;
+	mbc5RAMBank = 0;
 }
 
 std::string Cartridge::convertBytesToHumanReadable(uint32_t size){
@@ -934,4 +951,85 @@ void Cartridge::controllerMCB3LoadFromState(std::ifstream & stateFile){
 
 	// Load the clock.
 	if(usingRTC) realTimeClock.loadClockFromFile();
+}
+
+
+byte Cartridge::controllerMCB5Read(word address){
+	// ROM Bank 0.
+	if(address >= ROMBANK0_START && address <= ROMBANK0_END){
+		return romData[address - ROMBANK0_START];
+	// ROM Bank 01-7F.
+	} else if(address >= ROMBANKN_START && address <= ROMBANKN_END){
+		uint32_t addressToRead = mbc5ROMBank*ROM_BANK_SIZE + (address - ROMBANKN_START);
+		return romData[addressToRead];
+	// RAM Bank 00–03.
+	} else if(address >= EXTERNALRAM_START && address <= EXTERNALRAM_END){
+		// If RAM is disabled or the read is too large return high impedance.
+		if(!mbc5RAMEnable || (uint32_t)(address - EXTERNALRAM_START) >= ramSize) return HIGH_IMPEDANCE;
+		// Calculate the read offset.
+		uint32_t addressToWrite = mbc5RAMBank*RAM_BANK_SIZE + (address - EXTERNALRAM_START);
+		// Read the value of RAM.
+		return externalRAM[addressToWrite];
+	} return HIGH_IMPEDANCE;
+}
+
+void Cartridge::controllerMCB5Write(word address, byte data){
+	// RAM Enable.
+	if(address >= 0x0000 && address <= 0x1FFF){
+		// Enable the external RAM partition iff the data is 0xA. Else disable.
+		if(data==0x0A) mbc5RAMEnable = true;
+		else mbc5RAMEnable = false;
+	// ROM Bank Number (lower 8 bits).
+	} else if (address >= 0x2000 && address <= 0x2FFF){
+		mbc5ROMBank = mbc5ROMBank & 0x0100 | data;
+	// ROM Bank Number (top 9th bit).
+	} else if (address >= 0x3000 && address <= 0x3FFF){
+		mbc5ROMBank = mbc5ROMBank & 0xFF | (data & 0x01) << 8;
+	// RAM Bank Number.
+	} else if (address >= 0x4000 && address <= 0x5FFF){
+		// Take 3 bits.
+		mbc5RAMBank = 0b00001111 & data;
+	}
+}
+
+void Cartridge::controllerMCB5SaveToState(std::ofstream & stateFile){
+	int ramCopySize = sizeof(byte)*ramSize;
+    int bytesToWrite = sizeof(byte)*1 + sizeof(bool)*1 + sizeof(word)*1 + ramCopySize;
+    byte* writeBuffer = new byte[
+        bytesToWrite
+    ];
+    byte* writeBufferStart = writeBuffer;
+
+	std::memcpy(writeBuffer, &mbc5RAMBank, sizeof(byte)); writeBuffer+=sizeof(byte);
+	std::memcpy(writeBuffer, &mbc5ROMBank, sizeof(word)); writeBuffer+=sizeof(word);
+	std::memcpy(writeBuffer, &mbc5RAMEnable, sizeof(bool)); writeBuffer+=sizeof(bool);
+
+	std::memcpy(writeBuffer, externalRAM, ramCopySize); writeBuffer+=ramCopySize;
+
+	// Write out the data.
+    stateFile.write((char*)writeBufferStart, bytesToWrite);
+    delete[] writeBufferStart;
+}
+void Cartridge::controllerMCB5LoadFromState(std::ifstream & stateFile){
+	int ramCopySize = sizeof(byte)*ramSize;
+    int bytesToRead = sizeof(byte)*1 + sizeof(bool)*1 + sizeof(word)*1 + ramCopySize;
+    byte* readBuffer = new byte[
+        bytesToRead
+    ];
+    byte* readBufferStart = readBuffer;
+    stateFile.read((char*)readBufferStart, bytesToRead);
+
+	std::memcpy(&mbc5RAMBank, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+	std::memcpy(&mbc5ROMBank, readBuffer, sizeof(word)); readBuffer+=sizeof(word);
+	std::memcpy(&mbc5RAMEnable, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+
+	std::memcpy(externalRAM, readBuffer, ramCopySize); readBuffer+=ramCopySize;
+
+	delete[] readBufferStart;
+
+	// Sync the bat file.
+	if(usingBattery){
+		ramFile.seekp(0);
+		ramFile.write((char*) externalRAM, ramCopySize);
+	}
 }
