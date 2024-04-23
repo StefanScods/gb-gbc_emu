@@ -127,6 +127,10 @@ public:
      * @param stateFile The file to load from.
     */
     void loadFromState(std::ifstream & stateFile);
+    /**
+     * @brief Raises the joypad interrupt flag.
+     */
+    void raiseJoypadInterrupt(); 
 };
 
 #endif

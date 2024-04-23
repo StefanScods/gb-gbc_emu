@@ -7,9 +7,8 @@
 #include <SDL.h>
 #include <array>
 #include <functional>
+#include "defines.h"
 
-// Callback function types. 
-typedef std::function<void()> voidFuncWithNoArguments;
 
 /**
  * @brief An object which can be used to bind functions to SDL events.

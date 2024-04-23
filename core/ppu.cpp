@@ -7,6 +7,9 @@ The class implementation for the emulator's PPU / LCD  display.
 #include <set>
 #include <algorithm>
 
+#define CONVERT5TO8 255.0/31
+#define CONVERT8TO5 255.0/31
+
 // todo!!! handle GBC
 // todo!!! ppu enable 
 
@@ -158,6 +161,10 @@ void PPU::reset(){
     WY = 0;
     WX = 0;
     LYC = 0;
+
+    BGPaletteSpecification = 0;
+    OBJPaletteSpecification = 0;
+
     writeToSTAT(0);
     writeToLCDC(0);
 }
@@ -179,7 +186,7 @@ void PPU::destroy(){
 
 void PPU::cycle(bool CGBMode){
     // Pause execution if the PPU is disabled.
-    // if(!ppuEnable) return;
+    // if(!ppuEnable) return; //todo!!! this doesnt work 
 
     /**
      * The PPU renders to the LCD in rows called scan lines. There are 154 scanlines in the display, 
@@ -319,10 +326,10 @@ void PPU::increaseScanline(){
 void PPU::renderCurrentScanlineVRAM(bool CGBMode){
     if(scanline > LAST_VISIBLE_SCANLINE) return;
 
-    if(CGBMode){
-        std::cerr << "Error: GameBoy Colour Mode is currently unsupported!" << std::endl;
-        return;
-    }
+    // if(CGBMode){
+    //     std::cerr << "Error: GameBoy Colour Mode is currently unsupported!" << std::endl;
+    //     return;
+    // }
 
     // Render all layers on their own scanline.
     renderBGMapScanline(CGBMode);
@@ -558,44 +565,43 @@ void PPU::updateTile(int tileIndex, bool vRAMBank){
 }
 
 void PPU::updatePalettes(bool CGBMode){
-    // Handle the monochrome mode.
-    if(!CGBMode){
-        // Read BGP at 0xFF47 and construct the colour.
-        byte bgTileData = memory->read(0xFF47);
-        for(int swatchIndex = 0; swatchIndex < SWATCHES_PER_PALETTE; swatchIndex++){
-            const byte* selectedBrightness = &MONOCHROME_COLOURS[(bgTileData & 0x3) * 3];
-            backgroundColours[swatchIndex * 4 + 3] = 0xFF;                         // Alpha.
-            backgroundColours[swatchIndex * 4 + 2] = *(selectedBrightness + 2);    // Blue.
-            backgroundColours[swatchIndex * 4 + 1] = *(selectedBrightness + 1);    // Green.
-            backgroundColours[swatchIndex * 4 + 0] = *(selectedBrightness + 0);    // Red.
-            bgTileData = bgTileData >> 2;
-        }
-        // Read OBP0 and 1 at 0xFF48/0xFF49 and construct the colour.
-        for(int paletteIndex = 0; paletteIndex < NUMBER_OF_OBJECT_PALETTES_NON_COLOR; paletteIndex++){
-            byte obTileData = memory->read(0xFF48 + paletteIndex);
-            for(int swatchIndex = 0; swatchIndex < SWATCHES_PER_PALETTE; swatchIndex++){
-                const byte* selectedBrightness = &MONOCHROME_COLOURS[(obTileData & 0x3) * 3];
-                int offset = paletteIndex * SWATCHES_PER_PALETTE * 4;
-                // Set the alpha of swatch0 to 0 (transparent).
-                objectColours[offset + swatchIndex * 4 + 3] = swatchIndex ? 0xFF : 0x00;    // Alpha.
-                objectColours[offset + swatchIndex * 4 + 2] = *(selectedBrightness + 2);    // Blue.
-                objectColours[offset + swatchIndex * 4 + 1] = *(selectedBrightness + 1);    // Green.
-                objectColours[offset + swatchIndex * 4 + 0] = *(selectedBrightness + 0);    // Red.
-                obTileData = obTileData >> 2;
-            }
-        }
+    // For gameboy colour palettes, colour data is written directly using the gameboy colour's specific IO regs.
+    if(CGBMode){
         return;
     }
 
-    // Handle the GameBoy Colour Mode.
-    std::cerr << "Error: GameBoy Colour Palettes are currently unsupported!" << std::endl;
+    // Handle the monochrome mode.
+    // Read BGP at 0xFF47 and construct the colour.
+    byte bgTileData = memory->read(0xFF47);
+    for(int swatchIndex = 0; swatchIndex < SWATCHES_PER_PALETTE; swatchIndex++){
+        const byte* selectedBrightness = &MONOCHROME_COLOURS[(bgTileData & 0x3) * 3];
+        backgroundColours[swatchIndex * 4 + 3] = 0xFF;                         // Alpha.
+        backgroundColours[swatchIndex * 4 + 2] = *(selectedBrightness + 2);    // Blue.
+        backgroundColours[swatchIndex * 4 + 1] = *(selectedBrightness + 1);    // Green.
+        backgroundColours[swatchIndex * 4 + 0] = *(selectedBrightness + 0);    // Red.
+        bgTileData = bgTileData >> 2;
+    }
+    // Read OBP0 and 1 at 0xFF48/0xFF49 and construct the colour.
+    for(int paletteIndex = 0; paletteIndex < NUMBER_OF_OBJECT_PALETTES_NON_COLOR; paletteIndex++){
+        byte obTileData = memory->read(0xFF48 + paletteIndex);
+        for(int swatchIndex = 0; swatchIndex < SWATCHES_PER_PALETTE; swatchIndex++){
+            const byte* selectedBrightness = &MONOCHROME_COLOURS[(obTileData & 0x3) * 3];
+            int offset = paletteIndex * SWATCHES_PER_PALETTE * 4;
+            // Set the alpha of swatch0 to 0 (transparent).
+            objectColours[offset + swatchIndex * 4 + 3] = swatchIndex ? 0xFF : 0x00;    // Alpha.
+            objectColours[offset + swatchIndex * 4 + 2] = *(selectedBrightness + 2);    // Blue.
+            objectColours[offset + swatchIndex * 4 + 1] = *(selectedBrightness + 1);    // Green.
+            objectColours[offset + swatchIndex * 4 + 0] = *(selectedBrightness + 0);    // Red.
+            obTileData = obTileData >> 2;
+        }
+    } 
 }
 
 void PPU::updateBackgroundMap(bool CGBMode, bool mapNum){
-    if(CGBMode){
-        std::cerr << "Error: GameBoy Colour Mode is currently unsupported!" << std::endl;
-        return;
-    }
+    // if(CGBMode){
+    //     std::cerr << "Error: GameBoy Colour Mode is currently unsupported!" << std::endl;
+    //     return;
+    // }
 
     // Handle the monochrome mode.
     byte* startOfTileMapPointer = memory->getBytePointer(mapNum ? BGM1_DATA_START : BGM0_DATA_START);
@@ -673,6 +679,54 @@ void PPU::writeToLCDC(byte data){
     LCDC = data;
 }
 
+void PPU::writeToBCPS(byte data){BGPaletteSpecification = data & 0b10111111;}
+byte PPU::readFromBCPS(){return BGPaletteSpecification;}
+void PPU::writeToOCPS(byte data){OBJPaletteSpecification = data & 0b10111111;}
+byte PPU::readFromOCPS(){return OBJPaletteSpecification;}
+
+void PPU::writeToBCPDandOCPD(byte data, bool objectPalette){
+    std::cout << data << std::endl;
+
+    byte* targetReg = objectPalette ? &OBJPaletteSpecification : &BGPaletteSpecification;
+    byte* targetPalette = objectPalette? objectColours : backgroundColours;
+ 
+    byte palette = ((*targetReg) & 0b11000) >> 3;
+    byte swatch = ((*targetReg) & 0b110) >> 1;
+    byte high = (*targetReg) & 0b1;
+    int targetSwatch = palette*SWATCHES_PER_PALETTE*4 + swatch*4;
+    // Keep all zero colour for object palettes as transparent.
+    if(swatch == 0 && objectPalette) return;
+    // Target the last 2 bits of green and all blue.
+    if (high){
+        int blue5 = (data & 0b01111100) * CONVERT5TO8;
+        targetPalette[targetSwatch + 2] = (byte) std::max(0xFF, blue5);
+        
+        int green5 =  (byte) (targetPalette[targetSwatch + 1] * CONVERT8TO5);
+        green5 = (green5 & 0b111 | ((data & 0b11) << 3)) * CONVERT5TO8;
+        targetPalette[targetSwatch + 1] = (byte) std::max(0xFF, green5);
+
+     // Target the first 3 bits of green and all red.
+    } else {
+        int red5 = (data & 0b11111) * CONVERT5TO8;
+        targetPalette[targetSwatch + 0] = (byte) std::max(0xFF, red5);
+        
+        int green5 =  (byte) (targetPalette[targetSwatch + 1] * CONVERT8TO5);
+        green5 = (green5 & 0b11000 | ((data & 0b1100000) >> 5)) * CONVERT5TO8;
+        targetPalette[targetSwatch + 1] = (byte) std::max(0xFF, green5);
+    }
+
+    // Auto increment register. 
+    if(readBit((*targetReg), 7)){
+        (*targetReg)++;
+        // Overflow.
+        if(readBit((*targetReg), 6)) (*targetReg) = 0b10000000;
+    }
+}
+
+byte PPU::readFromBCPDandOCPD(bool objectPalette){
+    return HIGH_IMPEDANCE;
+}
+
 void PPU::updateOAM(){
     byte* OAMPointer = memory->getBytePointer(OAM_START);
     for(int i = 0; i < NUMBER_OF_OBJECTS; i++){
@@ -717,7 +771,7 @@ void PPU::saveToState(std::ofstream & stateFile){
     bytesToWrite += bgMapSize*2;
     bytesToWrite += tileMapSize;
     bytesToWrite += tileSize;
-    bytesToWrite += (sizeof(byte)*4 + sizeof(bool)*4)*NUMBER_OF_OBJECTS; // OEM objects.
+    bytesToWrite += (sizeof(byte)*6+ sizeof(bool)*4)*NUMBER_OF_OBJECTS; // OEM objects.
 
     byte* writeBuffer = new byte[
         bytesToWrite
@@ -731,7 +785,9 @@ void PPU::saveToState(std::ofstream & stateFile){
     std::memcpy(writeBuffer, &WX, sizeof(byte)); writeBuffer+=sizeof(byte);
     std::memcpy(writeBuffer, &LYC, sizeof(byte)); writeBuffer+=sizeof(byte);
     std::memcpy(writeBuffer, &STAT, sizeof(byte)); writeBuffer+=sizeof(byte);
-
+    std::memcpy(writeBuffer, &BGPaletteSpecification, sizeof(byte)); writeBuffer+=sizeof(byte);
+    std::memcpy(writeBuffer, &OBJPaletteSpecification, sizeof(byte)); writeBuffer+=sizeof(byte);
+    
     std::memcpy(writeBuffer, &LCDC, sizeof(byte)); writeBuffer+=sizeof(byte);
     std::memcpy(writeBuffer, &ppuEnable, sizeof(bool)); writeBuffer+=sizeof(bool);
     std::memcpy(writeBuffer, &windowAreaStart, sizeof(word)); writeBuffer+=sizeof(word);
@@ -776,7 +832,7 @@ void PPU::loadFromState(std::ifstream & stateFile){
     bytesToRead += bgMapSize*2;
     bytesToRead += tileMapSize;
     bytesToRead += tileSize;
-    bytesToRead += (sizeof(byte)*4 + sizeof(bool)*4)*NUMBER_OF_OBJECTS; // OEM objects.
+    bytesToRead += (sizeof(byte)*6 + sizeof(bool)*4)*NUMBER_OF_OBJECTS; // OEM objects.
 
     byte* readBuffer = new byte[
         bytesToRead
@@ -791,6 +847,8 @@ void PPU::loadFromState(std::ifstream & stateFile){
     std::memcpy(&WX, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
     std::memcpy(&LYC, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
     std::memcpy(&STAT, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
+    std::memcpy(&BGPaletteSpecification, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&OBJPaletteSpecification, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
 
     std::memcpy(&LCDC, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
     std::memcpy(&ppuEnable, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);

@@ -20,28 +20,32 @@ private:
 
     byte data = 0xFF;
 
+    voidFuncWithNoArguments raiseInterrupt = nullptr; 
+
 public:
 
     // Read and write operators for the joypad.
     byte read();
     void write(byte d_data);
 
+    void setInterruptCallback(voidFuncWithNoArguments func){raiseInterrupt = func;}
+
     // State modifiers.
-    void pressA(){a=true;}
+    void pressA(){a=true; raiseInterrupt();}
     void releaseA(){a=false;}
-    void pressB(){b=true;}
+    void pressB(){b=true; raiseInterrupt();}
     void releaseB(){b=false;}
-    void pressStart(){start=true;}
+    void pressStart(){start=true; raiseInterrupt();}
     void releaseStart(){start=false;}
-    void pressSelect(){select=true;}
+    void pressSelect(){select=true; raiseInterrupt();}
     void releaseSelect(){select=false;}
-    void pressUp(){up=true;}
+    void pressUp(){up=true; raiseInterrupt();}
     void releaseUp(){up=false;}
-    void pressDown(){down=true;}
+    void pressDown(){down=true; raiseInterrupt();}
     void releaseDown(){down=false;}
-    void pressLeft(){left=true;}
+    void pressLeft(){left=true; raiseInterrupt();}
     void releaseLeft(){left=false;}
-    void pressRight(){right=true;}
+    void pressRight(){right=true; raiseInterrupt();}
     void releaseRight(){right=false;}
 
     /**

@@ -65,6 +65,9 @@ private:
     byte LYC = 0;
     byte STAT = 0;
 
+    byte BGPaletteSpecification = 0;
+    byte OBJPaletteSpecification = 0;
+
     byte LCDC = 0;
     bool ppuEnable = true;
     word windowAreaStart = BGM0_DATA_START;
@@ -274,6 +277,46 @@ public:
      * @param data The data to write to the LCDC register.
      */
     void writeToLCDC(byte data);
+
+    /**
+     * @brief Used to interface with the BCPS/BGPI register.
+     * 
+     * @param data The data to write to the BCPS/BGPI register.
+     */
+    void writeToBCPS(byte data);
+    /**
+     * @brief Used to interface with the BCPS/BGPI register.
+     * 
+     * @returns data The data held in the BCPS/BGPI register.
+     */
+    byte readFromBCPS();
+    /**
+     * @brief Used to interface with the OCPS/OBPI register.
+     * 
+     * @param data The data to write to the OCPS/OBPI register.
+     */
+    void writeToOCPS(byte data);
+    /**
+     * @brief Used to interface with the OCPS/OBPI register.
+     * 
+     * @returns data The data held in the OCPS/OBPI register.
+     */
+    byte readFromOCPS();
+    /**
+     * @brief Used to interface with the BCPD/BGPD or OCPD/OBPD register.
+     * 
+     * @param data The data to write to the BCPD/BGPD or OCPD/OBPD register.
+     * @param objectPalette Flag to target the object palettes. 
+     */
+    void writeToBCPDandOCPD(byte data, bool objectPalette);
+    /**
+     * @brief Used to interface with the BCPD/BGPD or OCPD/OBPD register.
+     * 
+     * @param objectPalette Flag to target the object palettes.
+     * 
+     * @returns data The data held in the BCPD/BGPD or OCPD/OBPD register.
+     */
+    byte readFromBCPDandOCPD(bool objectPalette);
     
     /**
      * @brief Parse VRAM and update relevant elements of the Object Attribute Table.

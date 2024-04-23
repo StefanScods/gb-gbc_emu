@@ -83,6 +83,7 @@ typedef std::function<void(word, byte)> memoryControllerWriteFunctionTemplate;
 typedef std::function<byte(word)> memoryControllerReadFunctionTemplate;
 typedef std::function<void(std::ofstream &)> memoryControllerSaveToStateFunctionTemplate;
 typedef std::function<void(std::ifstream &)> memoryControllerLoadFromStateFunctionTemplate;
+typedef std::function<void()> voidFuncWithNoArguments;
 
 // CPU flags.
 #define FLAG_Z 7

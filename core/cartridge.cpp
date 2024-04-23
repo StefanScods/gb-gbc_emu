@@ -228,6 +228,7 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 	if (!romFile.is_open()) return CANNOT_READ_FILE; // Cannot read the ROM file.
 	std::filesystem::path cartridgePath(filepath); 
 	cartridgeName = cartridgePath.stem().generic_string();
+	gbcFileExtention = cartridgePath.extension() == ".gbc";
 
 	// Determine the size of the cartridge header.
 	int bytesToRead = CARTRIDGE_HEADER_SIZE * sizeof(byte);
@@ -585,6 +586,7 @@ void Cartridge::close() {
 		
 	// Clear control flags.
 	romLoaded = false;
+	gbcFileExtention = false;
 	CGB_flag = false;
 	SGB_flag = false;
 	usingBattery = false;

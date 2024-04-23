@@ -44,6 +44,9 @@ void IOController::cycle(bool cpuDoubleSpeed){
 void IOController::bindMemory(Memory* d_memory){
     memory = d_memory;
     dmaController.bindMemory(d_memory);
+    joypad.setInterruptCallback(
+        std::bind(&Memory::raiseJoypadInterrupt, d_memory)
+    );
 }
 
 void IOController::TIMATimerOverflowLogic(){
@@ -115,6 +118,18 @@ byte IOController::read(word address){
             writeBit(result, 7, cpu->getDoubleSpeedMode());
             return result;
         }
+        //  BCPS/BGPI (CGB Mode only): Background color palette specification / Background palette index.
+        case 0xFF68:
+            return ppu->readFromBCPS();
+        // BCPD/BGPD (CGB Mode only): Background color palette data / Background palette data.
+        case 0xFF69:
+            return ppu->readFromBCPDandOCPD(false);
+        // OCPS/OBPI (CGB Mode only): OBJ color palette specification / OBJ palette index.
+        case 0xFF6A:
+            return ppu->readFromOCPS();
+        // OCPD/OBPD (CGB Mode only): OBJ color palette data / OBJ palette data.
+        case 0xFF6B:
+            return ppu->readFromBCPDandOCPD(true);
         default:
             //std::cerr << "Error: I/O Device At 0x" << std::hex << address << std::dec <<" Not Yet Supported!" << std::endl;
             return 0;
@@ -222,6 +237,22 @@ void IOController::write(word address, byte data){
         //  KEY1 - Prepare speed switch - CGB Mode Only.
         case 0xFF4D:
             KEY1SwitchArmed = readBit(data, 0);
+            break;
+        //  BCPS/BGPI (CGB Mode only): Background color palette specification / Background palette index.
+        case 0xFF68:
+            ppu->writeToBCPS(data);
+            break;
+        // BCPD/BGPD (CGB Mode only): Background color palette data / Background palette data.
+        case 0xFF69:
+            ppu->writeToBCPDandOCPD(data, false);
+            break;
+        // OCPS/OBPI (CGB Mode only): OBJ color palette specification / OBJ palette index.
+        case 0xFF6A:
+             ppu->writeToOCPS(data);
+            break;
+        // OCPD/OBPD (CGB Mode only): OBJ color palette data / OBJ palette data.
+        case 0xFF6B:
+            ppu->writeToBCPDandOCPD(data, true);
             break;
         default:
             //std::cerr << "Error: I/O Device At 0x" << std::hex << address << std::dec <<" Not Yet Supported!" << std::endl;

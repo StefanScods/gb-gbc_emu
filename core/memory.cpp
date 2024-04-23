@@ -428,6 +428,12 @@ byte *Memory::getBytePointer(word address)
     return nullptr;
 }
 
+void Memory::raiseJoypadInterrupt(){
+    byte interruptFlags = read(INTERRUPT_FLAG_REGISTER_ADDR);
+    writeBit(interruptFlags, 4, true);
+    write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
+}
+
 void Memory::saveToState(std::ofstream & stateFile){
     int vbankSize = sizeof(byte)*(VRAM_END - VRAM_START + 1);
     int wRAM0Size = sizeof(byte)*(WRAMBANK0_END - WRAMBANK0_START + 1);

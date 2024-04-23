@@ -79,6 +79,7 @@ private:
 	std::string memoryControllerName = "";
 	std::string licensee = "";
 
+	bool gbcFileExtention = false;
 	bool CGB_flag = false;
 	bool SGB_flag = false;
 
@@ -117,9 +118,9 @@ public:
 	bool isROMLoaded(){return romLoaded;}
 
 	/**
-	 * @brief Returns whether a ROM cart is a GBC cart only.
+	 * @brief Returns whether a ROM cart is a GBC cart.
 	 */
-	bool isGBCROM(){return CGB_flag;}
+	bool isGBCROM(){return gbcFileExtention;}
 
 	/**
 	 * @brief Closes the loaded ROM file and performs any required clean up.
