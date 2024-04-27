@@ -363,9 +363,9 @@ byte *Memory::getBytePointer(word address)
     // 8000-9FFF   8KB Video RAM (VRAM) (switchable bank 0-1 in CGB Mode).
     else if (address >= VRAM_START && address <= VRAM_END)
     {   
+        updateDirtyVRAM(address, selectedVRAMBank);
         if(selectedVRAMBank) return vRAMBank1 + address - VRAM_START;
         else return vRAMBank2 + address - VRAM_START;
-        updateDirtyVRAM(address, selectedVRAMBank);
     }
 
     // A000-BFFF   8KB External RAM     (in cartridge, switchable bank, if any).
@@ -427,6 +427,8 @@ byte *Memory::getBytePointer(word address)
 
     return nullptr;
 }
+
+void Memory::sendHBlankToIO(){ioController->receiveHBlank();}
 
 void Memory::raiseJoypadInterrupt(){
     byte interruptFlags = read(INTERRUPT_FLAG_REGISTER_ADDR);
@@ -513,3 +515,4 @@ void Memory::loadFromState(std::ifstream & stateFile){
     // Handle On cartridge state.
     if(memoryControllerLoadFromState) memoryControllerLoadFromState(stateFile);
 }
+

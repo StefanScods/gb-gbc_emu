@@ -27,6 +27,7 @@ private:
 
     // DMA Controller.
     DMAController dmaController;
+    HDMAController hdmaController;
 
     // Timers.
     Timer DIVTimer;
@@ -57,6 +58,11 @@ public:
     void TIMATimerOverflowLogic();
     byte read(word address);
     void write(word address, byte data );
+
+    /**
+     * @brief Sends an HBlank event the various IO devices..
+     */
+    void receiveHBlank();
 
     /**
      * @brief Writes the current state to a state file.

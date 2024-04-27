@@ -116,6 +116,12 @@ public:
     }
 
     /**
+     * @brief Updates the VRAM bank currently used.
+     *
+     * @param vramBank The bank to switch to.
+    */
+    void setActiveVRAMBank(bool vramBank){selectedVRAMBank = vramBank;}
+    /**
      * @brief Writes the current state to a state file.
      *
      * @param stateFile The file to write to.
@@ -131,6 +137,11 @@ public:
      * @brief Raises the joypad interrupt flag.
      */
     void raiseJoypadInterrupt(); 
+
+    /**
+     * @brief Sends an HBlank event to the IO controller.
+     */
+    void sendHBlankToIO();
 };
 
 #endif

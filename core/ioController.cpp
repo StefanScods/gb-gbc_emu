@@ -7,6 +7,8 @@
 #include "include/ppu.h"
 #include <functional>
 
+// todo!!! turn off GBC regs if we are not running in GBC mode.
+
 void IOController::init(CPU* d_cpu, PPU* d_ppu){
     cpu = d_cpu;
     ppu = d_ppu;
@@ -32,6 +34,7 @@ void IOController::reset(){
     
     joypad.reset();
     dmaController.reset();
+    hdmaController.reset();
 }
 
 void IOController::cycle(bool cpuDoubleSpeed){
@@ -44,6 +47,7 @@ void IOController::cycle(bool cpuDoubleSpeed){
 void IOController::bindMemory(Memory* d_memory){
     memory = d_memory;
     dmaController.bindMemory(d_memory);
+    hdmaController.bindMemory(d_memory);
     joypad.setInterruptCallback(
         std::bind(&Memory::raiseJoypadInterrupt, d_memory)
     );
@@ -118,6 +122,9 @@ byte IOController::read(word address){
             writeBit(result, 7, cpu->getDoubleSpeedMode());
             return result;
         }
+        //  HDMA5 -  VRAM DMA length/mode/start.
+        case 0xFF55:
+            return hdmaController.readStatus();
         //  BCPS/BGPI (CGB Mode only): Background color palette specification / Background palette index.
         case 0xFF68:
             return ppu->readFromBCPS();
@@ -238,6 +245,30 @@ void IOController::write(word address, byte data){
         case 0xFF4D:
             KEY1SwitchArmed = readBit(data, 0);
             break;
+        // VBK - VRAM bank.
+        case 0xFF4F:
+            memory->setActiveVRAMBank(readBit(data, 0));
+            break;
+        //  HDMA1 - VRAM DMA source (high).
+        case 0xFF51:
+            hdmaController.setSourceAddr(data, true);
+            break;
+        //  HDMA2 - VRAM DMA source (low).   
+        case 0xFF52:
+            hdmaController.setSourceAddr(data, false);
+            break;
+        //  HDMA3 - VRAM DMA destination (high).
+        case 0xFF53:
+            hdmaController.setTargetAddr(data, true);
+            break;
+        //  HDMA4 - VRAM DMA destination (low).
+        case 0xFF54:
+            hdmaController.setTargetAddr(data, false);
+            break;
+        //  HDMA5 -  VRAM DMA length/mode/start.
+        case 0xFF55:
+            hdmaController.setStatus(data);
+            break;
         //  BCPS/BGPI (CGB Mode only): Background color palette specification / Background palette index.
         case 0xFF68:
             ppu->writeToBCPS(data);
@@ -260,9 +291,13 @@ void IOController::write(word address, byte data){
     }
 }
 
+void IOController::receiveHBlank(){
+    hdmaController.transferChunk();
+}
+
 void IOController::saveToState(std::ofstream & stateFile){
     int bytesToWrite = sizeof(byte)*6 + sizeof(bool);
-    bytesToWrite += sizeof(bool) + sizeof(cycles) + sizeof(word); // DMA size.
+    bytesToWrite += sizeof(bool)*3 + sizeof(cycles) + sizeof(word)*3 + sizeof(byte); // DMA size.
     bytesToWrite += (sizeof(bool) + sizeof(cycles)*2 + sizeof(byte))*2; // Timer size.
     byte* writeBuffer = new byte[
         bytesToWrite
@@ -273,6 +308,7 @@ void IOController::saveToState(std::ofstream & stateFile){
 
     // DMA.
     dmaController.saveToState(writeBuffer);
+    hdmaController.saveToState(writeBuffer);
 
     // Timers.
     std::memcpy(writeBuffer, &TMA, sizeof(byte)); writeBuffer+=sizeof(byte);
@@ -296,7 +332,7 @@ void IOController::saveToState(std::ofstream & stateFile){
 
 void IOController::loadFromState(std::ifstream & stateFile){
     int bytesToRead = sizeof(byte)*6 + sizeof(bool);
-    bytesToRead += sizeof(bool) + sizeof(cycles) + sizeof(word); // DMA size.
+    bytesToRead += sizeof(bool)*3 + sizeof(cycles) + sizeof(word)*3 + sizeof(byte); // DMA size.
     bytesToRead += (sizeof(bool) + sizeof(cycles)*2 + sizeof(byte))*2; // Timer size.
     byte* readBuffer = new byte[
         bytesToRead
@@ -309,6 +345,7 @@ void IOController::loadFromState(std::ifstream & stateFile){
 
     // DMA.
     dmaController.loadFromState(readBuffer);
+    hdmaController.loadFromState(readBuffer);
 
     // Timers.
     std::memcpy(&TMA, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);

@@ -53,6 +53,10 @@ LoadCartridgeReturnCodes Core::loadROM(std::string filePath){
             "Successfully loaded ROM! Playing " +
             cartridge.getROMName() +
             "...";
+            // Set up any GBC specific changes.
+            if(cartridge.isGBCROM()){
+                cpu.setInitalValuesColour();
+            }
             break;
         case CANNOT_READ_FILE:
             message = "ERROR: Could not open the the ROM file. Check permissions!";

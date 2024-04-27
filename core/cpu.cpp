@@ -56,6 +56,11 @@ void CPU::setInitalValues()
     activeInterruptVector = 0x0000;
 }
 
+void CPU::setInitalValuesColour(){
+    // https://gbdev.io/pandocs/CGB_Registers.html#detecting-cgb-and-gba-functions
+    *A = 0x11;
+}
+
 byte CPU::readNextInstructionByte()
 {
     // Fetch the next byte of the instruction.

@@ -103,6 +103,11 @@ public:
     void setInitalValues();
     
     /**
+     * @brief Additional initialization steps for Game Boy Colour.
+     */
+    void setInitalValuesColour();
+    
+    /**
      * @brief Toggles the CPU's verbose variable. While verbose is set to true,
      * more std::cout messages will be printed to console displaying the CPUs
      * activity.

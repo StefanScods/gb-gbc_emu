@@ -7,9 +7,6 @@ The class implementation for the emulator's PPU / LCD  display.
 #include <set>
 #include <algorithm>
 
-#define CONVERT5TO8 255.0/31
-#define CONVERT8TO5 255.0/31
-
 // todo!!! handle GBC
 // todo!!! ppu enable 
 
@@ -274,6 +271,7 @@ void PPU::cycle(bool CGBMode){
                 mode = 0;
                 writeBit(STAT, 0, 0);
                 writeBit(STAT, 1, 0);
+                if(CGBMode) memory->sendHBlankToIO();
             }
             break;
         default:
@@ -532,7 +530,7 @@ void PPU::updateTileMap(){
             std::cout << "Updating Tile: " << tileIndex << std::endl;
         updateTile(tileIndex, bankNumber);
     }
-     memory->clearDirtyTiles();
+    memory->clearDirtyTiles();
 }
 
 void PPU::updateTile(int tileIndex, bool vRAMBank){
@@ -685,34 +683,36 @@ void PPU::writeToOCPS(byte data){OBJPaletteSpecification = data & 0b10111111;}
 byte PPU::readFromOCPS(){return OBJPaletteSpecification;}
 
 void PPU::writeToBCPDandOCPD(byte data, bool objectPalette){
-    std::cout << data << std::endl;
-
     byte* targetReg = objectPalette ? &OBJPaletteSpecification : &BGPaletteSpecification;
-    byte* targetPalette = objectPalette? objectColours : backgroundColours;
- 
-    byte palette = ((*targetReg) & 0b11000) >> 3;
+    byte* targetPalette = objectPalette ? objectColours : backgroundColours;
+
+    byte palette = ((*targetReg) & 0b111000) >> 3;
     byte swatch = ((*targetReg) & 0b110) >> 1;
     byte high = (*targetReg) & 0b1;
     int targetSwatch = palette*SWATCHES_PER_PALETTE*4 + swatch*4;
-    // Keep all zero colour for object palettes as transparent.
-    if(swatch == 0 && objectPalette) return;
-    // Target the last 2 bits of green and all blue.
-    if (high){
-        int blue5 = (data & 0b01111100) * CONVERT5TO8;
-        targetPalette[targetSwatch + 2] = (byte) std::max(0xFF, blue5);
-        
-        int green5 =  (byte) (targetPalette[targetSwatch + 1] * CONVERT8TO5);
-        green5 = (green5 & 0b111 | ((data & 0b11) << 3)) * CONVERT5TO8;
-        targetPalette[targetSwatch + 1] = (byte) std::max(0xFF, green5);
 
-     // Target the first 3 bits of green and all red.
-    } else {
-        int red5 = (data & 0b11111) * CONVERT5TO8;
-        targetPalette[targetSwatch + 0] = (byte) std::max(0xFF, red5);
-        
-        int green5 =  (byte) (targetPalette[targetSwatch + 1] * CONVERT8TO5);
-        green5 = (green5 & 0b11000 | ((data & 0b1100000) >> 5)) * CONVERT5TO8;
-        targetPalette[targetSwatch + 1] = (byte) std::max(0xFF, green5);
+    // std::cout << "palette " << (int) palette << std::endl;
+    // std::cout << "swatch " << (int) swatch << std::endl;
+    // std::cout << "high " << (int) high << std::endl;
+    // std::cout << std::hex << (int) data << std::endl;
+
+
+    // Keep all zero colour for object palettes as transparent.
+    if(!(swatch == 0 && objectPalette)) {
+    // Else update the palette.
+        // Target the last 2 bits of green and all blue.
+        if (high){
+            targetPalette[targetSwatch + 2] = ((data & 0b01111100) >> 2) << 3;
+
+            byte green5 =  (targetPalette[targetSwatch + 1]) >> 3;
+            targetPalette[targetSwatch + 1] = (green5 & 0b111 | ((data & 0b11) << 3)) << 3;
+
+        // Target the first 3 bits of green and all red.
+        } else {
+            targetPalette[targetSwatch + 0] = (data & 0b11111) << 3;
+            byte green5 = (targetPalette[targetSwatch + 1]) >> 3;
+            targetPalette[targetSwatch + 1] = ((green5 & 0b11000) | ((data & 0b11100000) >> 5)) << 3;
+        }
     }
 
     // Auto increment register. 
