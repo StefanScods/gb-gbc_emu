@@ -38,6 +38,7 @@ private:
 
     byte* wRAM0 = nullptr;
     byte* wRAM1 = nullptr;
+    byte selectedWRAMBank = 1;
 
     byte* spriteAttributeTable = nullptr;
 
@@ -121,6 +122,14 @@ public:
      * @param vramBank The bank to switch to.
     */
     void setActiveVRAMBank(bool vramBank){selectedVRAMBank = vramBank;}
+
+    /**
+     * @brief Updates the WRAM bank currently used.
+     *
+     * @param wramBank The bank to switch to.
+    */
+    void setActiveWRAMBank(byte wramBank);
+    byte readActiveWRAMBank(){return selectedWRAMBank;}
     /**
      * @brief Writes the current state to a state file.
      *

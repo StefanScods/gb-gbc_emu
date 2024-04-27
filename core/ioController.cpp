@@ -137,6 +137,9 @@ byte IOController::read(word address){
         // OCPD/OBPD (CGB Mode only): OBJ color palette data / OBJ palette data.
         case 0xFF6B:
             return ppu->readFromBCPDandOCPD(true);
+        // SVBK: WRAM bank.
+        case 0xFF70:
+            return memory->readActiveWRAMBank();
         default:
             //std::cerr << "Error: I/O Device At 0x" << std::hex << address << std::dec <<" Not Yet Supported!" << std::endl;
             return 0;
@@ -284,6 +287,10 @@ void IOController::write(word address, byte data){
         // OCPD/OBPD (CGB Mode only): OBJ color palette data / OBJ palette data.
         case 0xFF6B:
             ppu->writeToBCPDandOCPD(data, true);
+            break;
+        // SVBK: WRAM bank.
+        case 0xFF70:
+            memory->setActiveWRAMBank(data);
             break;
         default:
             //std::cerr << "Error: I/O Device At 0x" << std::hex << address << std::dec <<" Not Yet Supported!" << std::endl;

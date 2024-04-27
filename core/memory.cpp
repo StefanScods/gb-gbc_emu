@@ -31,7 +31,7 @@ bool Memory::init(CPU* d_cpu, IOController* d_ioController, PPU* d_ppu, Cartridg
     wRAM0 = new byte[WRAMBANK0_END - WRAMBANK0_START + 1];
     if (wRAM0 == nullptr)
         return false;
-    wRAM1 = new byte[WRAMBANK1_END - WRAMBANK1_START + 1];
+    wRAM1 = new byte[(WRAMBANK1_END - WRAMBANK1_START + 1)*7];
     if (wRAM1 == nullptr)
         return false;
     spriteAttributeTable = new byte[OAM_END - OAM_START + 1];
@@ -104,20 +104,40 @@ void Memory::zeroAllBlocksOfMemory(){
     memoryControllerLoadFromState = NULL;
     // Clear control vars.
     dirtyTiles.clear();
+    selectedWRAMBank = 1;
+    selectedVRAMBank = 0;
 
     // Zero all blocks.
-    for (int address = 0; address < VRAM_END - VRAM_START + 1; ++address){
-        vRAMBank1[(word)address] = 0;
-        vRAMBank2[(word)address] = 0;
-    }
-    for (int address = 0; address < WRAMBANK0_END - WRAMBANK0_START + 1; ++address)
-        wRAM0[(word)address] = 0;
-    for (int address = 0; address < WRAMBANK1_END - WRAMBANK1_START + 1; ++address)
-        wRAM1[(word)address] = 0;
-    for (int address = 0; address < OAM_END - OAM_START + 1; ++address)
-        spriteAttributeTable[(word)address] = 0;
-    for (int address = 0; address < HRAM_END - HRAM_START + 1; ++address)
-        hRAM[(word)address] = 0;
+    std::fill(
+        vRAMBank1,
+        vRAMBank1 + (VRAM_END - VRAM_START + 1),
+        0
+    );
+    std::fill(
+        vRAMBank2,
+        vRAMBank2 + (VRAM_END - VRAM_START + 1),
+        0
+    );
+    std::fill(
+        wRAM0,
+        wRAM0 + (WRAMBANK0_END - WRAMBANK0_START + 1),
+        0
+    );
+    std::fill(
+        wRAM1,
+        wRAM1 + (WRAMBANK1_END - WRAMBANK1_START + 1)*7,
+        0
+    );
+    std::fill(
+        spriteAttributeTable,
+        spriteAttributeTable + (OAM_END - OAM_START + 1),
+        0
+    );
+    std::fill(
+        hRAM,
+        hRAM + (HRAM_END - HRAM_START + 1),
+        0
+    );
     interruptEnableRegister = 0;
 }
 void Memory::initializeVRAM(){   
@@ -217,8 +237,9 @@ void Memory::write(word address, byte d_data)
 
     // D000-DFFF   4KB Work RAM Bank 1 (WRAM)  (switchable bank 1-7 in CGB Mode).
     else if (address >= WRAMBANK1_START && address <= WRAMBANK1_END)
-    {
-        wRAM1[address - WRAMBANK1_START] = d_data;
+    {   
+        int offset = (WRAMBANK1_END - WRAMBANK1_START + 1)*(selectedWRAMBank-1) - WRAMBANK1_START;
+        wRAM1[address + offset] = d_data;
     }
 
     // E000-FDFF   Same as C000-DDFF (ECHO)    (typically not used).
@@ -300,7 +321,8 @@ const byte Memory::read(word address)
     // D000-DFFF   4KB Work RAM Bank 1 (WRAM)  (switchable bank 1-7 in CGB Mode).
     else if (address >= WRAMBANK1_START && address <= WRAMBANK1_END)
     {
-        return wRAM1[address - WRAMBANK1_START];
+        int offset = (WRAMBANK1_END - WRAMBANK1_START + 1)*(selectedWRAMBank-1) - WRAMBANK1_START;
+        return wRAM1[address + offset];
     }
 
     // E000-FDFF   Same as C000-DDFF (ECHO)    (typically not used).
@@ -384,7 +406,8 @@ byte *Memory::getBytePointer(word address)
     // D000-DFFF   4KB Work RAM Bank 1 (WRAM)  (switchable bank 1-7 in CGB Mode).
     else if (address >= WRAMBANK1_START && address <= WRAMBANK1_END)
     {
-        return wRAM1 + address - WRAMBANK1_START;
+        int offset = (WRAMBANK1_END - WRAMBANK1_START + 1)*(selectedWRAMBank-1) - WRAMBANK1_START;
+        return wRAM1 + address + offset;
     }
 
     // E000-FDFF   Same as C000-DDFF (ECHO)    (typically not used).
@@ -430,6 +453,11 @@ byte *Memory::getBytePointer(word address)
 
 void Memory::sendHBlankToIO(){ioController->receiveHBlank();}
 
+void Memory::setActiveWRAMBank(byte wramBank){
+    selectedWRAMBank = wramBank & 0b111;
+    if (selectedWRAMBank == 0) selectedWRAMBank = 1;
+}
+
 void Memory::raiseJoypadInterrupt(){
     byte interruptFlags = read(INTERRUPT_FLAG_REGISTER_ADDR);
     writeBit(interruptFlags, 4, true);
@@ -439,11 +467,11 @@ void Memory::raiseJoypadInterrupt(){
 void Memory::saveToState(std::ofstream & stateFile){
     int vbankSize = sizeof(byte)*(VRAM_END - VRAM_START + 1);
     int wRAM0Size = sizeof(byte)*(WRAMBANK0_END - WRAMBANK0_START + 1);
-    int wRAM1Size = sizeof(byte)*(WRAMBANK1_END - WRAMBANK1_START + 1);
+    int wRAM1Size = (sizeof(byte)*(WRAMBANK1_END - WRAMBANK1_START + 1))*7;
     int OEMSize = sizeof(byte)*(OAM_END - OAM_START + 1);
     int hRamSize = sizeof(byte)*(HRAM_END - HRAM_START + 1);
 
-    int bytesToWrite = sizeof(bool) + sizeof(byte);    
+    int bytesToWrite = sizeof(bool) + sizeof(byte)*2;    
     bytesToWrite += vbankSize*2;
     bytesToWrite += wRAM0Size + wRAM1Size;
     bytesToWrite += OEMSize;
@@ -455,6 +483,7 @@ void Memory::saveToState(std::ofstream & stateFile){
     byte* writeBufferStart = writeBuffer;
 
     std::memcpy(writeBuffer, &selectedVRAMBank, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &selectedWRAMBank, sizeof(byte)); writeBuffer+=sizeof(byte);
     std::memcpy(writeBuffer, &interruptEnableRegister, sizeof(byte)); writeBuffer+=sizeof(byte);
 
     std::memcpy(writeBuffer, vRAMBank1, vbankSize); writeBuffer+=vbankSize;
@@ -477,11 +506,11 @@ void Memory::saveToState(std::ofstream & stateFile){
 void Memory::loadFromState(std::ifstream & stateFile){
     int vbankSize = sizeof(byte)*(VRAM_END - VRAM_START + 1);
     int wRAM0Size = sizeof(byte)*(WRAMBANK0_END - WRAMBANK0_START + 1);
-    int wRAM1Size = sizeof(byte)*(WRAMBANK1_END - WRAMBANK1_START + 1);
+    int wRAM1Size = (sizeof(byte)*(WRAMBANK1_END - WRAMBANK1_START + 1))*7;
     int OEMSize = sizeof(byte)*(OAM_END - OAM_START + 1);
     int hRamSize = sizeof(byte)*(HRAM_END - HRAM_START + 1);
 
-    int bytesToRead = sizeof(bool) + sizeof(byte);    
+    int bytesToRead = sizeof(bool) + sizeof(byte)*2;    
     bytesToRead += vbankSize*2;
     bytesToRead += wRAM0Size + wRAM1Size;
     bytesToRead += OEMSize;
@@ -499,6 +528,7 @@ void Memory::loadFromState(std::ifstream & stateFile){
     }
 
     std::memcpy(&selectedVRAMBank, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&selectedWRAMBank, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
     std::memcpy(&interruptEnableRegister, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
 
     std::memcpy(vRAMBank1, readBuffer, vbankSize); readBuffer+=vbankSize;
