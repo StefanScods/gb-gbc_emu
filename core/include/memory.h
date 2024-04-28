@@ -122,6 +122,7 @@ public:
      * @param vramBank The bank to switch to.
     */
     void setActiveVRAMBank(bool vramBank){selectedVRAMBank = vramBank;}
+    byte* getVRAMBank(bool vramBank){ return vramBank ? vRAMBank1 : vRAMBank2; }
 
     /**
      * @brief Updates the WRAM bank currently used.

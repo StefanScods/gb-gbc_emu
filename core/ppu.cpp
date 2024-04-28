@@ -70,10 +70,10 @@ bool PPU::init(){
     videoBuffer = new uint8_t[INT8_PER_SCREEN];
     if (videoBuffer == nullptr)
         return false;
-    backgroundScanlinePixels = new uint8_t[SCREEN_WIDTH*2];
+    backgroundScanlinePixels = new uint8_t[SCREEN_WIDTH*3];
     if (backgroundScanlinePixels == nullptr)
         return false;
-    windowScanlinePixels = new uint8_t[SCREEN_WIDTH*2];
+    windowScanlinePixels = new uint8_t[SCREEN_WIDTH*3];
     if (windowScanlinePixels == nullptr)
         return false;
     lowPriorityObjectPixels = new uint8_t[SCREEN_WIDTH*2];
@@ -113,12 +113,12 @@ void PPU::zeroAllBlocksOfMemory(){
     );
     std::fill(
         windowScanlinePixels, 
-        windowScanlinePixels+SCREEN_WIDTH*2, 
+        windowScanlinePixels+SCREEN_WIDTH*3, 
         0
     );
     std::fill(
         backgroundScanlinePixels, 
-        backgroundScanlinePixels+SCREEN_WIDTH*2, 
+        backgroundScanlinePixels+SCREEN_WIDTH*3, 
         0
     );
     std::fill(
@@ -339,9 +339,11 @@ void PPU::renderCurrentScanlineVRAM(bool CGBMode){
     for(int i = 0; i < SCREEN_WIDTH; i++){
         // Of the different layers, determine the actual colour to render here.
         byte* startOfSwatch = nullptr;
+        bool placedObject = false;
         // High priority objects.
         if(objectEnable && highPriorityObjectPixels[i*2] != HIGH_IMPEDANCE){
             startOfSwatch = getPaletteColour(true, highPriorityObjectPixels[i*2]) + (4 * highPriorityObjectPixels[i*2+1]);
+            placedObject = true;
         }
         // Low priority objects. Render only if both window and map are using the zeroth colour of the palette.
         else if(
@@ -350,14 +352,20 @@ void PPU::renderCurrentScanlineVRAM(bool CGBMode){
             (windowScanlinePixels[i*2] == HIGH_IMPEDANCE || windowScanlinePixels[i*2+1] == 0)
         ){
             startOfSwatch = getPaletteColour(true, lowPriorityObjectPixels[i*2]) + (4 * lowPriorityObjectPixels[i*2+1]);
+            placedObject = true;
+        }
+        // Draw the background map if there is no object or if the tile has GBC BG priority.
+        if((windowScanlinePixels[i*3+2] && windowScanlinePixels[i*3] != HIGH_IMPEDANCE) || startOfSwatch == nullptr){
+            startOfSwatch = getPaletteColour(false, backgroundScanlinePixels[i*3]) + (4 * backgroundScanlinePixels[i*3+1]);
+            placedObject = false;
         }
         // Draw the window on top of the map.
-        else if(windowEnable && windowScanlinePixels[i*2] != HIGH_IMPEDANCE){
-            startOfSwatch = getPaletteColour(false, windowScanlinePixels[i*2]) + (4 * windowScanlinePixels[i*2+1]);
+        else if(windowEnable && windowScanlinePixels[i*3] != HIGH_IMPEDANCE){
+            // If there is no data here or if there is a object but this pixel is overwritten using the GBC BG priority.
+            if((windowScanlinePixels[i*3+2] && placedObject) || startOfSwatch == nullptr)
+                startOfSwatch = getPaletteColour(false, windowScanlinePixels[i*3]) + (4 * windowScanlinePixels[i*3+1]);
         } 
-        // Draw the background map.
-        else startOfSwatch = getPaletteColour(false, backgroundScanlinePixels[i*2]) + (4 * backgroundScanlinePixels[i*2+1]);
-
+    
         // Calculate where each pixel is on the master array.
         uint32_t pixelPositionToRender = currentIndexIntoVideoBuffer + i * sizeof(uint32_t);
         videoBuffer[pixelPositionToRender    ] = *(startOfSwatch + 2); // Blue.
@@ -374,37 +382,49 @@ void PPU::renderBGMapScanline(bool CGBMode){
     if(!backgroundEnablePriority){
         std::fill(
             backgroundScanlinePtr,  
-            backgroundScanlinePtr + SCREEN_WIDTH*2, 
+            backgroundScanlinePtr + SCREEN_WIDTH*3, 
             0 // Clear background.
         );
         return;
     }
 
     // Get the map to render from.
-    byte* startOfTileMapPointer = memory->getBytePointer(backgroundAreaStart);
+    byte* startOfTileMapPointer = memory->getVRAMBank(0) + (backgroundAreaStart - VRAM_START);
+    byte* mapAttributes = memory->getVRAMBank(1) + (backgroundAreaStart - VRAM_START);
     // Determine the map data to render.
     int currY = (scanline + SCY) % BG_MAP_WIDTH_PIXELS;
     int mapY = currY / TILE_DIMENSION;
-    int pixelY = currY % TILE_DIMENSION;
     // Loop over all pixels of the scanline.
     for(int i = 0; i < SCREEN_WIDTH; i++){
         int currX = (SCX + i) % BG_MAP_WIDTH_PIXELS;
         int mapX = currX / TILE_DIMENSION;
-        int pixelX = currX % TILE_DIMENSION;
         int mapIndex = mapY * BG_MAP_WIDTH_TILES + mapX;
+        // Style the tile (if monochrome do not style).
+        int tileAttributes = *(mapAttributes + mapIndex);
+        bool gbcPriority = CGBMode ? readBit(tileAttributes, 7) : 0;
+        bool yFlip = CGBMode ? readBit(tileAttributes, 6) : 0;
+        bool xFlip = CGBMode ? readBit(tileAttributes, 5) : 0;
+        bool vRAMBank = CGBMode ? readBit(tileAttributes, 3) : 0;
+        byte palette =  CGBMode ? tileAttributes & 0b111 : 0;   
         // Get which tile to draw.
         int tileIndex = *(startOfTileMapPointer + mapIndex);
         // Wacky offset case -> access the 3rd block of the bank -> https://gbdev.io/pandocs/Tile_Data.html#vram-tile-data.
         if(tileAreaStart == TILE0_DATA_START && tileIndex < TILES_PER_BANK_THIRD) tileIndex += TILES_PER_BANK_THIRD*2;
-            
+        // Get pixel number and apply reflections.
+        int pixelX = currX % TILE_DIMENSION;
+        int pixelY = currY % TILE_DIMENSION;
+        pixelX = xFlip ? (TILE_DIMENSION-1) - pixelX : pixelX;
+        pixelY = yFlip ? (TILE_DIMENSION-1) - pixelY : pixelY;
+
         // Determine which colour to use.
-        uint32_t pixelPositionInMap = tileIndex * PIXELS_PER_TILE + pixelY*TILE_DIMENSION + pixelX;
-        
-        // Get the palette to apply -> always BGP0 on non-CGB mode.
-        backgroundScanlinePtr[0] = 0;
+        uint32_t pixelPositionInMap = PIXELS_PER_TILE*(tileIndex + vRAMBank*TILES_PER_BANK) + pixelY*TILE_DIMENSION + pixelX;
+        // Get the palette to apply.
+        backgroundScanlinePtr[0] = palette;
         // Save the colour to render.
         backgroundScanlinePtr[1] = tileMap[pixelPositionInMap];
-        backgroundScanlinePtr+=2;
+        // Save the specific pixel's priority.
+        backgroundScanlinePtr[2] = gbcPriority;
+        backgroundScanlinePtr+=3;
     }
 }
 
@@ -412,7 +432,7 @@ void PPU::renderWindowMapScanline(bool CGBMode){
     // Clear scanline.
     std::fill(
         windowScanlinePixels,  
-        windowScanlinePixels + SCREEN_WIDTH*2, 
+        windowScanlinePixels + SCREEN_WIDTH*3, 
         HIGH_IMPEDANCE
     );
 
@@ -421,36 +441,48 @@ void PPU::renderWindowMapScanline(bool CGBMode){
     // Get the scanline pixels to write to.
     uint8_t* windowScanlinePtr = windowScanlinePixels;
     if((WX - 7) > 0){
-        windowScanlinePtr = windowScanlinePtr + (WX - 7)*2;
+        windowScanlinePtr = windowScanlinePtr + (WX - 7)*3;
     }
 
     // Get the window to render from.
-    byte* startOfTileWindowPointer = memory->getBytePointer(windowAreaStart);
+    byte* startOfTileWindowPointer = memory->getVRAMBank(0) + (windowAreaStart - VRAM_START);
+    byte* mapAttributes = memory->getVRAMBank(1) + (windowAreaStart - VRAM_START);
     // Determine the map data to render.
     int currY = (scanline - WY);
     if(currY > SCREEN_HEIGHT || currY < 0) return;
     int mapY = currY / TILE_DIMENSION;
-    int pixelY = currY % TILE_DIMENSION;
     // Loop over all pixels of the scanline.
     for(int currX = (WX - 7); currX < SCREEN_WIDTH; currX++){
         // Don't render of screen.
         if(currX < 0) continue;
         int mapX = currX / TILE_DIMENSION;
-        int pixelX = currX % TILE_DIMENSION;
         int mapIndex = mapY * BG_MAP_WIDTH_TILES + mapX;
+        // Style the tile (if monochrome do not style).
+        int tileAttributes = *(mapAttributes + mapIndex);
+        bool gbcPriority = CGBMode ? readBit(tileAttributes, 7) : 0;
+        bool yFlip = CGBMode ? readBit(tileAttributes, 6) : 0;
+        bool xFlip = CGBMode ? readBit(tileAttributes, 5) : 0;
+        bool vRAMBank = CGBMode ? readBit(tileAttributes, 3) : 0;
+        byte palette =  CGBMode ? tileAttributes & 0b111 : 0;  
         // Get which tile to draw.
         int tileIndex = *(startOfTileWindowPointer + mapIndex);
         // Wacky offset case -> access the 3rd block of the bank -> https://gbdev.io/pandocs/Tile_Data.html#vram-tile-data.
         if(tileAreaStart == TILE0_DATA_START && tileIndex < TILES_PER_BANK_THIRD) tileIndex += TILES_PER_BANK_THIRD*2;
-            
-        // Determine which colour to use.
-        uint32_t pixelPositionInMap = tileIndex * PIXELS_PER_TILE + pixelY*TILE_DIMENSION + pixelX;
+        // Get pixel number and apply reflections.
+        int pixelX = currX % TILE_DIMENSION;
+        int pixelY = currY % TILE_DIMENSION;
+        pixelX = xFlip ? (TILE_DIMENSION-1) - pixelX : pixelX;
+        pixelY = yFlip ? (TILE_DIMENSION-1) - pixelY : pixelY;
 
+        // Determine which colour to use.
+        uint32_t pixelPositionInMap = PIXELS_PER_TILE*(tileIndex + vRAMBank*TILES_PER_BANK) + pixelY*TILE_DIMENSION + pixelX;
         // Get the palette to apply -> always BGP0 on non-CGB mode.
-        windowScanlinePtr[0] = 0;
+        windowScanlinePtr[0] = palette;
         // Save the colour to render.
         windowScanlinePtr[1] = tileMap[pixelPositionInMap];
-        windowScanlinePtr+=2;
+        // Save the specific pixel's priority.
+        windowScanlinePtr[2] = gbcPriority;
+        windowScanlinePtr+=3;
     }
 }
 
@@ -596,35 +628,39 @@ void PPU::updatePalettes(bool CGBMode){
 }
 
 void PPU::updateBackgroundMap(bool CGBMode, bool mapNum){
-    // if(CGBMode){
-    //     std::cerr << "Error: GameBoy Colour Mode is currently unsupported!" << std::endl;
-    //     return;
-    // }
-
-    // Handle the monochrome mode.
-    byte* startOfTileMapPointer = memory->getBytePointer(mapNum ? BGM1_DATA_START : BGM0_DATA_START);
     uint8_t* bgMap = mapNum ? backgroundMap1 : backgroundMap0;
+    byte* startOfTileMapPointer = memory->getVRAMBank(0) + ((mapNum ? BGM1_DATA_START : BGM0_DATA_START) - VRAM_START);
+    byte* mapAttributes = memory->getVRAMBank(1) + ((mapNum ? BGM1_DATA_START : BGM0_DATA_START) - VRAM_START);
     for(int mapIndex = 0; mapIndex < BGM0_DATA_END - BGM0_DATA_START + 1; mapIndex++){
         // Get which tile to draw.
         int tileIndex = *(startOfTileMapPointer + mapIndex);
+        // Style the tile (if monochrome do not style).
+        int tileAttributes = *(mapAttributes + mapIndex);
+        bool yFlip = CGBMode ? readBit(tileAttributes, 6) : 0;
+        bool xFlip = CGBMode ? readBit(tileAttributes, 5) : 0;
+        bool vRAMBank = CGBMode ? readBit(tileAttributes, 3) : 0;
+        byte palette =  CGBMode ? tileAttributes & 0b111 : 0;
         // Wacky offset case -> access the 3rd block of the bank -> https://gbdev.io/pandocs/Tile_Data.html#vram-tile-data.
         if(tileAreaStart == TILE0_DATA_START && tileIndex < TILES_PER_BANK_THIRD) tileIndex += TILES_PER_BANK_THIRD*2;
         int mapX = mapIndex % BG_MAP_WIDTH_TILES;
         int mapY = mapIndex / BG_MAP_WIDTH_TILES;
-        // Get the palette to apply -> always BGP0 on non-CGB mode.
-        byte* startOfPalette =  getPaletteColour(false, 0);
+        // Get the palette to apply.
+        byte* startOfPalette =  getPaletteColour(false, palette);
         // Loop over the tile data and render the tile with the background palette applied.
         for(int lineNumber = 0; lineNumber<TILE_DIMENSION; lineNumber++){
             for(int pixelNumber = 0; pixelNumber<TILE_DIMENSION; pixelNumber++){
+                // Apply reflections.
+                int pixelX = xFlip ? (TILE_DIMENSION-1) - pixelNumber : pixelNumber;
+                int pixelY = yFlip ? (TILE_DIMENSION-1) - lineNumber : lineNumber;
                 // Determine which colour index to use.
-                uint32_t pixelPositionInMap = tileIndex * PIXELS_PER_TILE + lineNumber*TILE_DIMENSION + pixelNumber;
+                uint32_t pixelPositionInMap = PIXELS_PER_TILE*(tileIndex + vRAMBank*TILES_PER_BANK) + pixelY*TILE_DIMENSION + pixelX;
                 byte* startOfSwatch = startOfPalette + (4 * tileMap[pixelPositionInMap]);
                 // Calculate where each pixel is on the master array.
-                uint32_t pixelPositionInBGM0 = pixelNumber * sizeof(uint32_t) + mapX * TILE_PITCH + lineNumber * BG_MAP_PITCH + mapY * BG_MAP_PITCH * TILE_DIMENSION;
-                bgMap[pixelPositionInBGM0    ] = *(startOfSwatch + 2); // Blue.
-                bgMap[pixelPositionInBGM0 + 1] = *(startOfSwatch + 1); // Green.
-                bgMap[pixelPositionInBGM0 + 2] = *(startOfSwatch    ); // Red.
-                bgMap[pixelPositionInBGM0 + 3] = *(startOfSwatch + 3); // Alpha.
+                uint32_t pixelPositionInBGM = pixelNumber * sizeof(uint32_t) + mapX * TILE_PITCH + lineNumber * BG_MAP_PITCH + mapY * BG_MAP_PITCH * TILE_DIMENSION;
+                bgMap[pixelPositionInBGM    ] = *(startOfSwatch + 2); // Blue.
+                bgMap[pixelPositionInBGM + 1] = *(startOfSwatch + 1); // Green.
+                bgMap[pixelPositionInBGM + 2] = *(startOfSwatch    ); // Red.
+                bgMap[pixelPositionInBGM + 3] = *(startOfSwatch + 3); // Alpha.
             }
         }
     }
