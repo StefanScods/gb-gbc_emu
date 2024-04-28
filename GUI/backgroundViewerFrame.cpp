@@ -8,7 +8,7 @@
 #include "..\core\include\ppu.h"
 
 // Enables debug cout statements for this file.
-#define ENABLE_DEBUG_PRINTS true
+#define ENABLE_DEBUG_PRINTS false
 
 BackgroundViewerFrame::BackgroundViewerFrame(App *d_appContext, Core *d_emuCore, EmulationThread *d_emuThread) : wxFrame(NULL, wxID_ANY, BACKGROUND_VIEWER_DISPLAY_TITLE, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~wxRESIZE_BORDER)
 {

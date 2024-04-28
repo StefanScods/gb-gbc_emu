@@ -548,7 +548,7 @@ void PPU::renderObjectsScanline(bool CGBMode){
 
         // Put a cap on the number of objects rendered on a single scanline.
         renderedObjects++;
-        if(renderedObjects >= OBJECT_PER_SCANLINE) break;
+        if(renderedObjects > OBJECT_PER_SCANLINE) break;
     }
 }
 

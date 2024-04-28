@@ -93,8 +93,8 @@ void HDMAController::transferChunk(){
     // Transfer the chunk of memory.
     word destAddr = targetAddress + VRAM_START;
     for(int i = 0; i < NUMBER_OF_ADDRESS_PER_HDMA_TRANSFER; i++){
-        byte srcData = memory->read(destAddr + i);
-        memory->write(sourceAddress + i, srcData);
+        byte srcData = memory->read(sourceAddress + i);
+        memory->write(destAddr + i, srcData);
     }
     targetAddress += NUMBER_OF_ADDRESS_PER_HDMA_TRANSFER;
     sourceAddress += NUMBER_OF_ADDRESS_PER_HDMA_TRANSFER;

@@ -535,6 +535,12 @@ LoadCartridgeReturnCodes Cartridge::open(const char* filepath, Core* core) {
 	case(0x03):
 		ramSize = RAM_BANK_SIZE*4;
 		break;
+	case(0x04):
+		ramSize = RAM_BANK_SIZE*16;
+		break;
+	case(0x05):
+		ramSize = RAM_BANK_SIZE*8;
+		break;
 	default:
 		ramSize = 0;
 		usingBattery = false;
@@ -979,7 +985,7 @@ void Cartridge::controllerMCB5Write(word address, byte data){
 	// RAM Enable.
 	if(address >= 0x0000 && address <= 0x1FFF){
 		// Enable the external RAM partition iff the data is 0xA. Else disable.
-		if(data==0x0A) mbc5RAMEnable = true;
+		if((data & 0xF) == 0xA) mbc5RAMEnable = true;
 		else mbc5RAMEnable = false;
 	// ROM Bank Number (lower 8 bits).
 	} else if (address >= 0x2000 && address <= 0x2FFF){
@@ -991,6 +997,19 @@ void Cartridge::controllerMCB5Write(word address, byte data){
 	} else if (address >= 0x4000 && address <= 0x5FFF){
 		// Take 3 bits.
 		mbc5RAMBank = 0b00001111 & data;
+	// RAM Bank 00–03 or RTC Register 08-0C.
+	} else if(address >= EXTERNALRAM_START && address <= EXTERNALRAM_END){
+		// If RAM is disabled or the read is too large return high impedance.
+		if(!mbc5RAMEnable || (uint32_t)(address - EXTERNALRAM_START) >= ramSize) return;
+		// Calculate the write offset.
+		uint32_t addressToWrite = mbc5RAMBank*RAM_BANK_SIZE + (address - EXTERNALRAM_START);
+		// Write the value of RAM.
+		externalRAM[addressToWrite] = data;
+		// Write to the "battery backed" file. !!!TODO do this on another thread and maybe group writes for efficiency.
+		if(usingBattery){
+			ramFile.seekp(addressToWrite);
+			ramFile.write((char*) &data, 1);
+		}
 	}
 }
 

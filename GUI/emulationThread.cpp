@@ -9,7 +9,7 @@
 #include "../core/include/ppu.h"
 
 // Enables debug cout statements for this file.
-#define ENABLE_DEBUG_PRINTS true
+#define ENABLE_DEBUG_PRINTS false
 
 EmulationThread::EmulationThread(App *d_appContext, Core *d_emuCore, wxPanel *d_displayPanel) : wxThread(wxTHREAD_JOINABLE)
 {

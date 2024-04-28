@@ -130,7 +130,7 @@ public:
      * @param wramBank The bank to switch to.
     */
     void setActiveWRAMBank(byte wramBank);
-    byte readActiveWRAMBank(){return selectedWRAMBank;}
+    byte readActiveWRAMBank(){return 0b11111000 | selectedWRAMBank;}
     /**
      * @brief Writes the current state to a state file.
      *
