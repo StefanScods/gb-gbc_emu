@@ -7,7 +7,6 @@ The class implementation for the emulator's PPU / LCD  display.
 #include <set>
 #include <algorithm>
 
-// todo!!! handle GBC
 // todo!!! ppu enable 
 
 // Enables debug cout statements for this file.
@@ -21,7 +20,8 @@ void OAMEntry::update(byte* bytes){
     priority = readBit(bytes[3], 7);
     yFlip = readBit(bytes[3], 6);
     xFlip = readBit(bytes[3], 5);
-    dmgPalette = readBit(bytes[3], 3);
+    dmgPalette = readBit(bytes[3], 4);
+    bank = readBit(bytes[3], 3);
     colourPalette = bytes[3] & 0b0111;
 }
 
@@ -32,6 +32,7 @@ void OAMEntry::saveToState(byte*& writeBuffer){
     std::memcpy(writeBuffer, &priority, sizeof(bool)); writeBuffer+=sizeof(bool);
     std::memcpy(writeBuffer, &yFlip, sizeof(bool)); writeBuffer+=sizeof(bool);
     std::memcpy(writeBuffer, &xFlip, sizeof(bool)); writeBuffer+=sizeof(bool);
+    std::memcpy(writeBuffer, &bank, sizeof(bool)); writeBuffer+=sizeof(bool);
     std::memcpy(writeBuffer, &dmgPalette, sizeof(bool)); writeBuffer+=sizeof(bool);
     std::memcpy(writeBuffer, &colourPalette, sizeof(byte)); writeBuffer+=sizeof(byte);
 }
@@ -43,6 +44,7 @@ void OAMEntry::loadFromState(byte*& readBuffer){
     std::memcpy(&priority, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
     std::memcpy(&yFlip, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
     std::memcpy(&xFlip, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
+    std::memcpy(&bank, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
     std::memcpy(&dmgPalette, readBuffer, sizeof(bool)); readBuffer+=sizeof(bool);
     std::memcpy(&colourPalette, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
 }
@@ -348,21 +350,21 @@ void PPU::renderCurrentScanlineVRAM(bool CGBMode){
         // Low priority objects. Render only if both window and map are using the zeroth colour of the palette.
         else if(
             objectEnable && lowPriorityObjectPixels[i*2] != HIGH_IMPEDANCE &&
-            backgroundScanlinePixels[i*2+1] == 0 &&
-            (windowScanlinePixels[i*2] == HIGH_IMPEDANCE || windowScanlinePixels[i*2+1] == 0)
+            backgroundScanlinePixels[i*3+1] == 0 &&
+            (windowScanlinePixels[i*3] == HIGH_IMPEDANCE || windowScanlinePixels[i*3+1] == 0)
         ){
             startOfSwatch = getPaletteColour(true, lowPriorityObjectPixels[i*2]) + (4 * lowPriorityObjectPixels[i*2+1]);
             placedObject = true;
         }
         // Draw the background map if there is no object or if the tile has GBC BG priority.
-        if((windowScanlinePixels[i*3+2] && windowScanlinePixels[i*3] != HIGH_IMPEDANCE) || startOfSwatch == nullptr){
+        if((backgroundScanlinePixels[i*3+2] && backgroundScanlinePixels[i*3] != HIGH_IMPEDANCE) || startOfSwatch == nullptr){
             startOfSwatch = getPaletteColour(false, backgroundScanlinePixels[i*3]) + (4 * backgroundScanlinePixels[i*3+1]);
             placedObject = false;
         }
         // Draw the window on top of the map.
-        else if(windowEnable && windowScanlinePixels[i*3] != HIGH_IMPEDANCE){
+        if(windowEnable && windowScanlinePixels[i*3] != HIGH_IMPEDANCE){
             // If there is no data here or if there is a object but this pixel is overwritten using the GBC BG priority.
-            if((windowScanlinePixels[i*3+2] && placedObject) || startOfSwatch == nullptr)
+            if((windowScanlinePixels[i*3+2] && placedObject) || startOfSwatch == nullptr || !placedObject)
                 startOfSwatch = getPaletteColour(false, windowScanlinePixels[i*3]) + (4 * windowScanlinePixels[i*3+1]);
         } 
     
@@ -512,9 +514,12 @@ void PPU::renderObjectsScanline(bool CGBMode){
         // Apply vertical mirror.
         if(objectAttributeMemory[(*itr)].yFlip) yPosOfObject = (tileHeight-1) - yPosOfObject;
 
+        // Handle Gameboy Colour features.
+        bool vRAMBank = CGBMode ? objectAttributeMemory[(*itr)].bank : 0;
+        bool palette  = CGBMode ? objectAttributeMemory[(*itr)].colourPalette : objectAttributeMemory[(*itr)].dmgPalette;
+
         // Draw the part of object on this scanline.
         for(int i = 0; i < TILE_DIMENSION; i++){
-
             // Determine the position of the object on this scanline and handle hidden pixels.
             int xPosOnScreen = objectAttributeMemory[(*itr)].xPos + i;
             if( xPosOnScreen < SCANLINE_X_OFFSET || xPosOnScreen >= SCREEN_WIDTH + SCANLINE_X_OFFSET) continue;
@@ -525,8 +530,7 @@ void PPU::renderObjectsScanline(bool CGBMode){
             if(objectAttributeMemory[(*itr)].xFlip) tileX = (TILE_DIMENSION-1) - i;
 
             // Determine which colour to use.
-            uint32_t pixelPositionInMap =  objectAttributeMemory[(*itr)].tileIndex * PIXELS_PER_TILE + yPosOfObject*TILE_DIMENSION + tileX;
-            
+            uint32_t pixelPositionInMap =   PIXELS_PER_TILE*(objectAttributeMemory[(*itr)].tileIndex + vRAMBank*TILES_PER_BANK) + yPosOfObject*TILE_DIMENSION + tileX;
             // Transparent pixel case - do not render anything here.
             if(tileMap[pixelPositionInMap] == 0) continue;
 
@@ -538,7 +542,7 @@ void PPU::renderObjectsScanline(bool CGBMode){
             // Something else already drew here, skip.
             if(oamScanlinePtr[0] != HIGH_IMPEDANCE)  continue;
             // Save the palette and colour.
-            oamScanlinePtr[0] = objectAttributeMemory[(*itr)].dmgPalette;
+            oamScanlinePtr[0] = palette;
             oamScanlinePtr[1] = tileMap[pixelPositionInMap];
         }
 
@@ -807,7 +811,7 @@ void PPU::saveToState(std::ofstream & stateFile){
     bytesToWrite += bgMapSize*2;
     bytesToWrite += tileMapSize;
     bytesToWrite += tileSize;
-    bytesToWrite += (sizeof(byte)*6+ sizeof(bool)*4)*NUMBER_OF_OBJECTS; // OEM objects.
+    bytesToWrite += (sizeof(byte)*6+ sizeof(bool)*5)*NUMBER_OF_OBJECTS; // OEM objects.
 
     byte* writeBuffer = new byte[
         bytesToWrite
@@ -868,7 +872,7 @@ void PPU::loadFromState(std::ifstream & stateFile){
     bytesToRead += bgMapSize*2;
     bytesToRead += tileMapSize;
     bytesToRead += tileSize;
-    bytesToRead += (sizeof(byte)*6 + sizeof(bool)*4)*NUMBER_OF_OBJECTS; // OEM objects.
+    bytesToRead += (sizeof(byte)*6 + sizeof(bool)*5)*NUMBER_OF_OBJECTS; // OEM objects.
 
     byte* readBuffer = new byte[
         bytesToRead

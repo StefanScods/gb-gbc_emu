@@ -22,6 +22,7 @@ public:
     bool priority = 0;
     bool yFlip = 0;
     bool xFlip = 0;
+    bool bank = 0;
     bool dmgPalette = 0;
     byte colourPalette = 0;
     /**
