@@ -516,7 +516,7 @@ void PPU::renderObjectsScanline(bool CGBMode){
 
         // Handle Gameboy Colour features.
         bool vRAMBank = CGBMode ? objectAttributeMemory[(*itr)].bank : 0;
-        bool palette  = CGBMode ? objectAttributeMemory[(*itr)].colourPalette : objectAttributeMemory[(*itr)].dmgPalette;
+        byte palette  = CGBMode ? objectAttributeMemory[(*itr)].colourPalette : objectAttributeMemory[(*itr)].dmgPalette;
 
         // Draw the part of object on this scanline.
         for(int i = 0; i < TILE_DIMENSION; i++){
