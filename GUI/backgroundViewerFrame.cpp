@@ -120,8 +120,8 @@ void BackgroundViewerFrame::updateSDLDisplays(){
     emuCore->acquireMutexLock();
     PPU* ppu = emuCore->getPPU();
     // Render the entire background map.
-    ppu->updateBackgroundMap(emuCore->getCGBMode(), 0);
-    ppu->updateBackgroundMap(emuCore->getCGBMode(), 1);
+    ppu->updateBackgroundMap(0);
+    ppu->updateBackgroundMap(1);
     // Copy the entire bg map into a texture.
     void* lockedPixels = nullptr;
     int pitch = NULL;

@@ -55,6 +55,9 @@ private:
     // The current mode of the PPU. This controls what the PPU is doing per cycle. 
     byte mode = 2;
 
+    // A boolean indicating whether to interpret VRAM in GameBoy vs GameBoy Colour modes.  
+    bool CGBMode = false;
+
     // Viewport.
     byte SCY = 0;
     byte SCX = 0;
@@ -88,6 +91,7 @@ private:
 
     // The current state of the LCD video buffer.
     uint8_t* videoBuffer = nullptr;
+    uint8_t* disabledVideoBuffer = nullptr;
 
     // Contains a pair for each pixel on the scanline indicating palette and colour for that pixel.
     uint8_t* windowScanlinePixels = nullptr;
@@ -124,6 +128,11 @@ public:
     void destroy();
 
     /**
+     * @brief Sets the mode of the PPU.
+     */
+    void setGBCMode(bool mode);
+
+    /**
      * @brief Zeros all dynamic memory.
      */
     void zeroAllBlocksOfMemory();
@@ -144,43 +153,28 @@ public:
     /**
      * @brief Perform any work need on this clock cycle. This will increase 
      * the PPU's internal cycle counter.
-     * 
-     * @param CGBMode - A boolean indicating whether to interpret VRAM in
-     * GameBoy vs GameBoy Colour modes.  
      */
-    void cycle(bool CGBMode);
+    void cycle();
 
     /**
      * @brief Renders the current scanline of VRAM to the video buffer.
-     * 
-     * @param CGBMode - A boolean indicating whether to interpret VRAM in
-     * GameBoy vs GameBoy Colour modes. 
      */
-    void renderCurrentScanlineVRAM(bool CGBMode);
+    void renderCurrentScanlineVRAM();
 
     /**
      * @brief Renders the current scanline of BG VRAM to the video buffer.
-     * 
-     * @param CGBMode - A boolean indicating whether to interpret VRAM in
-     * GameBoy vs GameBoy Colour modes. 
      */
-    void renderBGMapScanline(bool CGBMode);
+    void renderBGMapScanline();
 
     /**
      * @brief Renders the current scanline of window VRAM to the video buffer.
-     * 
-     * @param CGBMode - A boolean indicating whether to interpret VRAM in
-     * GameBoy vs GameBoy Colour modes. 
      */
-    void renderWindowMapScanline(bool CGBMode);
+    void renderWindowMapScanline();
 
     /**
      * @brief Renders the current scanline of Object VRAM to the video buffer.
-     * 
-     * @param CGBMode - A boolean indicating whether to interpret VRAM in
-     * GameBoy vs GameBoy Colour modes. 
      */
-    void renderObjectsScanline(bool CGBMode);
+    void renderObjectsScanline();
 
     /**
      * @brief This function reinterprets the entire tile map.
@@ -198,22 +192,17 @@ public:
     void updateTile(int tileIndex, bool vRAMBank);
 
     /**
-     * @brief This function reinterprets the object and background palettes.
-     * 
-     * @param CGBMode - A boolean indicating whether to interpret VRAM in
-     * GameBoy vs GameBoy Colour modes.  
+     * @brief This function reinterprets the object and background palettes. 
      */
-    void updatePalettes(bool CGBMode);
+    void updatePalettes();
 
     /**
      * @brief This function reinterprets background map data. This function
      * should only be called when running the background map viewer. 
      * 
-     * @param CGBMode - A boolean indicating whether to interpret VRAM in 
-     * GameBoy vs GameBoy Colour modes. 
      * @param mapNum The map number to update. Should be one or zero.
      */
-    void updateBackgroundMap(bool CGBMode, bool mapNum);
+    void updateBackgroundMap(bool mapNum);
 
     // Accessors.
 
@@ -230,7 +219,7 @@ public:
     };
 
     uint8_t* getVideoBuffer(){
-        return videoBuffer;
+        return ppuEnable ? videoBuffer : disabledVideoBuffer;
     };
 
     /**

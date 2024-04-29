@@ -7,8 +7,6 @@ The class implementation for the emulator's PPU / LCD  display.
 #include <set>
 #include <algorithm>
 
-// todo!!! ppu enable 
-
 // Enables debug cout statements for this file.
 #define ENABLE_DEBUG_PRINTS false
 
@@ -71,6 +69,9 @@ bool PPU::init(){
     // Video buffer and scanline helpers.
     videoBuffer = new uint8_t[INT8_PER_SCREEN];
     if (videoBuffer == nullptr)
+        return false;
+    disabledVideoBuffer = new uint8_t[INT8_PER_SCREEN];
+    if (disabledVideoBuffer == nullptr)
         return false;
     backgroundScanlinePixels = new uint8_t[SCREEN_WIDTH*3];
     if (backgroundScanlinePixels == nullptr)
@@ -146,10 +147,22 @@ void PPU::zeroAllBlocksOfMemory(){
     updateOAM();
 }
 
+void PPU::setGBCMode(bool d_mode){
+    CGBMode = d_mode;
+    // Display different colours when ppu is disabled.
+    for(int i = 0; i < SCREEN_WIDTH*SCREEN_HEIGHT; i++){
+        disabledVideoBuffer[i*sizeof(uint32_t)/sizeof(uint8_t)+0] = CGBMode ? 0xFF :MONOCHROME_COLOURS[2]; // Blue. 
+        disabledVideoBuffer[i*sizeof(uint32_t)/sizeof(uint8_t)+1] = CGBMode ? 0xFF :MONOCHROME_COLOURS[1]; // Green.
+        disabledVideoBuffer[i*sizeof(uint32_t)/sizeof(uint8_t)+2] = CGBMode ? 0xFF : MONOCHROME_COLOURS[0]; // Red.
+        disabledVideoBuffer[i*sizeof(uint32_t)/sizeof(uint8_t)+3] = 0xFF;// Alpha.
+    }
+}
+
 void PPU::reset(){
     // The current mode of the PPU. This controls what the PPU is doing per cycle. 
     mode = 2;
     cyclesCounter = 0;
+    CGBMode = false;
 
     // Clear the buffers.
     zeroAllBlocksOfMemory();
@@ -183,9 +196,9 @@ void PPU::destroy(){
     delete[] highPriorityObjectPixels;
 }
 
-void PPU::cycle(bool CGBMode){
+void PPU::cycle(){
     // Pause execution if the PPU is disabled.
-    // if(!ppuEnable) return; //todo!!! this doesnt work 
+    if(!ppuEnable) return;
 
     /**
      * The PPU renders to the LCD in rows called scan lines. There are 154 scanlines in the display, 
@@ -205,16 +218,30 @@ void PPU::cycle(bool CGBMode){
      * From there, that state of OAM and VRAM data will be rendered to the scanline.
      */
     cyclesCounter++;
+    // Update the LYC=LY Flag.
+    if(cyclesCounter == 1 && (mode == 1 || mode == 2)){
+        writeBit(STAT, 2, scanline == LYC);
+        // Check to see if we should throw an LCD interrupt (LYC=LY condition). 
+        if(scanline == LYC && readBit(STAT, 6)){
+            byte interruptFlags = memory->read(INTERRUPT_FLAG_REGISTER_ADDR);
+            writeBit(interruptFlags, 1, true);
+            memory->write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
+        }
+    }
     switch(mode){
         case 0:
             // Start of Mode 0.
             if(cyclesCounter == 1){
+                writeBit(STAT, 0, 0);
+                writeBit(STAT, 1, 0);
+
                 // Check to see if we should throw an LCD interrupt (mode 0 condition).
                 if(readBit(STAT, 3)){
                     byte interruptFlags = memory->read(INTERRUPT_FLAG_REGISTER_ADDR);
                     writeBit(interruptFlags, 1, true);
                     memory->write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
                 }
+                if(CGBMode) memory->sendHBlankToIO();
             // End of Mode 0.
             } else if (cyclesCounter == MODE0_LEN){
                 // Loop the cycles counter at a mode transition.
@@ -225,6 +252,16 @@ void PPU::cycle(bool CGBMode){
         case 1:
             // Start of Mode 1.
             if(cyclesCounter == 1){
+                writeBit(STAT, 0, 1);
+                writeBit(STAT, 1, 0);
+
+                // Raise the VBlank Interrupt flag.
+                if(scanline == LAST_VISIBLE_SCANLINE + 1){
+                    byte interruptFlags = memory->read(INTERRUPT_FLAG_REGISTER_ADDR);
+                    writeBit(interruptFlags, 0, true);
+                    memory->write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
+                }
+
                 // Check to see if we should throw an LCD interrupt (mode 1 condition).
                 if(readBit(STAT, 4)){
                     byte interruptFlags = memory->read(INTERRUPT_FLAG_REGISTER_ADDR);
@@ -241,6 +278,9 @@ void PPU::cycle(bool CGBMode){
         case 2:
             // Start of Mode 2.
             if(cyclesCounter == 1){
+                writeBit(STAT, 0, 0);
+                writeBit(STAT, 1, 1);
+                
                 updateOAM();
                 determineObjectToRender();
                 // Check to see if we should throw an LCD interrupt (mode 2 condition).
@@ -255,25 +295,23 @@ void PPU::cycle(bool CGBMode){
                 cyclesCounter = 0;
                 // Move to mode 3.
                 mode = 3;
-                writeBit(STAT, 0, 1);
-                writeBit(STAT, 1, 1);
             }
             break;
          case 3:
             // Start of Mode 2.
             if(cyclesCounter == 1){
+                writeBit(STAT, 0, 1);
+                writeBit(STAT, 1, 1);
+
                 updateTileMap();
-                updatePalettes(CGBMode);
-                renderCurrentScanlineVRAM(CGBMode);
+                updatePalettes();
+                renderCurrentScanlineVRAM();
             // End of Mode 2.
             } else if (cyclesCounter == MODE3_LEN){
                 // Loop the cycles counter at a mode transition.
                 cyclesCounter = 0;
                 // Move to mode 0.
                 mode = 0;
-                writeBit(STAT, 0, 0);
-                writeBit(STAT, 1, 0);
-                if(CGBMode) memory->sendHBlankToIO();
             }
             break;
         default:
@@ -288,86 +326,63 @@ void PPU::increaseScanline(){
     // V-BLANK.
     if(scanline > LAST_VISIBLE_SCANLINE){
         mode = 1;
-        writeBit(STAT, 0, 0);
-        writeBit(STAT, 1, 1);
 
-        // Raise the VBlank Interrupt flag.
-        if(scanline == LAST_VISIBLE_SCANLINE + 1){
-            byte interruptFlags = memory->read(INTERRUPT_FLAG_REGISTER_ADDR);
-            writeBit(interruptFlags, 0, true);
-            memory->write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
-        }
-       
         // Loop back to the visible scanlines.
         if(scanline == NUM_SCANLINES){
             scanline = 0;
             mode = 2;
-            writeBit(STAT, 0, 1);
-            writeBit(STAT, 1, 0);
         }
     }
     // Visible scanline.
     else{
         mode = 2;
-        writeBit(STAT, 0, 1);
-        writeBit(STAT, 1, 0);
-    }
-
-    // Update the LYC=LY Flag.
-    writeBit(STAT, 2, scanline == LYC);
-    // Check to see if we should throw an LCD interrupt (LYC=LY condition). 
-    if(scanline == LYC && readBit(STAT, 6)){
-        byte interruptFlags = memory->read(INTERRUPT_FLAG_REGISTER_ADDR);
-        writeBit(interruptFlags, 1, true);
-        memory->write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
     }
 }
 
-void PPU::renderCurrentScanlineVRAM(bool CGBMode){
+void PPU::renderCurrentScanlineVRAM(){
     if(scanline > LAST_VISIBLE_SCANLINE) return;
 
-    // if(CGBMode){
-    //     std::cerr << "Error: GameBoy Colour Mode is currently unsupported!" << std::endl;
-    //     return;
-    // }
-
     // Render all layers on their own scanline.
-    renderBGMapScanline(CGBMode);
-    renderWindowMapScanline(CGBMode);
-    renderObjectsScanline(CGBMode);
+    renderBGMapScanline();
+    renderWindowMapScanline();
+    renderObjectsScanline();
 
     int currentIndexIntoVideoBuffer = scanline * INT8_PER_SCANELINE;
     // Loop over all pixels of the scanline.
     for(int i = 0; i < SCREEN_WIDTH; i++){
         // Of the different layers, determine the actual colour to render here.
-        byte* startOfSwatch = nullptr;
-        bool placedObject = false;
-        // High priority objects.
-        if(objectEnable && highPriorityObjectPixels[i*2] != HIGH_IMPEDANCE){
-            startOfSwatch = getPaletteColour(true, highPriorityObjectPixels[i*2]) + (4 * highPriorityObjectPixels[i*2+1]);
-            placedObject = true;
-        }
-        // Low priority objects. Render only if both window and map are using the zeroth colour of the palette.
-        else if(
-            objectEnable && lowPriorityObjectPixels[i*2] != HIGH_IMPEDANCE &&
-            backgroundScanlinePixels[i*3+1] == 0 &&
-            (windowScanlinePixels[i*3] == HIGH_IMPEDANCE || windowScanlinePixels[i*3+1] == 0)
-        ){
-            startOfSwatch = getPaletteColour(true, lowPriorityObjectPixels[i*2]) + (4 * lowPriorityObjectPixels[i*2+1]);
-            placedObject = true;
-        }
-        // Draw the background map if there is no object or if the tile has GBC BG priority.
-        if((backgroundScanlinePixels[i*3+2] && backgroundScanlinePixels[i*3] != HIGH_IMPEDANCE) || startOfSwatch == nullptr){
-            startOfSwatch = getPaletteColour(false, backgroundScanlinePixels[i*3]) + (4 * backgroundScanlinePixels[i*3+1]);
-            placedObject = false;
-        }
-        // Draw the window on top of the map.
-        if(windowEnable && windowScanlinePixels[i*3] != HIGH_IMPEDANCE){
-            // If there is no data here or if there is a object but this pixel is overwritten using the GBC BG priority.
-            if((windowScanlinePixels[i*3+2] && placedObject) || startOfSwatch == nullptr || !placedObject)
-                startOfSwatch = getPaletteColour(false, windowScanlinePixels[i*3]) + (4 * windowScanlinePixels[i*3+1]);
+
+        // Draw the background map.
+        byte palette = backgroundScanlinePixels[i*3];
+        byte colour = backgroundScanlinePixels[i*3+1];
+        bool bgPriority = backgroundScanlinePixels[i*3+2];
+        bool object = false;
+        // Draw the window on top of the map if there is something to draw.
+        if(windowScanlinePixels[i*3] != HIGH_IMPEDANCE){
+            palette = windowScanlinePixels[i*3];
+            colour = windowScanlinePixels[i*3+1];
+            bgPriority = windowScanlinePixels[i*3+2];
         } 
-    
+
+        // High priority objects.
+        if(
+            highPriorityObjectPixels[i*2] != HIGH_IMPEDANCE && // Something to draw.
+            (colour == 0 || !bgPriority) // Objects have priority.
+        ){
+            palette = highPriorityObjectPixels[i*2];
+            colour = highPriorityObjectPixels[i*2+1];
+            object = true;
+        // Low priority objects.
+        } else if (
+            lowPriorityObjectPixels[i*2] != HIGH_IMPEDANCE && // Something to draw.
+            (colour == 0) // Low priority objects can only draw on 0th colour.
+        ){ 
+            palette = lowPriorityObjectPixels[i*2];
+            colour = lowPriorityObjectPixels[i*2+1];
+            object = true;
+        }
+
+        byte* startOfSwatch = getPaletteColour(object, palette) + (4 * colour);
         // Calculate where each pixel is on the master array.
         uint32_t pixelPositionToRender = currentIndexIntoVideoBuffer + i * sizeof(uint32_t);
         videoBuffer[pixelPositionToRender    ] = *(startOfSwatch + 2); // Blue.
@@ -377,11 +392,11 @@ void PPU::renderCurrentScanlineVRAM(bool CGBMode){
     }
 }
 
-void PPU::renderBGMapScanline(bool CGBMode){
+void PPU::renderBGMapScanline(){
     uint8_t* backgroundScanlinePtr = backgroundScanlinePixels;
 
     // Show a blank background if bit 0 of the LCDC is set to 0.
-    if(!backgroundEnablePriority){
+    if(!backgroundEnablePriority && !CGBMode){
         std::fill(
             backgroundScanlinePtr,  
             backgroundScanlinePtr + SCREEN_WIDTH*3, 
@@ -403,7 +418,7 @@ void PPU::renderBGMapScanline(bool CGBMode){
         int mapIndex = mapY * BG_MAP_WIDTH_TILES + mapX;
         // Style the tile (if monochrome do not style).
         int tileAttributes = *(mapAttributes + mapIndex);
-        bool gbcPriority = CGBMode ? readBit(tileAttributes, 7) : 0;
+        bool gbcPriority = (CGBMode && !backgroundEnablePriority) ? readBit(tileAttributes, 7) : 0;
         bool yFlip = CGBMode ? readBit(tileAttributes, 6) : 0;
         bool xFlip = CGBMode ? readBit(tileAttributes, 5) : 0;
         bool vRAMBank = CGBMode ? readBit(tileAttributes, 3) : 0;
@@ -430,7 +445,7 @@ void PPU::renderBGMapScanline(bool CGBMode){
     }
 }
 
-void PPU::renderWindowMapScanline(bool CGBMode){
+void PPU::renderWindowMapScanline(){
     // Clear scanline.
     std::fill(
         windowScanlinePixels,  
@@ -439,7 +454,7 @@ void PPU::renderWindowMapScanline(bool CGBMode){
     );
 
     // Skip if disabling window.
-    if(!windowEnable || !backgroundEnablePriority) return;
+    if(!windowEnable || (!backgroundEnablePriority && !CGBMode)) return;
     // Get the scanline pixels to write to.
     uint8_t* windowScanlinePtr = windowScanlinePixels;
     if((WX - 7) > 0){
@@ -461,7 +476,7 @@ void PPU::renderWindowMapScanline(bool CGBMode){
         int mapIndex = mapY * BG_MAP_WIDTH_TILES + mapX;
         // Style the tile (if monochrome do not style).
         int tileAttributes = *(mapAttributes + mapIndex);
-        bool gbcPriority = CGBMode ? readBit(tileAttributes, 7) : 0;
+        bool gbcPriority = (CGBMode && !backgroundEnablePriority) ? readBit(tileAttributes, 7) : 0;
         bool yFlip = CGBMode ? readBit(tileAttributes, 6) : 0;
         bool xFlip = CGBMode ? readBit(tileAttributes, 5) : 0;
         bool vRAMBank = CGBMode ? readBit(tileAttributes, 3) : 0;
@@ -488,7 +503,7 @@ void PPU::renderWindowMapScanline(bool CGBMode){
     }
 }
 
-void PPU::renderObjectsScanline(bool CGBMode){
+void PPU::renderObjectsScanline(){
     // Clear scanline.
     std::fill(
         lowPriorityObjectPixels, 
@@ -598,7 +613,7 @@ void PPU::updateTile(int tileIndex, bool vRAMBank){
     }
 }
 
-void PPU::updatePalettes(bool CGBMode){
+void PPU::updatePalettes(){
     // For gameboy colour palettes, colour data is written directly using the gameboy colour's specific IO regs.
     if(CGBMode){
         return;
@@ -631,7 +646,7 @@ void PPU::updatePalettes(bool CGBMode){
     } 
 }
 
-void PPU::updateBackgroundMap(bool CGBMode, bool mapNum){
+void PPU::updateBackgroundMap(bool mapNum){
     uint8_t* bgMap = mapNum ? backgroundMap1 : backgroundMap0;
     byte* startOfTileMapPointer = memory->getVRAMBank(0) + ((mapNum ? BGM1_DATA_START : BGM0_DATA_START) - VRAM_START);
     byte* mapAttributes = memory->getVRAMBank(1) + ((mapNum ? BGM1_DATA_START : BGM0_DATA_START) - VRAM_START);
@@ -715,6 +730,17 @@ void PPU::writeToLCDC(byte data){
     windowAreaStart = readBit(data, 6) ? BGM1_DATA_START : BGM0_DATA_START;
     ppuEnable = readBit(data, 7);
     LCDC = data;
+
+    // Check if PPU got disabled.
+    if(!ppuEnable){
+        // Reset the scanline tracker.
+        scanline = 0;
+        cyclesCounter = 0;
+        mode = 0;
+        writeBit(STAT, 0, 0);
+        writeBit(STAT, 1, 0);
+        // No LYC check is done.
+    }
 }
 
 void PPU::writeToBCPS(byte data){BGPaletteSpecification = data & 0b10111111;}

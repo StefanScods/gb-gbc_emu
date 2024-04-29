@@ -57,6 +57,7 @@ LoadCartridgeReturnCodes Core::loadROM(std::string filePath){
             if(cartridge.isGBCROM()){
                 cpu.setInitalValuesColour();
             }
+            ppu.setGBCMode(cartridge.isGBCROM());
             break;
         case CANNOT_READ_FILE:
             message = "ERROR: Could not open the the ROM file. Check permissions!";
@@ -117,7 +118,7 @@ void Core::runForFrame(bool breakOnCPU) {
     while (cycleCounter < CYCLES_PER_FRAME) {
         // Run hardware.
         cycles cpuWork = cpu.cycle();
-        ppu.cycle(getCGBMode());
+        ppu.cycle();
         ioController.cycle(cpu.getDoubleSpeedMode());
         handleInterrupts();
 
