@@ -9,9 +9,10 @@
 
 // todo!!! turn off GBC regs if we are not running in GBC mode.
 
-void IOController::init(CPU* d_cpu, PPU* d_ppu){
+void IOController::init(CPU* d_cpu, PPU* d_ppu, APU* d_apu){
     cpu = d_cpu;
     ppu = d_ppu;
+    apu = d_apu;
 
     reset();
 }
@@ -63,6 +64,10 @@ void IOController::TIMATimerOverflowLogic(){
 }
 
 byte IOController::read(word address){
+    // Special case for wave pattern RAM.
+    if(address >= WAVEPATTERNRAME_START && address <= WAVEPATTERNRAME_END)
+        return apu->readRAM(address);
+    // All other I/O devices.
     switch(address){
         // P1/JOYP: Joypad (R/W).
         case 0xFF00:
@@ -82,6 +87,54 @@ byte IOController::read(word address){
         // IF - Interrupt Flag
         case 0xFF0F:
             return IF;
+        // NR10 - Channel 1 sweep.
+        case 0xFF10:
+            return apu->readReg(1, 0);
+        // NR11 - Channel 1 length timer & duty cycle.
+        case 0xFF11:
+            return apu->readReg(1, 1);
+        // NR12 - Channel 1 volume & envelope.
+        case 0xFF12:
+            return apu->readReg(1, 2);
+        // NR14 - Channel 1 period high & control.
+        case 0xFF14:
+            return apu->readReg(1, 4);
+        // NR21 - Channel 2 length timer & duty cycle.
+        case 0xFF16:
+            return apu->readReg(2, 1);
+        // NR22 - Channel 2 volume & envelope.
+        case 0xFF17:
+            return apu->readReg(2, 2);
+        // NR24 - Channel 2 period high & control.
+        case 0xFF19:
+            return apu->readReg(2, 4);
+        // NR30 - Channel 3 DAC enable.
+        case 0xFF1A:
+            return apu->readReg(3, 0);     
+        // NR32 - Channel 3 output level.
+        case 0xFF1C:
+            return apu->readReg(3, 2);
+        // NR34 - Channel 3 period high & control.
+        case 0xFF1E:
+            return apu->readReg(3, 4);
+        // NR42 - Channel 4 volume & envelope.
+        case 0xFF21:
+            return apu->readReg(4, 2);
+        // NR43 - Channel 4 frequency & randomness.
+        case 0xFF22:
+            return apu->readReg(4, 3);
+        // NR44 - Channel 4 control.
+        case 0xFF23:
+            return apu->readReg(4, 4);
+        // NR50 - Master volume & VIN panning.
+        case 0xFF24:
+            return apu->readReg(5, 0);
+        // NR51 - Sound panning.
+        case 0xFF25:
+            return apu->readReg(5, 1);
+        // NR52 - Audio master control.
+        case 0xFF26:
+            return apu->readReg(5, 2);
         // LCDC: LCD control
         case 0xFF40:
             return ppu->LCDC;  
@@ -147,6 +200,10 @@ byte IOController::read(word address){
     }
 }
 void IOController::write(word address, byte data){
+    // Special case for wave pattern RAM.
+    if(address >= WAVEPATTERNRAME_START && address <= WAVEPATTERNRAME_END)
+        return apu->writeRAM(address, data);
+    // All other I/O devices.
     switch(address){
         // P1/JOYP: Joypad (R/W).
         case 0xFF00:
@@ -195,6 +252,90 @@ void IOController::write(word address, byte data){
         // IF - Interrupt Flag
         case 0xFF0F:
             IF = data;
+            break;
+        // NR10 - Channel 1 sweep.
+        case 0xFF10:
+            apu->writeReg(1, 0, data);
+            break;
+        // NR11 - Channel 1 length timer & duty cycle.
+        case 0xFF11:
+            apu->writeReg(1, 1, data);
+            break;
+        // NR12 - Channel 1 volume & envelope.
+        case 0xFF12:
+            apu->writeReg(1, 2, data);
+            break;
+        // NR13 - Channel 1 period low.
+        case 0xFF13:
+            apu->writeReg(1, 3, data);
+            break;
+        // NR14 - Channel 1 period high & control.
+        case 0xFF14:
+            apu->writeReg(1, 4, data);
+            break;
+        // NR21 - Channel 2 length timer & duty cycle.
+        case 0xFF16:
+            apu->writeReg(2, 1, data);
+            break;
+        // NR22 - Channel 2 volume & envelope.
+        case 0xFF17:
+            apu->writeReg(2, 2, data);
+            break;
+        // NR23 - Channel 2 period low.
+        case 0xFF18:
+            apu->writeReg(2, 3, data);
+            break;
+        // NR24 - Channel 2 period high & control.
+        case 0xFF19:
+            apu->writeReg(2, 4, data);
+            break;
+        // NR30 - Channel 3 DAC enable.
+        case 0xFF1A:
+            apu->writeReg(3, 0, data);
+            break;
+        // NR31 - Channel 3 length timer.
+        case 0xFF1B:
+            apu->writeReg(3, 1, data);
+            break;      
+        // NR32 - Channel 3 output level.
+        case 0xFF1C:
+            apu->writeReg(3, 2, data);
+            break;
+        // NR33 - Channel 3 period low.
+        case 0xFF1D:
+            apu->writeReg(3, 3, data);
+            break;
+        // NR34 - Channel 3 period high & control.
+        case 0xFF1E:
+            apu->writeReg(3, 4, data);
+            break;
+        // NR41 - Channel 4 length timer.
+        case 0xFF20:
+            apu->writeReg(4, 1, data);
+            break;
+        // NR42 - Channel 4 volume & envelope.
+        case 0xFF21:
+            apu->writeReg(4, 2, data);
+            break;
+        // NR43 - Channel 4 frequency & randomness.
+        case 0xFF22:
+            apu->writeReg(4, 3, data);
+            break;
+        // NR44 - Channel 4 control.
+        case 0xFF23:
+            apu->writeReg(4, 4, data);
+            break;
+        // NR50 - Master volume & VIN panning.
+        case 0xFF24:
+            apu->writeReg(5, 0, data);
+            break;
+        // NR51 - Sound panning.
+        case 0xFF25:
+            apu->writeReg(5, 1, data);
+            break;
+        // NR52 - Audio master control.
+        case 0xFF26:
+            apu->writeReg(5, 2, data);
             break;
         // LCDC: LCD control
         case 0xFF40:

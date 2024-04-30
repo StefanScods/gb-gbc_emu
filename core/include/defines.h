@@ -138,6 +138,9 @@ const int INT8_PER_SCANELINE = SCREEN_WIDTH*sizeof(uint32_t)/sizeof(uint8_t);
 #define IOPORTS_START 0xFF00
 #define IOPORTS_END 0xFF7F
 
+#define WAVEPATTERNRAME_START 0xFF30
+#define WAVEPATTERNRAME_END 0xFF3F
+
 #define HRAM_START 0xFF80
 #define HRAM_END 0xFFFE
 
@@ -283,6 +286,9 @@ const int PIXELS_PER_GB_MAP = BG_MAP_WIDTH_PIXELS * BG_MAP_WIDTH_PIXELS;
 const int INT8_PER_BG_MAP = sizeof(uint32_t)/sizeof(uint8_t) * PIXELS_PER_GB_MAP;
 
 const int AMOUNT_BG_TO_UPDATE_PER_CYCLE = (BGM0_DATA_END - BGM0_DATA_START + 1) / 128;
+
+// APU Defines.
+#define NUMBER_OF_CHANNELS 4
 
 // OAM Defines.
 #define NUMBER_OF_OBJECTS 40

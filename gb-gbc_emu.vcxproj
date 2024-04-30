@@ -162,6 +162,7 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="core\apu.cpp" />
     <ClCompile Include="core\cartridge.cpp" />
     <ClCompile Include="core\core.cpp" />
     <ClCompile Include="core\cpu.cpp" />
@@ -193,6 +194,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="core\include\apu.h" />
     <ClInclude Include="core\include\cartridge.h" />
     <ClInclude Include="core\include\core.h" />
     <ClInclude Include="core\include\cpu.h" />

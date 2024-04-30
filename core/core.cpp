@@ -16,8 +16,10 @@ The header implementation for the main emulator core.
 Core::Core(ExecutionModes mode) {
     executionMode = mode;
     ppu.init();
-    ioController.init(&cpu, &ppu);
+    apu.init();
+    ioController.init(&cpu, &ppu, &apu);
     memory.init(&cpu, &ioController, &ppu, &cartridge);
+
 
     cpu.bindMemory(&memory);
     ppu.bindMemory(&memory);
@@ -32,6 +34,7 @@ void Core::resetCore(){
     cartridge.close();
 
     ppu.reset();
+    apu.reset();
     ioController.reset();
     cpu.setInitalValues();
     memory.setInitalValues();
@@ -40,6 +43,8 @@ void Core::resetCore(){
 Core::~Core() {
     cartridge.close();
     memory.destroy();
+    apu.destroy();
+    ppu.destroy();
 }
 
 LoadCartridgeReturnCodes Core::loadROM(std::string filePath){
@@ -118,8 +123,9 @@ void Core::runForFrame(bool breakOnCPU) {
     while (cycleCounter < CYCLES_PER_FRAME) {
         // Run hardware.
         cycles cpuWork = cpu.cycle();
-        ppu.cycle();
         ioController.cycle(cpu.getDoubleSpeedMode());
+        ppu.cycle();
+        apu.cycle();
         handleInterrupts();
 
         if(std::find(enabledCPUBreakpoints.begin(),enabledCPUBreakpoints.end(), cpu.getPC()) != enabledCPUBreakpoints.end()){
@@ -232,7 +238,8 @@ void Core::loadState(int stateNum){
     cpu.loadFromState(saveFile);
     memory.loadFromState(saveFile);
     ppu.loadFromState(saveFile);
-    ioController.loadFromState(saveFile);\
+    ioController.loadFromState(saveFile);
+    apu.loadFromState(saveFile);
 
     releaseMutexLock();
 
@@ -267,6 +274,7 @@ void Core::saveState(int stateNum){
     memory.saveToState(saveFile);
     ppu.saveToState(saveFile);
     ioController.saveToState(saveFile);
+    apu.saveToState(saveFile);
 
     releaseMutexLock();
 

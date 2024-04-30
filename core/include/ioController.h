@@ -8,6 +8,7 @@
 #include "timer.h"
 #include "joypad.h"
 #include "dmaController.h"
+#include "apu.h"
 
 class CPU;
 class PPU;
@@ -21,6 +22,7 @@ private:
     CPU* cpu = nullptr;
     PPU* ppu = nullptr;
     Memory* memory = nullptr;
+    APU* apu = nullptr;
 
     // Joypad.
     Joypad joypad;
@@ -50,7 +52,7 @@ public:
     */
     Joypad* getJoypad(){return &joypad;}
 
-    void init(CPU* d_cpu, PPU* d_ppu);
+    void init(CPU* d_cpu, PPU* d_ppu, APU* d_apu);
     void bindMemory(Memory* d_memory);
     void reset();
     void cycle(bool cpuDoubleSpeed);

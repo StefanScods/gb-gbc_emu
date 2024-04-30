@@ -14,6 +14,7 @@ The header declaration for the main emulator core.
 #include "memory.h"
 #include "joypad.h"
 #include "ppu.h"
+#include "apu.h"
 #include "ioController.h"
 #include "register.h"
 #include "defines.h"
@@ -29,6 +30,7 @@ private:
     Cartridge cartridge;
     PPU ppu;
     IOController ioController; 
+    APU apu; 
 
     ExecutionModes executionMode = PAUSE;
 
