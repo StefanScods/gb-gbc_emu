@@ -144,10 +144,9 @@ bool App::OnInit()
 		std::cout << "Starting: " << APP_TITLE << std::endl;
 
 	// Initialize SDL2 subsystem.
-	if (!initializeSDL2())
-	{
-		exit(1);
-	}
+	if (!initializeSDL2()) exit(1);
+	// Initialize PortAudio subsystem.
+	if (!initializeAudio()) exit(1);
 
 	// Set the app icon.
 	wxIcon icon;
@@ -220,6 +219,10 @@ int App::OnExit()
 	// Wait for the main thread to return (Finishes the current frame).
 	emuThread->Wait();
 
+	// Clean up audio.
+	if(audioStream != nullptr) Pa_CloseStream(audioStream);
+    Pa_Terminate();
+
 	// Clean dynamic memory. WxWidgets handles its own memory.
 	delete emuCore;
 	delete emuThread;
@@ -275,6 +278,64 @@ bool App::initializeSDL2(){
 
 	// Everything initialized successfully.
 	return true;
+}
+
+bool App::initializeAudio(){
+	PaError err = Pa_Initialize();
+	if( err != paNoError )return false;
+
+	// Set up the target audio device.
+	PaStreamParameters deviceParameters;
+	deviceParameters.device = Pa_GetDefaultOutputDevice(); 
+	if (deviceParameters.device == paNoDevice) return false;
+
+	deviceParameters.channelCount = NUMBER_OF_AUDIO_CHANNELS;   
+    deviceParameters.sampleFormat = paFloat32; 
+    deviceParameters.suggestedLatency = Pa_GetDeviceInfo( deviceParameters.device )->defaultLowOutputLatency;
+    deviceParameters.hostApiSpecificStreamInfo = NULL;
+	// Open an audio stream.
+	err = Pa_OpenStream(
+              &audioStream,
+              NULL, 
+              &deviceParameters,
+              SAMPLE_RATE,
+              AUDIO_FRAMES_PER_BUFFER,
+              paClipOff,   
+              [](
+				const void* inputBuffer, 
+			  	void* outputBuffer,
+				unsigned long framesPerBuffer,
+				const PaStreamCallbackTimeInfo* timeInfo,
+				PaStreamCallbackFlags statusFlags,
+				void* userData
+			  ) -> int { 
+				return ((App*)userData)->handleAudioCallback(
+					inputBuffer, outputBuffer, framesPerBuffer,
+					timeInfo, statusFlags
+				);},
+              this );
+    if( err != paNoError ) return false;
+
+	// Start the stream.
+	err = Pa_StartStream(audioStream);
+	return err == paNoError;
+}
+
+int App::handleAudioCallback (
+	const void* inputBuffer, 
+	void* outputBuffer,
+	unsigned long framesPerBuffer,
+	const PaStreamCallbackTimeInfo* timeInfo,
+	PaStreamCallbackFlags statusFlags
+){
+	// If the emulator is not loaded do nothing.
+	if(!emuCore) return paContinue;
+	memcpy(
+		(AudioChannelData*)outputBuffer,
+		emuCore->fetchAudioData(),
+		(AUDIO_FRAMES_PER_BUFFER)*sizeof(AudioChannelData)
+	);
+	return paContinue;
 }
 
 void App::sendEmulationCoreUpdateEvent(){

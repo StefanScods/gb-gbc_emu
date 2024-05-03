@@ -4,7 +4,8 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/dependencies/wxWidgets/include"
+                "${workspaceFolder}/dependencies/wxWidgets/include",
+                "${workspaceFolder}/dependencies/portAudio/include"
             ],
             "defines": [
                 "_DEBUG",

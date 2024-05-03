@@ -4,6 +4,7 @@
  * Class declaration for a GameBoy Color APU for audio. 
  */
 #include "defines.h"
+#include "audioDefines.h"
 
 struct ChannelControl {
     // Some channel-specific feature (if present).
@@ -29,8 +30,16 @@ private:
     // Wave pattern RAM for channel 3.
     byte* wavePatternRAM = nullptr;
 
+    // The audio data to be played aloud.
+    AudioChannelData* audioData = nullptr;
+    double phase = 0;
 
 public:
+    /**
+     * @brief Fetches the buffer of audio data used to supply the application 
+     * with audio data.
+     */
+    AudioChannelData* fetchAudioData();
     /**
      * @brief Dynamically allocates all blocks
      * of memory. Returns a bool indicating success.

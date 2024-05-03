@@ -12,6 +12,8 @@
 #include "wx/progdlg.h"
 #include "wx/grid.h"
 #include <string>
+#include "portaudio.h"
+#include "../../core/include/audioDefines.h"
 
 // Forward declarations.
 class EmulationThread;
@@ -113,6 +115,23 @@ public:
 	bool initializeSDL2();
 
 	/**
+	 * @brief Initialize the portAudio subsystem. 
+	 * 	
+	 * Will output error messages to std::cerr upon failure.
+	 * 
+	 * @return Returns the success of SDL's initialization.
+	*/
+	bool initializeAudio();
+
+	int handleAudioCallback (
+		const void* inputBuffer, 
+		void* outputBuffer,
+		unsigned long framesPerBuffer,
+		const PaStreamCallbackTimeInfo* timeInfo,
+		PaStreamCallbackFlags statusFlags
+	);
+
+	/**
 	 * @brief Closes all frames except the main emulator frame.
 	 */
 	void closeAllSideFrames();
@@ -199,6 +218,8 @@ private:
 	BreakpointManagerFrame *breakpointManagerFrame = nullptr;
 
 	Core *emuCore = nullptr;
+
+	PaStream *audioStream = nullptr;
 };
 
 #endif

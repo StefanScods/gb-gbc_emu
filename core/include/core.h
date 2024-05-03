@@ -18,6 +18,7 @@ The header declaration for the main emulator core.
 #include "ioController.h"
 #include "register.h"
 #include "defines.h"
+#include "audioDefines.h"
 #include "cartridge.h"
 #include "sdlController.h"
 #include "../../GUI/include/app.h"
@@ -182,6 +183,12 @@ public:
      * @brief Returns if we are currently running a GBC only cart.
     */
     bool getCGBMode(){ return cartridge.isGBCROM(); }
+
+    /**
+     * @brief Fetches the buffer of audio data used to supply the application 
+     * with audio data.
+     */
+    AudioChannelData* fetchAudioData(){return apu.fetchAudioData();}
 
     /**
      * @brief Returns the currently loaded cartridge.

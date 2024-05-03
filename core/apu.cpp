@@ -13,6 +13,10 @@ bool APU::init(){
     if (wavePatternRAM == nullptr)
         return false;
 
+    audioData = new AudioChannelData[AUDIO_FRAMES_PER_BUFFER];
+    if (audioData == nullptr)
+        return false;
+
     reset();
     return true;
 }
@@ -20,6 +24,7 @@ bool APU::init(){
 void APU::destroy(){
     // Deallocates the data.
     delete[] wavePatternRAM;
+    delete[] audioData;
 }
 
 void APU::reset(){
@@ -30,6 +35,7 @@ void APU::reset(){
         wavePatternRAM+(WAVEPATTERNRAME_END - WAVEPATTERNRAME_START + 1), 
         0
     );
+    memset(audioData, 0, (AUDIO_FRAMES_PER_BUFFER)*sizeof(AudioChannelData));
     for(int i =0; i < NUMBER_OF_CHANNELS + 1; i++){
         audioRegs[i] = {};
     }
@@ -85,7 +91,17 @@ void APU::writeRAM(word address, byte data){
 
 
 void APU::cycle(){
+}
 
+AudioChannelData* APU::fetchAudioData(){
+    // Generate the sine wave
+    for (unsigned int i = 0; i < AUDIO_FRAMES_PER_BUFFER; i++) {
+        audioData[i].left = sin(phase * 2.0 * M_PI);
+        audioData[i].right = sin(phase * 2.0 * M_PI);
+        phase += 500.0 / SAMPLE_RATE;
+        if (phase > 1.0) phase -= 1.0;
+    }
+    return audioData;
 }
 
 void APU::saveToState(std::ofstream & stateFile){
