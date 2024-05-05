@@ -330,11 +330,13 @@ int App::handleAudioCallback (
 ){
 	// If the emulator is not loaded do nothing.
 	if(!emuCore) return paContinue;
-	memcpy(
-		(AudioChannelData*)outputBuffer,
-		emuCore->fetchAudioData(),
-		(AUDIO_FRAMES_PER_BUFFER)*sizeof(AudioChannelData)
-	);
+
+	// Read the requested amount from the APU.
+	AudioChannelData* output = (AudioChannelData*) outputBuffer;
+	for(int i = 0; i < framesPerBuffer; i++){
+		output[i] = *emuCore->fetchAudioData();
+	}
+	
 	return paContinue;
 }
 

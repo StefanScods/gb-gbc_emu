@@ -43,6 +43,9 @@ private:
         // add inital breakpoints here!
     };
 
+    // Placeholder for no audio.
+    AudioChannelData NO_AUDIO = {};
+
 public:
     // Make the core's controller public so that the rest of the codebase can modify bindings without needing wrapper functions.
     SDLController controller;
@@ -188,7 +191,11 @@ public:
      * @brief Fetches the buffer of audio data used to supply the application 
      * with audio data.
      */
-    AudioChannelData* fetchAudioData(){return apu.fetchAudioData();}
+    AudioChannelData* fetchAudioData(){
+        if(executionMode == PAUSE) return (&NO_AUDIO);
+        return apu.fetchAudioData();
+    }
+
 
     /**
      * @brief Returns the currently loaded cartridge.

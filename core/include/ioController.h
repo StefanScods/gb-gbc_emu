@@ -44,6 +44,8 @@ private:
 
     byte IF = 0xFF;
 
+    byte divAPUCounter = 0;
+
     bool KEY1SwitchArmed = false;
 
 public:
@@ -60,6 +62,8 @@ public:
     void TIMATimerOverflowLogic();
     byte read(word address);
     void write(word address, byte data );
+
+    byte getDivAPUCounter(){return divAPUCounter;}
 
     /**
      * @brief Sends an HBlank event the various IO devices..

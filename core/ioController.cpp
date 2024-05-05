@@ -30,8 +30,9 @@ void IOController::reset(){
     // Init timers.
     TIMATimer.resetTimer(0);
     DIVTimer.resetTimer(0);
-    DIVTimer.setIncrementFrequency(cpu->getClockSpeed() / 256);
+    DIVTimer.setIncrementFrequency( 256);
     DIVTimer.setRunning(true);
+    divAPUCounter = 0;
     
     joypad.reset();
     dmaController.reset();
@@ -39,7 +40,14 @@ void IOController::reset(){
 }
 
 void IOController::cycle(bool cpuDoubleSpeed){
+
+    // Cycle the div timer and track “DIV-APU” counter events.
+    bool divBitBefore = cpuDoubleSpeed ? readBit(DIVTimer.read(), 5) : readBit(DIVTimer.read(), 4);
     DIVTimer.cycle(cpuDoubleSpeed);
+    bool divBitAfter = cpuDoubleSpeed ? readBit(DIVTimer.read(), 5) : readBit(DIVTimer.read(), 4);
+    // If bit 4 (5 in double-speed mode) goes from 1 to 0, inc divAPUCounter. 
+    if( divBitBefore && !divBitAfter) divAPUCounter++;
+
     TIMATimer.cycle(cpuDoubleSpeed, std::bind(&IOController::TIMATimerOverflowLogic, this));
 
     dmaController.cycle(cpuDoubleSpeed);
@@ -175,6 +183,9 @@ byte IOController::read(word address){
             writeBit(result, 7, cpu->getDoubleSpeedMode());
             return result;
         }
+        // VBK - VRAM bank.
+        case 0xFF4F:
+            return memory->getActiveVRAMBank();
         //  HDMA5 -  VRAM DMA length/mode/start.
         case 0xFF55:
             return hdmaController.readStatus();
@@ -446,7 +457,7 @@ void IOController::receiveHBlank(){
 void IOController::saveToState(std::ofstream & stateFile){
     int bytesToWrite = sizeof(byte)*6 + sizeof(bool);
     bytesToWrite += sizeof(bool)*3 + sizeof(cycles) + sizeof(word)*3 + sizeof(byte); // DMA size.
-    bytesToWrite += (sizeof(bool) + sizeof(cycles)*2 + sizeof(byte))*2; // Timer size.
+    bytesToWrite += (sizeof(bool) + sizeof(cycles)*2 + sizeof(byte))*3; // Timer size.
     byte* writeBuffer = new byte[
         bytesToWrite
     ];
@@ -463,7 +474,7 @@ void IOController::saveToState(std::ofstream & stateFile){
     std::memcpy(writeBuffer, &TAC, sizeof(byte)); writeBuffer+=sizeof(byte);
     DIVTimer.saveToState(writeBuffer);
     TIMATimer.saveToState(writeBuffer);
-
+    std::memcpy(writeBuffer, &divAPUCounter, sizeof(byte)); writeBuffer+=sizeof(byte);
     // Palettes.
     std::memcpy(writeBuffer, &BGP, sizeof(byte)); writeBuffer+=sizeof(byte);
     std::memcpy(writeBuffer, &OBP0, sizeof(byte)); writeBuffer+=sizeof(byte);
@@ -481,7 +492,7 @@ void IOController::saveToState(std::ofstream & stateFile){
 void IOController::loadFromState(std::ifstream & stateFile){
     int bytesToRead = sizeof(byte)*6 + sizeof(bool);
     bytesToRead += sizeof(bool)*3 + sizeof(cycles) + sizeof(word)*3 + sizeof(byte); // DMA size.
-    bytesToRead += (sizeof(bool) + sizeof(cycles)*2 + sizeof(byte))*2; // Timer size.
+    bytesToRead += (sizeof(bool) + sizeof(cycles)*2 + sizeof(byte))*3; // Timer size.
     byte* readBuffer = new byte[
         bytesToRead
     ];
@@ -500,6 +511,7 @@ void IOController::loadFromState(std::ifstream & stateFile){
     std::memcpy(&TAC, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
     DIVTimer.loadFromState(readBuffer);
     TIMATimer.loadFromState(readBuffer);
+    std::memcpy(&divAPUCounter, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);
 
     // Palettes.
     std::memcpy(&BGP, readBuffer, sizeof(byte)); readBuffer+=sizeof(byte);

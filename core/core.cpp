@@ -122,12 +122,23 @@ void Core::runForFrame(bool breakOnCPU) {
     cycles cycleCounter = 0;
     while (cycleCounter < CYCLES_PER_FRAME) {
         // Run hardware.
-        cycles cpuWork = cpu.cycle();
-        ioController.cycle(cpu.getDoubleSpeedMode());
-        ppu.cycle();
-        apu.cycle();
         handleInterrupts();
 
+        cycles cpuWork = cpu.cycle();
+        byte apuDivCounterBefore = ioController.getDivAPUCounter();
+        ioController.cycle(cpu.getDoubleSpeedMode());
+        byte apuDivCounterAfter = ioController.getDivAPUCounter();
+
+        // Detect any apu div counter events.
+        byte apuDivCounterEvents = 0;
+        if(apuDivCounterBefore != apuDivCounterAfter){
+            writeBit(apuDivCounterEvents, 2, apuDivCounterAfter % 8 == 0);
+            writeBit(apuDivCounterEvents, 1, apuDivCounterAfter % 4 == 0);
+            writeBit(apuDivCounterEvents, 0, apuDivCounterAfter % 2 == 0);
+        }
+        apu.cycle(apuDivCounterEvents);
+        ppu.cycle();
+      
         if(std::find(enabledCPUBreakpoints.begin(),enabledCPUBreakpoints.end(), cpu.getPC()) != enabledCPUBreakpoints.end()){
             breakOnCPU = true;
             pauseEmulatorExecution();
