@@ -367,7 +367,7 @@ void PPU::renderCurrentScanlineVRAM(){
         // High priority objects.
         if(
             highPriorityObjectPixels[i*2] != HIGH_IMPEDANCE && // Something to draw.
-            (colour == 0 || !bgPriority) // Objects have priority.
+            (colour == 0 || !bgPriority || !backgroundEnablePriority) // Objects have priority.
         ){
             palette = highPriorityObjectPixels[i*2];
             colour = highPriorityObjectPixels[i*2+1];
@@ -375,7 +375,7 @@ void PPU::renderCurrentScanlineVRAM(){
         // Low priority objects.
         } else if (
             lowPriorityObjectPixels[i*2] != HIGH_IMPEDANCE && // Something to draw.
-            (colour == 0) // Low priority objects can only draw on 0th colour.
+            ((colour == 0) || !backgroundEnablePriority)// Low priority objects can only draw on 0th colour.
         ){ 
             palette = lowPriorityObjectPixels[i*2];
             colour = lowPriorityObjectPixels[i*2+1];
@@ -418,7 +418,7 @@ void PPU::renderBGMapScanline(){
         int mapIndex = mapY * BG_MAP_WIDTH_TILES + mapX;
         // Style the tile (if monochrome do not style).
         int tileAttributes = *(mapAttributes + mapIndex);
-        bool gbcPriority = (CGBMode && !backgroundEnablePriority) ? readBit(tileAttributes, 7) : 0;
+        bool gbcPriority = (CGBMode && backgroundEnablePriority) ? readBit(tileAttributes, 7) : 0;
         bool yFlip = CGBMode ? readBit(tileAttributes, 6) : 0;
         bool xFlip = CGBMode ? readBit(tileAttributes, 5) : 0;
         bool vRAMBank = CGBMode ? readBit(tileAttributes, 3) : 0;
@@ -476,7 +476,7 @@ void PPU::renderWindowMapScanline(){
         int mapIndex = mapY * BG_MAP_WIDTH_TILES + mapX;
         // Style the tile (if monochrome do not style).
         int tileAttributes = *(mapAttributes + mapIndex);
-        bool gbcPriority = (CGBMode && !backgroundEnablePriority) ? readBit(tileAttributes, 7) : 0;
+        bool gbcPriority = (CGBMode && backgroundEnablePriority) ? readBit(tileAttributes, 7) : 0;
         bool yFlip = CGBMode ? readBit(tileAttributes, 6) : 0;
         bool xFlip = CGBMode ? readBit(tileAttributes, 5) : 0;
         bool vRAMBank = CGBMode ? readBit(tileAttributes, 3) : 0;
@@ -756,12 +756,6 @@ void PPU::writeToBCPDandOCPD(byte data, bool objectPalette){
     byte swatch = ((*targetReg) & 0b110) >> 1;
     byte high = (*targetReg) & 0b1;
     int targetSwatch = palette*SWATCHES_PER_PALETTE*4 + swatch*4;
-
-    // std::cout << "palette " << (int) palette << std::endl;
-    // std::cout << "swatch " << (int) swatch << std::endl;
-    // std::cout << "high " << (int) high << std::endl;
-    // std::cout << std::hex << (int) data << std::endl;
-
 
     // Keep all zero colour for object palettes as transparent.
     if(!(swatch == 0 && objectPalette)) {
