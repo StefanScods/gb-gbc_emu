@@ -18,9 +18,7 @@ cycles MiscAndControl::nop(CPU* cpu){
     return NOP_CYCLES;
 }
 
-//!!! IMPLEMENT THIS AHHHHHHHHHHHHHHHHHHHHH
 cycles MiscAndControl::stop(CPU* cpu){
-    std::cout << "STOP" << std::endl;
     bool KEY1SwitchArmed = readBit(cpu->memory->read(0xFF4D), 0);
     if(KEY1SwitchArmed) cpu->toggleDoubleSpeedMode();
     else cpu->setLowPowerMode(true);

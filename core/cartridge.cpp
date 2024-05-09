@@ -708,7 +708,7 @@ byte Cartridge::controllerMCB1Read(word address){
 		// If its too large, just use the bottom bits.
 		if((uint32_t)(bankToRead*ROM_BANK_SIZE) > romSize) bankToRead = mbc1ROMBank;
 		//std::cout << "Read ROM Bank " << bankToRead << std::endl;
-		if(mbc1Mode == 0x1) std::cout << (int) mbc1ROMSecondaryBank << " " << (int) bankToRead << std::endl;
+		// if(mbc1Mode == 0x1) std::cout << (int) mbc1ROMSecondaryBank << " " << (int) bankToRead << std::endl;
 		uint32_t addressToRead = bankToRead*ROM_BANK_SIZE + (address - ROMBANKN_START);
 		return romData[addressToRead];
 	// RAM Bank 00–03, if any.

@@ -206,7 +206,7 @@ byte IOController::read(word address){
             return memory->readActiveWRAMBank();
         default:
             //std::cerr << "Error: I/O Device At 0x" << std::hex << address << std::dec <<" Not Yet Supported!" << std::endl;
-            return 0;
+            return HIGH_IMPEDANCE;
         return 0;
     }
 }
@@ -218,7 +218,8 @@ void IOController::write(word address, byte data){
     switch(address){
         // P1/JOYP: Joypad (R/W).
         case 0xFF00:
-            return joypad.write(data);
+            joypad.write(data);
+            break;
         // DIV: Divider register.
         case 0xFF04:
             DIVTimer.resetTimer(0);

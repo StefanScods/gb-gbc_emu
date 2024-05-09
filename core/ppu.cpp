@@ -200,6 +200,11 @@ void PPU::cycle(){
     // Pause execution if the PPU is disabled.
     if(!ppuEnable) return;
 
+    // Clear any interrupts.
+    byte interruptFlags = memory->read(INTERRUPT_FLAG_REGISTER_ADDR);
+    writeBit(interruptFlags, 1, false);
+    memory->write(INTERRUPT_FLAG_REGISTER_ADDR, interruptFlags);
+
     /**
      * The PPU renders to the LCD in rows called scan lines. There are 154 scanlines in the display, 
      * 144 visible, 10 in the "v-blank" zone. It takes the PPU 456 cycles to render a scanline.
@@ -757,24 +762,20 @@ void PPU::writeToBCPDandOCPD(byte data, bool objectPalette){
     byte high = (*targetReg) & 0b1;
     int targetSwatch = palette*SWATCHES_PER_PALETTE*4 + swatch*4;
 
-    // Keep all zero colour for object palettes as transparent.
-    if(!(swatch == 0 && objectPalette)) {
-    // Else update the palette.
-        // Target the last 2 bits of green and all blue.
-        if (high){
-            targetPalette[targetSwatch + 2] = ((data & 0b01111100) >> 2) << 3;
+    // Target the last 2 bits of green and all blue.
+    if (high){
+        targetPalette[targetSwatch + 2] = ((data & 0b01111100) >> 2) << 3;
 
-            byte green5 =  (targetPalette[targetSwatch + 1]) >> 3;
-            targetPalette[targetSwatch + 1] = (green5 & 0b111 | ((data & 0b11) << 3)) << 3;
+        byte green5 =  (targetPalette[targetSwatch + 1]) >> 3;
+        targetPalette[targetSwatch + 1] = (green5 & 0b111 | ((data & 0b11) << 3)) << 3;
 
-        // Target the first 3 bits of green and all red.
-        } else {
-            targetPalette[targetSwatch + 0] = (data & 0b11111) << 3;
-            byte green5 = (targetPalette[targetSwatch + 1]) >> 3;
-            targetPalette[targetSwatch + 1] = ((green5 & 0b11000) | ((data & 0b11100000) >> 5)) << 3;
-        }
+    // Target the first 3 bits of green and all red.
+    } else {
+        targetPalette[targetSwatch + 0] = (data & 0b11111) << 3;
+        byte green5 = (targetPalette[targetSwatch + 1]) >> 3;
+        targetPalette[targetSwatch + 1] = ((green5 & 0b11000) | ((data & 0b11100000) >> 5)) << 3;
     }
-
+    
     // Auto increment register. 
     if(readBit((*targetReg), 7)){
         (*targetReg)++;
@@ -784,7 +785,30 @@ void PPU::writeToBCPDandOCPD(byte data, bool objectPalette){
 }
 
 byte PPU::readFromBCPDandOCPD(bool objectPalette){
-    return HIGH_IMPEDANCE;
+    byte* targetReg = objectPalette ? &OBJPaletteSpecification : &BGPaletteSpecification;
+    byte* targetPalette = objectPalette ? objectColours : backgroundColours;
+
+    byte palette = ((*targetReg) & 0b111000) >> 3;
+    byte swatch = ((*targetReg) & 0b110) >> 1;
+    byte high = (*targetReg) & 0b1;
+    int targetSwatch = palette*SWATCHES_PER_PALETTE*4 + swatch*4;
+
+    byte valueToReturn = 0;
+    // Target the last 2 bits of green and all blue.
+    if (high){
+        valueToReturn = targetPalette[targetSwatch + 2] >> 1;
+
+        byte green5 =  (targetPalette[targetSwatch + 1]) >> 6;
+        valueToReturn = valueToReturn | (green5 & 0b11);
+
+    // Target the first 3 bits of green and all red.
+    } else {
+        valueToReturn = (targetPalette[targetSwatch + 0] >> 3);
+        byte green5 = (targetPalette[targetSwatch + 1]) << 2;
+        valueToReturn = valueToReturn | green5;
+    }
+
+    return valueToReturn;
 }
 
 void PPU::updateOAM(){
