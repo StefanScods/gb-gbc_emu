@@ -2,9 +2,10 @@
 This is a Nintendo GameBoy / GameBoy Color emulator written in C++.  
 
 <p float="left">
-<img src="resources\pokemon.gif" width="400" />
-<img src="resources\tetris.gif" width="400" />
-<img src="resources\zelda.gif" width="400" /> 
+<img src="resources/pokemon.gif" width="400" />
+<img src="resources/tetris.gif" width="400" />
+<img src="resources/donkeykong.gif" width="400" /> 
+<img src="resources/zelda.gif" width="400" /> 
 </p>
 
 ## Features
@@ -26,8 +27,7 @@ This is a Nintendo GameBoy / GameBoy Color emulator written in C++.
     - Background / Window Maps
 - Basic debugger with support for adding breakpoints within GB/GBC ROMs and stepping the emulated hardware for either a cycle or for a frame.
 
-
-![resources\allWindows.png](resources\allWindows.png)
+<img src="resources/allWindows.png"/> 
 
 ## Controls
 
